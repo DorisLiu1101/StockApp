@@ -2,8 +2,17 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>投資儀表板 v10</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>投資儀表板</title>
+    
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="投資看板">
+    <link rel="apple-touch-icon" href="icon.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -26,7 +35,7 @@
         .app-card { background-color: #121212; border: 1px solid #404040; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.7); }
         
         /* Bottom Navigation */
-        .bottom-nav { background-color: #0A0A0A; border-top: 1px solid #333; }
+        .bottom-nav { background-color: #0A0A0A; border-top: 1px solid #333; padding-bottom: env(safe-area-inset-bottom); }
         .bottom-nav-item { color: #888; transition: color 0.3s; } .bottom-nav-item.active { color: #D4AF37; }
         .bottom-nav-item.active span { font-weight: bold; }
         
@@ -64,7 +73,10 @@
         .tx-btn-inactive:hover { background-color: #2A2A2A; color: #9CA3AF; }
         .tx-btn-inactive:active { background-color: #333; color: #E5E7EB; }
 
-        /* AI Markdown Styles */
+        /* Chart Filter Chip */
+        .chart-filter-chip { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; cursor: pointer; border: 1px solid #333; color: #666; transition: all 0.2s; }
+        .chart-filter-chip.active { background-color: #D4AF37; color: #000; border-color: #D4AF37; }
+        
         .ai-response h3 { color: #D4AF37; font-weight: bold; margin-bottom: 0.5em; font-size: 1.1em; }
         .ai-response p { margin-bottom: 0.8em; line-height: 1.6; color: #E5E7EB; }
         .ai-response strong { color: #FFF; font-weight: 700; }
@@ -72,7 +84,7 @@
     </style>
 </head>
 <body>
-    <header class="bg-[#050505] p-4 sticky top-0 z-50 border-b border-[#333]">
+    <header class="bg-[#050505] p-4 sticky top-0 z-50 border-b border-[#333] pt-[env(safe-area-inset-top)]">
         <div class="flex justify-between items-center max-w-7xl mx-auto w-full">
             <div class="flex items-center gap-2">
                 <span class="material-icons text-gold text-3xl">bar_chart</span>
@@ -110,24 +122,17 @@
                 </div>
             </div>
 
-            <!-- 2. Allocation Card (Redesigned Header) -->
+            <!-- 2. Allocation Card -->
             <div class="app-card p-6 flex flex-col justify-center">
                 <div class="flex justify-between items-center mb-5 relative min-h-[32px]">
                     <h2 class="text-sm font-bold text-gray-300 uppercase tracking-widest">Portfolio</h2>
-                    <!-- Styled Dropdown with simplified text -->
                     <div class="relative">
                         <select onchange="window.updateHomeChart(this.value)" class="bg-[#1A1A1A] text-[#D4AF37] border border-[#D4AF37]/40 rounded-lg px-3 py-1.5 text-xs font-bold tracking-widest focus:outline-none appearance-none pr-9 cursor-pointer hover:border-[#D4AF37] transition-colors uppercase shadow-sm">
-                            <option value="ALL">ALL</option>
-                            <option value="TW">TW</option>
-                            <option value="US">US</option>
-                            <option value="JP">JP</option>
+                            <option value="ALL">ALL</option><option value="TW">TW</option><option value="US">US</option><option value="JP">JP</option>
                         </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#D4AF37]">
-                            <span class="material-icons text-sm">expand_more</span>
-                        </div>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#D4AF37]"><span class="material-icons text-sm">expand_more</span></div>
                     </div>
                 </div>
-                
                 <div class="flex items-center gap-8 justify-center md:justify-start">
                     <div id="portfolio-chart" class="w-[140px] h-[140px] rounded-full relative flex justify-center items-center shadow-[0_0_20px_rgba(0,0,0,0.5)] transition-all duration-500" style="background: conic-gradient(#222 0% 100%);">
                         <div class="w-[100px] h-[100px] bg-[#121212] rounded-full absolute flex flex-col justify-center items-center"><span id="chart-center-text" class="text-2xl font-bold text-gold">--%</span></div>
@@ -138,23 +143,16 @@
 
             <!-- 3. Alert Section -->
             <div id="alert-section" class="app-card p-4 border-l-4 border-red-500 bg-[#1A1A1A] md:col-span-2 relative overflow-hidden group">
-                <div class="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-2">
-                    <span class="material-icons text-6xl text-red-500">warning</span>
-                </div>
+                <div class="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-2"><span class="material-icons text-6xl text-red-500">warning</span></div>
                 <div class="flex items-start gap-4 relative z-10">
-                    <div class="flex-shrink-0 mt-1">
-                        <span class="material-icons text-red-500 animate-pulse text-2xl">notifications_active</span>
-                    </div>
+                    <div class="flex-shrink-0 mt-1"><span class="material-icons text-red-500 animate-pulse text-2xl">notifications_active</span></div>
                     <div class="flex-1">
                         <h3 id="home-alert-title" class="text-sm font-bold text-white tracking-widest uppercase mb-1">系統監控中</h3>
                         <p id="home-alert-msg" class="text-xs text-gray-400 leading-relaxed font-mono">警示模組已就緒。監控邏輯配置中...</p>
                     </div>
-                    <button class="text-gray-600 hover:text-white transition focus:outline-none" onclick="this.closest('#alert-section').style.display='none'">
-                        <span class="material-icons text-sm">close</span>
-                    </button>
+                    <button class="text-gray-600 hover:text-white transition focus:outline-none" onclick="this.closest('#alert-section').style.display='none'"><span class="material-icons text-sm">close</span></button>
                 </div>
             </div>
-
         </section>
 
         <!-- List Section -->
@@ -212,17 +210,8 @@
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
         <div class="app-card w-full max-w-sm p-6 space-y-5">
-            <div class="flex justify-between items-center mb-1">
-                <h3 class="text-gold font-bold tracking-widest text-lg">SETTINGS</h3>
-                <button onclick="window.openHelp()" class="text-gray-500 hover:text-gold transition focus:outline-none"><span class="material-icons">help_outline</span></button>
-            </div>
-            <div class="space-y-2 relative">
-                <label class="text-xs text-gray-400 font-bold uppercase tracking-widest">Google Apps Script URL</label>
-                <div class="relative">
-                     <input type="url" id="script-url-input" class="w-full bg-[#050505] border border-[#333] rounded p-3 text-xs text-gray-300 font-mono focus:border-gold outline-none pr-10" placeholder="Paste Exec URL here">
-                     <span id="settings-check-icon" class="material-icons absolute right-3 top-1/2 transform -translate-y-1/2 text-green-500 hidden animate-in fade-in zoom-in duration-300">check_circle</span>
-                </div>
-            </div>
+            <div class="flex justify-between items-center mb-1"><h3 class="text-gold font-bold tracking-widest text-lg">SETTINGS</h3><button onclick="window.openHelp()" class="text-gray-500 hover:text-gold transition focus:outline-none"><span class="material-icons">help_outline</span></button></div>
+            <div class="space-y-2 relative"><label class="text-xs text-gray-400 font-bold uppercase tracking-widest">Google Apps Script URL</label><div class="relative"><input type="url" id="script-url-input" class="w-full bg-[#050505] border border-[#333] rounded p-3 text-xs text-gray-300 font-mono focus:border-gold outline-none pr-10" placeholder="Paste Exec URL here"><span id="settings-check-icon" class="material-icons absolute right-3 top-1/2 transform -translate-y-1/2 text-green-500 hidden animate-in fade-in zoom-in duration-300">check_circle</span></div></div>
             <button id="btn-save-settings" onclick="window.saveSettings()" class="w-full bg-gold hover:bg-[#FFE082] text-black py-3 rounded font-bold text-sm transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none">SAVE</button>
             <div id="settings-status" class="text-center text-xs h-4 font-mono transition-colors"></div>
             <button onclick="window.closeSettings()" class="w-full text-gray-500 text-xs mt-2 hover:text-white transition focus:outline-none">Cancel</button>
@@ -232,12 +221,21 @@
     <!-- Help Modal -->
     <div id="help-modal" class="modal fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4">
         <div class="app-card w-full max-w-lg flex flex-col max-h-[85vh]">
-            <div class="bg-[#111] p-4 flex justify-between items-center border-b border-[#333]">
-                <h3 class="text-white text-sm font-bold tracking-widest">使用說明書</h3>
-                <button onclick="window.closeHelp()" class="text-gray-500 hover:text-white focus:outline-none"><span class="material-icons text-xl">close</span></button>
-            </div>
-            <div class="p-6 overflow-y-auto text-sm text-gray-300 space-y-6 leading-relaxed">
-                <div id="help-content">Loading...</div>
+            <div class="bg-[#111] p-4 flex justify-between items-center border-b border-[#333]"><h3 class="text-white text-sm font-bold tracking-widest">使用說明書</h3><button onclick="window.closeHelp()" class="text-gray-500 hover:text-white focus:outline-none"><span class="material-icons text-xl">close</span></button></div>
+            <div class="p-6 overflow-y-auto text-sm text-gray-300 space-y-6 leading-relaxed"><div id="help-content">Loading...</div></div>
+        </div>
+    </div>
+
+    <!-- Transaction Modal -->
+    <div id="transaction-modal" class="modal fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+        <div class="app-card w-full max-w-sm flex flex-col max-h-[90vh]">
+            <div class="bg-[#111] p-4 flex justify-between items-center border-b border-[#333]"><h3 class="text-white text-sm font-bold tracking-widest">新增交易</h3><button onclick="window.closeTransactionModal()" class="text-gray-500 hover:text-white focus:outline-none"><span class="material-icons text-xl">close</span></button></div>
+            <div class="p-6 space-y-5 overflow-y-auto hide-scrollbar">
+                <div class="grid grid-cols-2 gap-4 mb-2"><button type="button" id="btn-tx-buy" onclick="window.setTxType('buy')" class="tx-btn tx-btn-buy-active flex-1">買進</button><button type="button" id="btn-tx-sell" onclick="window.setTxType('sell')" class="tx-btn tx-btn-inactive flex-1">賣出</button></div>
+                <div class="flex gap-3"><div class="w-[80px] flex-shrink-0"><label class="text-xs text-gray-400 font-bold tracking-wide mb-2 block">市場</label><div class="relative"><select id="tx-market" onchange="window.resetTxStatus(); window.lookupSymbolName()" class="w-full bg-[#050505] border border-[#333] rounded p-2 pl-3 text-left text-sm text-white focus:border-gold outline-none h-[46px] appearance-none font-bold tracking-wider"><option value="TW">TW</option><option value="US">US</option><option value="JP">JP</option></select><div class="pointer-events-none absolute inset-y-0 right-1 flex items-center px-1 text-gray-500"><span class="material-icons text-xs">expand_more</span></div></div></div><div class="flex-1"><label class="text-xs text-gray-400 font-bold tracking-wide mb-2 block">股票代號</label><div class="relative"><input type="text" id="tx-symbol" oninput="window.resetTxStatus(); window.lookupSymbolName()" class="w-full bg-[#050505] border border-[#333] rounded px-3 py-2 text-sm text-white focus:border-gold outline-none h-[46px] font-mono placeholder-gray-700 uppercase pr-24" placeholder="輸入代號"><div id="tx-name-display" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-right pointer-events-none max-w-[60%] truncate font-bold opacity-0 transition-opacity"></div></div></div></div>
+                <div class="grid grid-cols-2 gap-3"><div><label class="text-xs text-gray-400 font-bold tracking-wide mb-2 block">交易價格</label><input type="number" id="tx-price" oninput="window.resetTxStatus()" class="w-full bg-[#050505] border border-[#333] rounded px-3 py-2 text-sm text-white focus:border-gold outline-none h-[46px] font-mono appearance-none"></div><div><label class="text-xs text-gray-400 font-bold tracking-wide mb-2 block">交易股數</label><input type="number" id="tx-qty" oninput="window.resetTxStatus()" class="w-full bg-[#050505] border border-[#333] rounded px-3 py-2 text-sm text-white focus:border-gold outline-none h-[46px] font-mono appearance-none"></div></div>
+                <button id="btn-tx-submit" onclick="window.saveTransaction()" class="w-full bg-gold hover:bg-[#FFE082] text-black font-bold py-3.5 rounded text-sm tracking-widest shadow-lg transition active:scale-95 mt-2 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">確認新增</button>
+                <div id="tx-status" class="text-center text-xs h-4 font-mono transition-colors font-bold"></div>
             </div>
         </div>
     </div>
@@ -245,147 +243,20 @@
     <!-- Detail Modal -->
     <div id="detail-modal" class="modal-fullscreen fixed inset-0 z-[55] bg-[#000] flex flex-col">
         <div class="flex-1 overflow-y-auto p-5 pb-10 hide-scrollbar">
-            
-            <!-- Header: Market, Name & ROI -->
-            <div class="flex justify-between items-start mb-6">
-                <div>
-                    <div class="flex items-center gap-2 mb-3">
-                        <span id="detail-market-tag" class="text-[13.5px] px-2 py-0.5 rounded font-bold uppercase tracking-tighter">TAG</span>
-                        <span id="detail-sector" class="text-[13.5px] text-[#D4AF37] tracking-widest uppercase font-bold">SECTOR</span>
-                    </div>
-                    <div class="flex items-baseline gap-4">
-                        <h2 id="detail-symbol" class="text-3xl font-bold text-white font-mono leading-none">--</h2>
-                        <h2 id="detail-name" class="text-3xl font-bold text-[#E5E7EB] leading-none">--</h2>
-                    </div>
-                </div>
-                <div class="flex flex-col items-end">
-                    <button onclick="window.closeStockDetail()" class="text-gray-600 hover:text-white p-1 mb-2 focus:outline-none"><span class="material-icons">close</span></button>
-                    <!-- UPDATED: Text size changed from 5xl to 3xl to match Symbol/Name -->
-                    <div id="detail-roi" class="text-3xl font-bold tracking-tighter leading-none">--%</div>
-                </div>
-            </div>
-
-            <!-- Section 1: Portfolio Stats -->
-            <div class="mb-10">
-                <div class="flex items-center justify-between mb-6 border-t border-gray-800 pt-6">
-                    <div class="flex items-center gap-2">
-                        <span class="material-icons text-[#D4AF37]">pie_chart</span>
-                        <h3 class="text-[13.5px] font-bold text-blue-100 tracking-[0.2em] uppercase">PORTFOLIO STATISTICS</h3>
-                    </div>
-                    <!-- UPDATED: Enriched Edit Button Style -->
-                    <button id="btn-header-edit" class="flex items-center justify-center w-8 h-8 rounded-full bg-[#1A1A1A] border border-gray-600 text-gray-300 hover:border-[#D4AF37] hover:text-[#D4AF37] transition-all shadow-md focus:outline-none">
-                        <span class="material-icons text-[16px]">edit</span>
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-3 gap-y-10 gap-x-2 text-center">
-                    <div><div class="text-label-grey mb-2">股數</div><div id="detail-qty" class="text-val-lg text-[#D4AF37]">--</div></div>
-                    <div><div class="text-label-grey mb-2">平均成本</div><div id="detail-cost" class="text-val-lg text-[#D4AF37]">--</div></div>
-                    <div><div class="text-label-grey mb-2">總成本</div><div id="detail-cost-org" class="text-val-lg text-[#D4AF37]">--</div></div>
-                    <div><div class="text-label-grey mb-2">持有總成本</div><div id="detail-cost-twd-primary" class="text-val-md">--</div><div id="detail-cost-twd-secondary" class="text-[13px] text-gray-500 font-mono mt-1.5">--</div></div>
-                    <div><div class="text-label-grey mb-2">市場價值</div><div id="detail-market-primary" class="text-val-md">--</div><div id="detail-market-secondary" class="text-[13px] text-gray-500 font-mono mt-1.5">--</div></div>
-                    <div><div class="text-label-grey mb-2">未實現損益</div><div id="detail-gain-primary" class="text-val-md">--</div><div id="detail-gain-secondary" class="text-[13px] font-bold font-mono mt-1.5">--</div></div>
-                </div>
-            </div>
-
-            <!-- Section 2: Thermometer (Price Heatmap) -->
-            <div id="thermometer-section" class="mb-12 pt-4 hidden">
-                 <div class="flex items-center justify-between gap-6">
-                     <div class="flex flex-col items-center flex-shrink-0"><span class="text-label-grey mb-2 text-green-500 font-bold">淑價</span><span id="val-cheap" class="text-xl font-mono font-bold text-green-500 leading-none">--</span></div>
-                     <div class="flex-1 relative h-20 flex flex-col justify-center">
-                          <div id="therm-pointer-top" class="absolute top-0 w-full pointer-events-none h-6"><div id="therm-current-label" class="absolute bg-[#D4AF37] text-black text-[11px] font-black px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-20 transform -translate-x-1/2 transition-all duration-500 top-0">現價</div></div>
-                          <div class="therm-track w-full relative"><div id="therm-indicator-line" class="therm-indicator-line"></div></div>
-                          <div id="therm-pointer-bottom" class="absolute bottom-0 w-full pointer-events-none h-6"><div id="detail-price-text" class="absolute bottom-0 transform -translate-x-1/2 text-white font-mono font-bold text-xl transition-all duration-500 text-center w-24 leading-none">--</div></div>
-                     </div>
-                     <div class="flex flex-col items-center flex-shrink-0"><span class="text-label-grey mb-2 text-red-500 font-bold">貴價</span><span id="val-pricey" class="text-xl font-mono font-bold text-red-500 leading-none">--</span></div>
-                     <div class="flex flex-col items-center flex-shrink-0 min-w-[80px]"><span class="text-label-grey mb-2">預期報酬率</span><span id="detail-exp-return" class="text-4xl font-mono text-[#D4AF37] font-medium leading-none">--%</span></div>
-                 </div>
-            </div>
-
-            <!-- Section 3: Analysis Insights -->
-            <div class="mb-12">
-                <div class="flex items-center gap-3 mb-4">
-                    <button onclick="window.loadReport()" class="px-4 py-2 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black transition-all text-[#D4AF37] text-[12px] font-bold tracking-widest rounded border border-[#D4AF37]/30 flex items-center gap-2 shadow-lg focus:outline-none">
-                        <span class="material-icons text-base">cloud_search</span> 搜尋雲端報告
-                    </button>
-                    <div class="flex items-center text-[12px] text-gray-500 font-mono">
-                        <span class="mr-2">目標:</span>
-                        <span id="debug-symbol" class="text-[#D4AF37] font-bold">--</span>
-                    </div>
-                </div>
-                <div id="report-section" class="rounded-xl overflow-hidden relative min-h-[0px]"> 
-                     <div id="report-loading" class="hidden flex-col items-center py-10"><span class="material-icons animate-spin text-[#D4AF37] mb-3 text-4xl">sync</span><p class="text-[13px] text-gray-500 tracking-[0.3em] font-bold">SEARCHING...</p></div>
-                     <div id="report-content" class="w-full hidden bg-white"><iframe id="report-frame" class="w-full border-none block" scrolling="no"></iframe></div>
-                </div>
-            </div>
+            <div class="flex justify-between items-start mb-6"><div><div class="flex items-center gap-2 mb-3"><span id="detail-market-tag" class="text-[13.5px] px-2 py-0.5 rounded font-bold uppercase tracking-tighter">TAG</span><span id="detail-sector" class="text-[13.5px] text-[#D4AF37] tracking-widest uppercase font-bold">SECTOR</span></div><div class="flex items-baseline gap-4"><h2 id="detail-symbol" class="text-3xl font-bold text-white font-mono leading-none">--</h2><h2 id="detail-name" class="text-3xl font-bold text-[#E5E7EB] leading-none">--</h2></div></div><div class="flex flex-col items-end"><button onclick="window.closeStockDetail()" class="text-gray-600 hover:text-white p-1 mb-2 focus:outline-none"><span class="material-icons">close</span></button><div id="detail-roi" class="text-3xl font-bold tracking-tighter leading-none">--%</div></div></div>
+            <div class="mb-10"><div class="flex items-center justify-between mb-6 border-t border-gray-800 pt-6"><div class="flex items-center gap-2"><span class="material-icons text-[#D4AF37]">pie_chart</span><h3 class="text-[13.5px] font-bold text-blue-100 tracking-[0.2em] uppercase">PORTFOLIO STATISTICS</h3></div><button id="btn-header-edit" class="flex items-center justify-center w-8 h-8 rounded-full bg-[#1A1A1A] border border-gray-600 text-gray-300 hover:border-[#D4AF37] hover:text-[#D4AF37] transition-all shadow-md focus:outline-none"><span class="material-icons text-[16px]">edit</span></button></div><div class="grid grid-cols-3 gap-y-10 gap-x-2 text-center"><div><div class="text-label-grey mb-2">股數</div><div id="detail-qty" class="text-val-lg text-[#D4AF37]">--</div></div><div><div class="text-label-grey mb-2">平均成本</div><div id="detail-cost" class="text-val-lg text-[#D4AF37]">--</div></div><div><div class="text-label-grey mb-2">總成本</div><div id="detail-cost-org" class="text-val-lg text-[#D4AF37]">--</div></div><div><div class="text-label-grey mb-2">持有總成本</div><div id="detail-cost-twd-primary" class="text-val-md">--</div><div id="detail-cost-twd-secondary" class="text-[13px] text-gray-500 font-mono mt-1.5">--</div></div><div><div class="text-label-grey mb-2">市場價值</div><div id="detail-market-primary" class="text-val-md">--</div><div id="detail-market-secondary" class="text-[13px] text-gray-500 font-mono mt-1.5">--</div></div><div><div class="text-label-grey mb-2">未實現損益</div><div id="detail-gain-primary" class="text-val-md">--</div><div id="detail-gain-secondary" class="text-[13px] font-bold font-mono mt-1.5">--</div></div></div></div>
+            <div id="thermometer-section" class="mb-12 pt-4 hidden"><div class="flex items-center justify-between gap-6"><div class="flex flex-col items-center flex-shrink-0"><span class="text-label-grey mb-2 text-green-500 font-bold">淑價</span><span id="val-cheap" class="text-xl font-mono font-bold text-green-500 leading-none">--</span></div><div class="flex-1 relative h-20 flex flex-col justify-center"><div id="therm-pointer-top" class="absolute top-0 w-full pointer-events-none h-6"><div id="therm-current-label" class="absolute bg-[#D4AF37] text-black text-[11px] font-black px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-20 transform -translate-x-1/2 transition-all duration-500 top-0">現價</div></div><div class="therm-track w-full relative"><div id="therm-indicator-line" class="therm-indicator-line"></div></div><div id="therm-pointer-bottom" class="absolute bottom-0 w-full pointer-events-none h-6"><div id="detail-price-text" class="absolute bottom-0 transform -translate-x-1/2 text-white font-mono font-bold text-xl transition-all duration-500 text-center w-24 leading-none">--</div></div></div><div class="flex flex-col items-center flex-shrink-0"><span class="text-label-grey mb-2 text-red-500 font-bold">貴價</span><span id="val-pricey" class="text-xl font-mono font-bold text-red-500 leading-none">--</span></div><div class="flex flex-col items-center flex-shrink-0 min-w-[80px]"><span class="text-label-grey mb-2">預期報酬率</span><span id="detail-exp-return" class="text-4xl font-mono text-[#D4AF37] font-medium leading-none">--%</span></div></div></div>
+            <div class="mb-12"><div class="flex items-center gap-3 mb-4"><button onclick="window.loadReport()" class="px-4 py-2 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black transition-all text-[#D4AF37] text-[12px] font-bold tracking-widest rounded border border-[#D4AF37]/30 flex items-center gap-2 shadow-lg focus:outline-none"><span class="material-icons text-base">cloud_search</span> 搜尋雲端報告</button><div class="flex items-center text-[12px] text-gray-500 font-mono"><span class="mr-2">目標:</span><span id="debug-symbol" class="text-[#D4AF37] font-bold">--</span></div></div><div id="report-section" class="rounded-xl overflow-hidden relative min-h-[0px]"><div id="report-loading" class="hidden flex-col items-center py-10"><span class="material-icons animate-spin text-[#D4AF37] mb-3 text-4xl">sync</span><p class="text-[13px] text-gray-500 tracking-[0.3em] font-bold">SEARCHING...</p></div><div id="report-content" class="w-full hidden bg-white"><iframe id="report-frame" class="w-full border-none block" scrolling="no"></iframe></div></div></div>
         </div>
     </div>
     
-    <!-- Transaction Modal (Fixed & Redesigned) -->
-    <div id="transaction-modal" class="modal fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-        <div class="app-card w-full max-w-sm flex flex-col max-h-[90vh]">
-            <div class="bg-[#111] p-4 flex justify-between items-center border-b border-[#333]">
-                <h3 class="text-white text-sm font-bold tracking-widest">新增交易</h3>
-                <button onclick="window.closeTransactionModal()" class="text-gray-500 hover:text-white focus:outline-none"><span class="material-icons text-xl">close</span></button>
-            </div>
-            <!-- Added hide-scrollbar to remove side scrollbar -->
-            <div class="p-6 space-y-5 overflow-y-auto hide-scrollbar">
-                <div class="grid grid-cols-2 gap-4 mb-2">
-                    <button type="button" id="btn-tx-buy" onclick="window.setTxType('buy')" class="tx-btn tx-btn-buy-active flex-1">買進</button>
-                    <button type="button" id="btn-tx-sell" onclick="window.setTxType('sell')" class="tx-btn tx-btn-inactive flex-1">賣出</button>
-                </div>
-                <div class="flex gap-3">
-                    <div class="w-[80px] flex-shrink-0">
-                        <label class="text-xs text-gray-400 font-bold tracking-wide mb-2 block">市場</label>
-                        <div class="relative">
-                            <select id="tx-market" onchange="window.resetTxStatus(); window.lookupSymbolName()" class="w-full bg-[#050505] border border-[#333] rounded p-2 pl-3 text-left text-sm text-white focus:border-gold outline-none h-[46px] appearance-none font-bold tracking-wider">
-                                <option value="TW">TW</option><option value="US">US</option><option value="JP">JP</option>
-                            </select>
-                            <div class="pointer-events-none absolute inset-y-0 right-1 flex items-center px-1 text-gray-500"><span class="material-icons text-xs">expand_more</span></div>
-                        </div>
-                    </div>
-                    <div class="flex-1">
-                        <label class="text-xs text-gray-400 font-bold tracking-wide mb-2 block">股票代號</label>
-                        <div class="relative">
-                            <input type="text" id="tx-symbol" oninput="window.resetTxStatus(); window.lookupSymbolName()" class="w-full bg-[#050505] border border-[#333] rounded px-3 py-2 text-sm text-white focus:border-gold outline-none h-[46px] font-mono placeholder-gray-700 uppercase pr-24" placeholder="輸入代號">
-                            <div id="tx-name-display" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-right pointer-events-none max-w-[60%] truncate font-bold opacity-0 transition-opacity"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-xs text-gray-400 font-bold tracking-wide mb-2 block">交易價格</label>
-                        <!-- Added appearance-none -->
-                        <input type="number" id="tx-price" oninput="window.resetTxStatus()" class="w-full bg-[#050505] border border-[#333] rounded px-3 py-2 text-sm text-white focus:border-gold outline-none h-[46px] font-mono appearance-none">
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-400 font-bold tracking-wide mb-2 block">交易股數</label>
-                        <!-- Added appearance-none -->
-                        <input type="number" id="tx-qty" oninput="window.resetTxStatus()" class="w-full bg-[#050505] border border-[#333] rounded px-3 py-2 text-sm text-white focus:border-gold outline-none h-[46px] font-mono appearance-none">
-                    </div>
-                </div>
-                <button id="btn-tx-submit" onclick="window.saveTransaction()" class="w-full bg-gold hover:bg-[#FFE082] text-black font-bold py-3.5 rounded text-sm tracking-widest shadow-lg transition active:scale-95 mt-2 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">確認新增</button>
-                <div id="tx-status" class="text-center text-xs h-4 font-mono transition-colors font-bold"></div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- System Modal -->
     <div id="system-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 hidden"><div class="app-card w-full max-w-xs p-6 space-y-4 border-gold/20"><h3 id="system-modal-title" class="text-gold font-bold text-sm tracking-widest">系統提示</h3><p id="system-modal-message" class="text-xs text-gray-300 leading-relaxed break-all font-mono"></p><div id="system-modal-actions" class="flex gap-2 justify-end pt-2"></div></div></div>
 
-    <!-- Navigation -->
-    <nav class="fixed bottom-0 w-full bottom-nav shadow-2xl z-40">
-        <div class="max-w-md mx-auto flex justify-around items-center px-4 h-16">
-            <button onclick="window.openTransactionModal('TW','')" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item hover:text-gold transition group"><span class="material-icons text-3xl mb-0.5 group-hover:scale-110 transition-transform">add_circle_outline</span><span class="text-xs font-bold">新增</span></button>
-            <button onclick="window.switchPage('home')" id="nav-home" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item active"><span class="material-icons text-2xl mb-0.5">dashboard</span><span class="text-xs font-bold">總覽</span></button>
-            <button onclick="window.switchPage('list')" id="nav-list" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item"><span class="material-icons text-2xl mb-0.5">list_alt</span><span class="text-xs font-bold">清單</span></button>
-            <button onclick="window.switchPage('account')" id="nav-account" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item"><span class="material-icons text-2xl mb-0.5">person</span><span class="text-xs font-bold">帳戶</span></button>
-        </div>
-    </nav>
+    <nav class="fixed bottom-0 w-full bottom-nav shadow-2xl z-40"><div class="max-w-md mx-auto flex justify-around items-center px-4 h-16"><button onclick="window.openTransactionModal('TW','')" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item hover:text-gold transition group"><span class="material-icons text-3xl mb-0.5 group-hover:scale-110 transition-transform">add_circle_outline</span><span class="text-xs font-bold">新增</span></button><button onclick="window.switchPage('home')" id="nav-home" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item active"><span class="material-icons text-2xl mb-0.5">dashboard</span><span class="text-xs font-bold">總覽</span></button><button onclick="window.switchPage('list')" id="nav-list" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item"><span class="material-icons text-2xl mb-0.5">list_alt</span><span class="text-xs font-bold">清單</span></button><button onclick="window.switchPage('account')" id="nav-account" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item"><span class="material-icons text-2xl mb-0.5">person</span><span class="text-xs font-bold">帳戶</span></button></div></nav>
 
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- LAYER 0: Configuration ---
@@ -396,12 +267,67 @@
         let db, auth, currentUser, userScriptUrl = "", allPortfolioData = [];
         let currentDetailSymbol = "", currentFilter = 'ALL', txType = 'buy', currentChartFilter = 'ALL';
         let currentSort = { field: 'gain', order: 'desc' };
-        let _modalResolver = null;
         
         const REPORT_FOLDER_URL = "https://drive.google.com/drive/folders/1GdtSyWHYhwZ8JnugPGzgBhIRwXKScIZR";
         const APP_INSTRUCTIONS = `<div class="p-4 space-y-6"><h4>使用說明書正在加載中...</h4></div>`;
 
-        // --- LAYER 1: Core Definitions (FUNCTION DECLARATIONS) ---
+        // --- LAYER 1: Core Definitions ---
+
+        async function syncSheetData() {
+            if (!auth || !currentUser) return window.showAlert("系統尚未就緒，請重新整理。");
+            if(!userScriptUrl) return window.openSettings();
+            try { 
+                const res=await fetch(userScriptUrl); 
+                const data=await res.json(); 
+                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'portfolio', 'summary'), data, {merge:true}); 
+            } catch(e) { console.error(e); window.showAlert("同步失敗: "+e.message); }
+        }
+
+        async function saveTransaction() {
+            const m = document.getElementById('tx-market').value;
+            const s = document.getElementById('tx-symbol').value;
+            const p = document.getElementById('tx-price').value;
+            const q = document.getElementById('tx-qty').value;
+
+            if (!s || !p || !q) return window.showAlert("請填寫完整");
+
+            let qty = Number(q);
+            if (txType === 'sell') qty = -qty;
+
+            if (txType === 'sell') {
+                const stock = allPortfolioData.find(i => String(i.symbol).toUpperCase() === s.toUpperCase() && i.market === m);
+                if (stock && Math.abs(qty) > stock.qty) return window.showAlert(`賣出量大於庫存 (${stock.qty})`);
+            }
+
+            const sB = document.getElementById('btn-tx-submit');
+            const sD = document.getElementById('tx-status');
+            sB.disabled = true;
+            sB.innerText = "同步中...";
+
+            try {
+                const res = await fetch(userScriptUrl, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'add',
+                        data: { market: m, symbol: s, price: Number(p), qty: qty }
+                    })
+                });
+                const json = await res.json();
+
+                if (json.success) {
+                    sD.innerHTML = '<span class="text-green-500">新增完成 ✅</span>';
+                    await syncSheetData(); 
+                    sB.disabled = false;
+                    sB.innerText = "確認新增";
+                } else {
+                    throw new Error(json.message);
+                }
+            } catch (e) {
+                window.showAlert("錯誤：" + e.message);
+                sB.disabled = false;
+                sB.innerText = "確認新增";
+            }
+        }
 
         function updateUserUI(user) {
             const u=document.getElementById('user-info'), a=document.getElementById('user-avatar'), i=document.getElementById('user-avatar-icon'), al=document.getElementById('account-avatar-lg'), ap=document.getElementById('account-img-placeholder');
@@ -412,8 +338,7 @@
                 if(al) al.classList.add('hidden'); if(ap) ap.classList.remove('hidden');
             } else {
                 document.getElementById('btn-login').classList.add('hidden'); u.classList.remove('hidden');
-                const p=user.photoURL;
-                if(p) { if(a) a.src=p; if(al) al.src=p; }
+                const p=user.photoURL; if(p) { if(a) a.src=p; if(al) al.src=p; }
                 document.getElementById('account-name-lg').innerText=user.displayName||"User";
             }
         }
@@ -463,26 +388,18 @@
                     if(d.portfolio){
                         allPortfolioData=d.portfolio; 
                         window.filterStocks();
-                        window.updateHomeChart('ALL'); // Initial render
+                        window.updateHomeChart('ALL'); 
                     }
                 }
             }, (err) => console.error("Firestore Listen Error", err));
         }
         
-        // --- NEW: Client-side Chart Logic ---
         function updateHomeChart(marketFilter) {
             currentChartFilter = marketFilter;
-            // Removed chip UI logic since we use select now
-
-            // 1. Filter Data
             const data = (marketFilter === 'ALL') ? allPortfolioData : allPortfolioData.filter(i => i.market === marketFilter);
-            
             if (data.length === 0) {
-                window.renderChart([], []); // Clear chart if no data
-                return;
+                window.renderChart([], []); return;
             }
-
-            // 2. Aggregate by Sector (using marketValue)
             const sectors = {};
             let totalVal = 0;
             data.forEach(item => {
@@ -491,29 +408,20 @@
                 sectors[s] = (sectors[s] || 0) + v;
                 totalVal += v;
             });
-
-            // 3. Convert to Array & Sort
             let sortedSectors = Object.keys(sectors).map(key => ({
                 label: key,
                 value: sectors[key],
                 pct: (totalVal > 0) ? Math.round((sectors[key] / totalVal) * 100) : 0
             })).sort((a, b) => b.value - a.value);
-
-            // 4. Take Top 5
             const top5 = sortedSectors.slice(0, 5);
-            
-            // 5. Render
             window.renderChart(top5.map(s => s.pct), top5.map(s => s.label));
         }
 
-        // Renamed wrapper for compatibility
         function setChartFilter(m) { window.updateHomeChart(m); }
 
         function renderChart(vals, labels) {
-            // Added 5th color for Top 5 support
             const colors=['#D4AF37','#B4941F','#756010','#4B5563','#1F2937']; 
             let grad="conic-gradient(", curr=0, leg="";
-            
             if (vals.length === 0) {
                 const chart = document.getElementById('portfolio-chart');
                 if(chart) chart.style.background = '#222';
@@ -523,22 +431,17 @@
                 if(centerText) centerText.innerText = "0%";
                 return;
             }
-
             vals.forEach((v,i)=>{ 
                 const c=colors[i]||colors[colors.length-1]; 
                 grad+=`${c} ${curr}% ${curr+v}%, `; 
                 curr+=v; 
                 leg+=`<div class="flex items-center justify-between text-xs mb-1"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full" style="background:${c}"></div><span class="text-gray-400 truncate w-24">${labels[i]}</span></div><span class="text-gray-400 font-mono">${v}%</span></div>`; 
             });
-            
             const chart = document.getElementById('portfolio-chart');
             if(chart) chart.style.background=grad.slice(0,-2)+")"; 
-            
             const legEl = document.getElementById('sector-legend');
             if(legEl) legEl.innerHTML=leg; 
-            
             const centerText = document.getElementById('chart-center-text');
-            // Show total % coverage of top 5 (usually near 100% unless many small sectors)
             const coverage = vals.reduce((a,b)=>a+b,0);
             if(centerText) centerText.innerText = coverage + "%";
         }
@@ -573,7 +476,6 @@
 
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
         
-        // --- Restored List Logic ---
         function toggleFilterMenu() { const m=document.getElementById('filter-menu'); const o=document.getElementById('filter-overlay'); if(m&&o){m.classList.toggle('hidden');o.classList.toggle('hidden');} }
         function setMarketFilter(m) { currentFilter=m; document.getElementById('current-filter-label').innerText={'ALL':'全部市場','TW':'台股','US':'美股','JP':'日股'}[m]||m; window.toggleFilterMenu(); window.filterStocks(); }
         function toggleSortMenu() { const m=document.getElementById('sort-menu'); const o=document.getElementById('sort-overlay'); if(m&&o){m.classList.toggle('hidden');o.classList.toggle('hidden');} }
@@ -611,7 +513,6 @@
             else if(market === 'JP') mktTag.className = "text-[13.5px] px-2 py-0.5 rounded font-bold uppercase tracking-tight bg-red-950 text-red-300 border border-red-800";
             else mktTag.className = "text-[13.5px] px-2 py-0.5 rounded font-bold uppercase tracking-tight bg-[#333] text-gray-300 border border-[#555]";
 
-            // Header Info
             document.getElementById('detail-symbol').innerText = symbol;
             document.getElementById('detail-name').innerText = stock.name || symbol;
             document.getElementById('detail-sector').innerText = stock.sector || "其他";
@@ -621,31 +522,23 @@
             roiEl.innerText = (isGain ? "+" : "") + stock.gainPct + "%";
             roiEl.className = `text-3xl font-bold tracking-tighter leading-none ${isGain ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
 
-            // --- Stats Grid Alignment ---
             const prefix = market === 'US' ? 'US$ ' : (market === 'JP' ? 'JP¥ ' : 'NT$ ');
-            
-            // Row 1 (Uniform text-val-lg)
             document.getElementById('detail-qty').innerText = fmt(stock.qty);
             document.getElementById('detail-cost').innerText = fmt(stock.cost);
             const costOrg = stock.cost * stock.qty;
             document.getElementById('detail-cost-org').innerText = fmt(Math.round(costOrg));
-            
-            // Row 2 (Uniform text-val-md)
             document.getElementById('detail-cost-twd-primary').innerText = prefix + fmt(Math.round(costOrg));
             const costTWD = stock.marketValue - stock.gain; 
             document.getElementById('detail-cost-twd-secondary').innerText = "NT$ " + fmt(Math.round(costTWD));
-            
             const mktOrg = stock.price * stock.qty;
             document.getElementById('detail-market-primary').innerText = prefix + fmt(Math.round(mktOrg));
             document.getElementById('detail-market-secondary').innerText = "NT$ " + fmt(stock.marketValue);
-            
             const gainOrg = stock.gainOrg || ((stock.price - stock.cost) * stock.qty); 
             document.getElementById('detail-gain-primary').innerText = (gainOrg >= 0 ? "+" : "") + fmt(Math.round(gainOrg));
             document.getElementById('detail-gain-primary').className = `text-val-md ${gainOrg >= 0 ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
             document.getElementById('detail-gain-secondary').innerText = (isGain ? "+NT$ " : "NT$ ") + fmt(Math.round(stock.gain));
             document.getElementById('detail-gain-secondary').className = `text-[13px] font-bold font-mono mt-1.5 ${isGain ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
 
-            // --- Thermometer (Price Heatmap) ---
             const price = Number(stock.price) || 0;
             const cheap = Number(stock.cheap) || 0;
             const pricey = Number(stock.pricey) || 0;
@@ -656,21 +549,10 @@
                 document.getElementById('val-cheap').innerText = fmt(cheap);
                 document.getElementById('val-pricey').innerText = fmt(pricey);
                 document.getElementById('detail-exp-return').innerText = stock.expReturn ? stock.expReturn + "%" : "4%";
-
-                let pct = 0;
-                let badgeText = "現價";
-                let badgeColor = "bg-[#D4AF37] text-black";
-                
-                if (price <= cheap) {
-                    pct = 0; badgeText = "低於淑價"; badgeColor = "bg-green-600 text-white";
-                } else if (price >= pricey) {
-                    pct = 100; badgeText = "高於貴價"; badgeColor = "bg-red-600 text-white";
-                } else {
-                    pct = ((price - cheap) / (pricey - cheap)) * 100;
-                    pct = Math.max(0, Math.min(100, pct));
-                }
-
-                // Precision Alignment of pointer elements
+                let pct = 0; let badgeText = "現價"; let badgeColor = "bg-[#D4AF37] text-black";
+                if (price <= cheap) { pct = 0; badgeText = "低於淑價"; badgeColor = "bg-green-600 text-white"; } 
+                else if (price >= pricey) { pct = 100; badgeText = "高於貴價"; badgeColor = "bg-red-600 text-white"; } 
+                else { pct = ((price - cheap) / (pricey - cheap)) * 100; pct = Math.max(0, Math.min(100, pct)); }
                 document.getElementById('therm-indicator-line').style.left = pct + "%";
                 document.getElementById('detail-price-text').style.left = pct + "%";
                 document.getElementById('detail-price-text').innerText = fmt(price);
@@ -678,23 +560,15 @@
                 label.style.left = pct + "%";
                 label.innerText = badgeText;
                 label.className = `absolute text-[11px] font-black px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-20 transform -translate-x-1/2 transition-all duration-500 top-0 ${badgeColor}`;
-                
-            } else {
-                thermSection.classList.add('hidden');
-            }
+            } else { thermSection.classList.add('hidden'); }
             
-            // Transaction Hook
             const editBtn = document.getElementById('btn-header-edit');
             if(editBtn) editBtn.onclick = (e) => { e.stopPropagation(); window.openTransactionModal(market, symbol); };
 
-            // Reset Analysis View
             document.getElementById('report-frame').srcdoc = ""; 
             document.getElementById('report-content').classList.add('hidden');
             document.getElementById('report-loading').classList.add('hidden');
-            
-            // Ensure frame height is reset
             document.getElementById('report-frame').style.height = '0px';
-
             document.getElementById('detail-modal').classList.add('open');
         }
         function closeStockDetail() { document.getElementById('detail-modal').classList.remove('open'); document.getElementById('report-frame').srcdoc = ""; }
@@ -702,50 +576,16 @@
         async function loadReport() {
             if (!userScriptUrl) return window.showAlert("請先於設定中貼上 Script URL", "系統提示");
             document.getElementById('report-loading').classList.remove('hidden');
-            
-            // Reset frame
-            const frame = document.getElementById('report-frame');
-            frame.style.height = '0px';
-            
+            const frame = document.getElementById('report-frame'); frame.style.height = '0px';
             try {
-                const response = await fetch(userScriptUrl, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'getReport', data: { symbol: currentDetailSymbol } })
-                });
+                const response = await fetch(userScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'getReport', data: { symbol: currentDetailSymbol } }) });
                 const result = await response.json();
                 if (result.success && result.found) {
                     frame.srcdoc = result.html;
-                    
-                    // Auto-resize logic on load
-                    frame.onload = function() {
-                        try {
-                            const h = this.contentWindow.document.body.scrollHeight;
-                            this.style.height = (h + 50) + 'px'; // Add buffer
-                        } catch(e) {
-                            console.log("Resize failed (CORS?)", e);
-                            this.style.height = '600px'; // Fallback
-                        }
-                    };
-                    
+                    frame.onload = function() { try { const h = this.contentWindow.document.body.scrollHeight; this.style.height = (h + 50) + 'px'; } catch(e) { this.style.height = '600px'; } };
                     document.getElementById('report-content').classList.remove('hidden');
-                } else {
-                    window.showAlert(`找不到相關檔案。可能是權限不足或檔案未同步。`, "找不到報告", true);
-                }
-            } catch (e) {
-                window.showAlert("伺服器連線錯誤：" + e.message);
-            } finally {
-                document.getElementById('report-loading').classList.add('hidden');
-            }
-        }
-
-        async function syncSheetData() {
-            if (!auth || !currentUser) return window.showAlert("系統尚未就緒，請重新整理。");
-            if(!userScriptUrl) return window.openSettings();
-            try { 
-                const res=await fetch(userScriptUrl); 
-                const data=await res.json(); 
-                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'portfolio', 'summary'), data, {merge:true}); 
-            } catch(e) { console.error(e); }
+                } else { window.showAlert(`找不到相關檔案。`, "找不到報告", true); }
+            } catch (e) { window.showAlert("伺服器連線錯誤：" + e.message); } finally { document.getElementById('report-loading').classList.add('hidden'); }
         }
 
         async function saveSettings() {
@@ -765,23 +605,19 @@
             } catch (e) { statusDiv.innerText = "同步失敗"; statusDiv.className = "text-center text-xs h-4 font-mono text-red-500"; btn.disabled = false; urlInput.disabled = false; }
         }
 
-        function setTxType(t) { 
-            txType = t; 
-            window.resetTxStatus(); 
-            const bB = document.getElementById('btn-tx-buy');
-            const bS = document.getElementById('btn-tx-sell'); 
-            if(t==='buy'){ 
-                bB.className = "tx-btn tx-btn-buy-active flex-1"; 
-                bS.className = "tx-btn tx-btn-inactive flex-1"; 
-            } else { 
-                bB.className = "tx-btn tx-btn-inactive flex-1"; 
-                bS.className = "tx-btn tx-btn-sell-active flex-1"; 
-            } 
+        async function openHelp() { 
+            const helpModal = document.getElementById('help-modal'); const helpContent = document.getElementById('help-content');
+            helpModal.classList.remove('hidden'); helpContent.innerHTML = '<div class="text-center py-5 animate-pulse text-gold">Loading...</div>';
+            try {
+                const response = await fetch('https://raw.githubusercontent.com/DorisLiu1101/StockApp/refs/heads/main/StockAPP_Help.html');
+                if (response.ok) { const html = await response.text(); const parser = new DOMParser(); const docParser = parser.parseFromString(html, 'text/html'); helpContent.innerHTML = docParser.getElementById('help-body') ? docParser.getElementById('help-body').innerHTML : docParser.body.innerHTML; } else { throw new Error("Fetch failed"); }
+            } catch (e) { helpContent.innerHTML = APP_INSTRUCTIONS; }
         }
+
+        function setTxType(t) { txType = t; window.resetTxStatus(); const bB=document.getElementById('btn-tx-buy'), bS=document.getElementById('btn-tx-sell'); if(t==='buy'){ bB.className="tx-btn tx-btn-buy-active flex-1"; bS.className="tx-btn tx-btn-inactive flex-1"; }else{ bB.className="tx-btn tx-btn-inactive flex-1"; bS.className="tx-btn tx-btn-sell-active flex-1"; } }
         function resetTxStatus() { const sD=document.getElementById('tx-status'), sB=document.getElementById('btn-tx-submit'); if(sD) sD.innerHTML=""; if(sB){ sB.disabled=false; sB.innerText="確認新增"; sB.classList.remove('opacity-50','cursor-not-allowed'); } }
         function lookupSymbolName() { const m=document.getElementById('tx-market').value, s=document.getElementById('tx-symbol').value.trim().toUpperCase(), d=document.getElementById('tx-name-display'); if(!s){d.innerText='';d.style.opacity='0';return;} const stock=allPortfolioData.find(i=>String(i.symbol).toUpperCase()===s && (i.market===m)); d.style.opacity='1'; if(stock){d.innerText=stock.name;d.className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-right text-gray-400 font-bold truncate max-w-[60%] pointer-events-none";}else{d.innerText="NEW";d.className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-blue-400 bg-blue-900/30 px-1.5 py-0.5 rounded border border-blue-900/50 pointer-events-none";}}
         function openTransactionModal(m, s) { const mS=document.getElementById('tx-market'), sI=document.getElementById('tx-symbol'), d=document.getElementById('tx-name-display'); mS.value=m||'TW'; sI.value=s||''; d.innerText=''; window.resetTxStatus(); if(s) window.lookupSymbolName(); mS.disabled=!!s; sI.readOnly=!!s; if(s) sI.classList.add('opacity-60','cursor-not-allowed'); else sI.classList.remove('opacity-60','cursor-not-allowed'); document.getElementById('tx-price').value=''; document.getElementById('tx-qty').value=''; window.setTxType('buy'); document.getElementById('transaction-modal').classList.add('open'); }
-        async function saveTransaction() { const m=document.getElementById('tx-market').value, s=document.getElementById('tx-symbol').value, p=document.getElementById('tx-price').value, q=document.getElementById('tx-qty').value; if(!s||!p||!q) return window.showAlert("請填寫完整"); let qty=Number(q); if(txType==='sell') qty=-qty; if(txType==='sell'){ const stock=allPortfolioData.find(i=>String(i.symbol).toUpperCase()===s.toUpperCase()&&i.market===m); if(stock && Math.abs(qty)>stock.qty) return window.showAlert(`賣出量大於庫存 (${stock.qty})`); } const sB=document.getElementById('btn-tx-submit'), sD=document.getElementById('tx-status'); sB.disabled=true; sB.innerText="同步中..."; try{ const res=await fetch(userScriptUrl, {method:'POST', body:JSON.stringify({action:'add', data:{market:m, symbol:s, price:Number(p), qty:qty}})}); const json=await res.json(); if(json.success){ sD.innerHTML='<span class="text-green-500">新增完成 ✅</span>'; await window.syncSheetData(); sB.disabled=false; sB.innerText="確認新增"; }else throw new Error(json.message); }catch(e){ window.showAlert("錯誤："+e.message); sB.disabled=false; sB.innerText="確認新增"; } }
 
         // --- Window Binding & Init ---
         window.updateUserUI=updateUserUI; window.loadUserSettings=loadUserSettings; window.closeSystemModal=closeSystemModal; window.showAlert=showAlert; window.renderChart=renderChart; window.filterStocks=filterStocks; window.renderStockList=renderStockList; window.openStockDetail=openStockDetail; window.closeStockDetail=closeStockDetail; window.loadReport=loadReport; window.syncSheetData=syncSheetData; window.saveSettings=saveSettings; window.setTxType=setTxType; window.resetTxStatus=resetTxStatus; window.lookupSymbolName=lookupSymbolName; window.openTransactionModal=openTransactionModal; window.saveTransaction=saveTransaction; window.openSettings=openSettings; window.closeSettings=closeSettings; window.closeHelp=closeHelp; window.scrollToTop=scrollToTop; window.switchPage=switchPage; window.loginGoogle=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){}}; window.logout=async()=>signOut(auth);
@@ -800,6 +636,14 @@
             try {
                 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
                 auth = getAuth(app); db = getFirestore(app);
+                
+                // Auth Persistence Logic
+                try {
+                    await setPersistence(auth, browserLocalPersistence);
+                } catch (error) {
+                    console.error("Persistence Error:", error);
+                }
+
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token); else await signInAnonymously(auth);
                 onAuthStateChanged(auth, (user) => { if(user) { currentUser=user; updateUserUI(user); loadUserSettings(user.uid); startDataListener(user.uid); } });
             } catch (err) { console.error("Init Error", err); }
