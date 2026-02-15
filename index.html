@@ -77,6 +77,14 @@
         .chart-filter-chip { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; cursor: pointer; border: 1px solid #333; color: #666; transition: all 0.2s; }
         .chart-filter-chip.active { background-color: #D4AF37; color: #000; border-color: #D4AF37; }
         
+        /* Help Content Styles */
+        .help-content h4 { color: #D4AF37; font-weight: bold; font-size: 1.25rem; margin-bottom: 1rem; border-bottom: 1px solid #333; padding-bottom: 0.5rem; }
+        .help-content ul { padding-left: 1.25rem; list-style-type: disc; margin-bottom: 1.5rem; color: #D1D5DB; line-height: 1.625; }
+        .help-content li { margin-bottom: 0.75rem; }
+        .help-content strong { color: #FFFFFF; }
+        .help-content code { background: #222; padding: 2px 5px; border-radius: 4px; font-family: monospace; color: #4DB6AC; }
+        .help-content .bg-gold { background-color: #D4AF37; color: black; }
+        
         .ai-response h3 { color: #D4AF37; font-weight: bold; margin-bottom: 0.5em; font-size: 1.1em; }
         .ai-response p { margin-bottom: 0.8em; line-height: 1.6; color: #E5E7EB; }
         .ai-response strong { color: #FFF; font-weight: 700; }
@@ -222,7 +230,7 @@
     <div id="help-modal" class="modal fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4">
         <div class="app-card w-full max-w-lg flex flex-col max-h-[85vh]">
             <div class="bg-[#111] p-4 flex justify-between items-center border-b border-[#333]"><h3 class="text-white text-sm font-bold tracking-widest">使用說明書</h3><button onclick="window.closeHelp()" class="text-gray-500 hover:text-white focus:outline-none"><span class="material-icons text-xl">close</span></button></div>
-            <div class="p-6 overflow-y-auto text-sm text-gray-300 space-y-6 leading-relaxed"><div id="help-content">Loading...</div></div>
+            <div class="p-6 overflow-y-auto text-sm text-gray-300 space-y-6 leading-relaxed help-content"><div id="help-content">Loading...</div></div>
         </div>
     </div>
 
@@ -269,7 +277,99 @@
         let currentSort = { field: 'gain', order: 'desc' };
         
         const REPORT_FOLDER_URL = "https://drive.google.com/drive/folders/1GdtSyWHYhwZ8JnugPGzgBhIRwXKScIZR";
-        const APP_INSTRUCTIONS = `<div class="p-4 space-y-6"><h4>使用說明書正在加載中...</h4></div>`;
+        
+        // Embedded Help Content (StockAPP_Help.html) to ensure it works in preview
+        const HELP_HTML_CONTENT = `
+        <div id="help-body" class="space-y-8 max-w-2xl mx-auto">
+            <section>
+                <h4 class="text-gold font-bold text-xl mb-4 border-b border-[#333] pb-2">1. 快速開始 (Quick Start)</h4>
+                <ul class="list-disc pl-5 space-y-3 text-gray-300 leading-relaxed">
+                    <li>
+                        <strong class="text-white">步驟一：連結資料庫</strong><br>
+                        初次使用請點擊 App 右上角的「齒輪」設定頁，貼上您的 Google Apps Script 網頁應用程式網址 (Exec URL)。
+                    </li>
+                    <li>
+                        <strong class="text-white">步驟二：同步資料</strong><br>
+                        點擊設定頁中的「SAVE」按鈕，系統會自動儲存網址並開始同步您的投資組合。若需手動更新數據，可隨時再次點擊該按鈕。
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h4 class="text-gold font-bold text-xl mb-4 border-b border-[#333] pb-2">2. 試算表結構 (Sheet Structure)</h4>
+                <p class="text-gray-300 mb-3">請確保您的 Google Sheet 包含以下 5 個分頁 (名稱必須完全一致，大小寫敏感)：</p>
+                
+                <div class="space-y-4">
+                    <div class="bg-[#1A1A1A] p-4 rounded-lg border border-[#333]">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-black font-bold bg-gold px-2 py-0.5 rounded text-xs">Funds</span>
+                            <span class="text-sm text-gray-500">現金與匯率設定</span>
+                        </div>
+                        <div class="text-sm text-gray-400 pl-1">
+                            欄位順序：<code>Account</code>, <code>Currency</code>, <code>Rate</code>, <code>Position</code>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#1A1A1A] p-4 rounded-lg border border-[#333]">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-white font-bold bg-blue-900 px-2 py-0.5 rounded text-xs">TW</span>
+                            <span class="text-white font-bold bg-yellow-900 px-2 py-0.5 rounded text-xs">US</span>
+                            <span class="text-white font-bold bg-red-900 px-2 py-0.5 rounded text-xs">JP</span>
+                            <span class="text-sm text-gray-500">各國庫存分頁</span>
+                        </div>
+                        <div class="text-sm text-gray-400 pl-1 leading-loose">
+                            欄位順序：<br>
+                            <code>Symbol</code> (股號), <code>Name</code> (名稱), <code>Sector</code> (產業), 
+                            <code>Expected Return</code> (預期報酬), <code>Pricey</code> (貴價), 
+                            <code>Cheap</code> (淑價), <code>Price</code> (現價), <code>Cost</code> (成本), 
+                            <code>Qty</code> (股數)
+                        </div>
+                    </div>
+
+                    <div class="bg-[#1A1A1A] p-4 rounded-lg border border-[#333]">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-white font-bold bg-gray-700 px-2 py-0.5 rounded text-xs">History</span>
+                            <span class="text-sm text-gray-500">交易歷史紀錄</span>
+                        </div>
+                        <div class="text-sm text-gray-400 pl-1">
+                            此分頁由系統自動維護，建議保留標題列即可，無需手動輸入內容。
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h4 class="text-gold font-bold text-xl mb-4 border-b border-[#333] pb-2">3. 交易功能 (Transaction)</h4>
+                <ul class="list-disc pl-5 space-y-3 text-gray-300 leading-relaxed">
+                    <li>
+                        <strong class="text-white">新增持股：</strong><br>
+                        點擊底部導航欄的 (+) 按鈕，或在個股詳情頁點擊 "Transaction"。
+                    </li>
+                    <li>
+                        <strong class="text-white">智慧填入：</strong><br>
+                        輸入已知股號時，系統會自動帶出股票名稱；若為新標的則顯示 NEW。
+                    </li>
+                    <li>
+                        <strong class="text-white">防呆機制：</strong><br>
+                        賣出時若輸入股數大於庫存股數，系統會阻擋交易並彈出紅色警示。
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h4 class="text-gold font-bold text-xl mb-4 border-b border-[#333] pb-2">4. 常見問題 (FAQ)</h4>
+                <ul class="list-disc pl-5 space-y-3 text-gray-300 leading-relaxed">
+                    <li>
+                        <strong class="text-white">Q: 為什麼找不到分析報告？</strong><br>
+                        A: 請確認 Google Drive 資料夾權限已設為「知道連結者皆可檢視」，且檔名包含該股號 (例如: <code>2330.html</code>)。
+                    </li>
+                    <li>
+                        <strong class="text-white">Q: 數據沒有更新？</strong><br>
+                        A: 本 App 顯示的是 Google Sheet 內的數據。請確認您的 Google Sheet 公式 (如 <code>=GOOGLEFINANCE</code>) 是否運作正常。
+                    </li>
+                </ul>
+            </section>
+        </div>`;
 
         // --- LAYER 1: Core Definitions ---
 
@@ -362,6 +462,8 @@
             document.getElementById('system-modal').classList.add('hidden');
             if (_modalResolver) { _modalResolver(); _modalResolver = null; }
         }
+
+        let _modalResolver = null;
 
         function showAlert(msg, title="系統提示", showDriveBtn=false) { 
             return new Promise((resolve) => {
@@ -607,11 +709,8 @@
 
         async function openHelp() { 
             const helpModal = document.getElementById('help-modal'); const helpContent = document.getElementById('help-content');
-            helpModal.classList.remove('hidden'); helpContent.innerHTML = '<div class="text-center py-5 animate-pulse text-gold">Loading...</div>';
-            try {
-                const response = await fetch('https://raw.githubusercontent.com/DorisLiu1101/StockApp/refs/heads/main/StockAPP_Help.html');
-                if (response.ok) { const html = await response.text(); const parser = new DOMParser(); const docParser = parser.parseFromString(html, 'text/html'); helpContent.innerHTML = docParser.getElementById('help-body') ? docParser.getElementById('help-body').innerHTML : docParser.body.innerHTML; } else { throw new Error("Fetch failed"); }
-            } catch (e) { helpContent.innerHTML = APP_INSTRUCTIONS; }
+            helpModal.classList.remove('hidden'); 
+            helpContent.innerHTML = HELP_HTML_CONTENT;
         }
 
         function setTxType(t) { txType = t; window.resetTxStatus(); const bB=document.getElementById('btn-tx-buy'), bS=document.getElementById('btn-tx-sell'); if(t==='buy'){ bB.className="tx-btn tx-btn-buy-active flex-1"; bS.className="tx-btn tx-btn-inactive flex-1"; }else{ bB.className="tx-btn tx-btn-inactive flex-1"; bS.className="tx-btn tx-btn-sell-active flex-1"; } }
@@ -631,6 +730,7 @@
         window.closeTransactionModal = closeTransactionModal;
         window.setChartFilter = setChartFilter;
         window.updateHomeChart = updateHomeChart;
+        window.openHelp = openHelp;
 
         async function initApp() {
             try {
@@ -644,8 +744,24 @@
                     console.error("Persistence Error:", error);
                 }
 
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token); else await signInAnonymously(auth);
-                onAuthStateChanged(auth, (user) => { if(user) { currentUser=user; updateUserUI(user); loadUserSettings(user.uid); startDataListener(user.uid); } });
+                // Plan A: 智慧記憶模式 (Smart Memory Mode)
+                // 邏輯修改：依靠 onAuthStateChanged 自動判斷是否恢復舊登入，而非強制建立新訪客
+                onAuthStateChanged(auth, async (user) => { 
+                    if(user) { 
+                        // 1. 發現舊登入紀錄 (或剛登入成功) -> 恢復該使用者狀態
+                        currentUser = user; 
+                        updateUserUI(user); 
+                        loadUserSettings(user.uid); 
+                        startDataListener(user.uid); 
+                    } else {
+                        // 2. 真的沒有人登入 (第一次來 或 已登出) -> 自動補一張訪客證
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                             await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                             await signInAnonymously(auth);
+                        }
+                    } 
+                });
             } catch (err) { console.error("Init Error", err); }
         }
         initApp();
