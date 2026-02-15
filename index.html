@@ -98,15 +98,46 @@
                 <span class="material-icons text-gold text-3xl">bar_chart</span>
                 <h1 id="header-title" class="text-2xl font-bold tracking-wider text-gray-100 font-sans">維股利</h1>
             </div>
+            
+            <!-- Plan A: Integrated Header Control -->
             <div class="flex gap-4 items-center">
-                <button onclick="window.openSettings()" class="text-gray-400 hover:text-gold transition flex items-center justify-center w-10 h-10 rounded-full hover:bg-[#222] focus:outline-none">
-                    <span id="header-gear-icon" class="material-icons text-2xl">settings</span>
-                </button>
-                <div id="user-info" class="hidden flex items-center justify-center relative w-8 h-8">
-                    <span id="user-avatar-icon" class="material-icons text-3xl text-gray-500">account_circle</span>
-                    <img id="user-avatar" src="" class="w-8 h-8 rounded-full border border-gray-600 absolute inset-0 m-auto object-cover hidden" onload="this.classList.remove('hidden');" onerror="this.style.display='none';">
-                </div>
+                <!-- Login Button (Guest State) -->
                 <button id="btn-login" class="hidden px-3 py-1.5 bg-[#111] border border-gold text-gold text-xs font-bold rounded" onclick="window.loginGoogle()">Login</button>
+
+                <!-- User Profile Dropdown (Logged In State) -->
+                <div id="user-menu-container" class="relative hidden">
+                    <!-- Trigger Avatar -->
+                    <button onclick="window.toggleUserMenu()" class="flex items-center justify-center relative w-9 h-9 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:border-gold hover:border-gold transition-colors bg-[#1A1A1A]">
+                        <span id="header-avatar-icon" class="material-icons text-xl text-gray-500">account_circle</span>
+                        <img id="header-avatar-img" src="" class="w-full h-full object-cover hidden absolute inset-0" onerror="this.style.display='none';">
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div id="user-menu-dropdown" class="hidden absolute top-full mt-3 right-0 w-52 bg-[#1E1E1E] border border-[#333] rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-[60] overflow-hidden transform origin-top-right transition-all">
+                        <div class="px-4 py-3 border-b border-[#333] bg-[#252525]">
+                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Signed in as</p>
+                            <p id="menu-user-name" class="text-sm text-white font-bold truncate">Guest User</p>
+                        </div>
+                        <div class="py-1">
+                            <button onclick="window.openSettings()" class="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-[#D4AF37] hover:text-black transition flex items-center gap-3">
+                                <span class="material-icons text-[18px]">settings</span> 
+                                <span class="font-medium">資料來源設定</span>
+                            </button>
+                            <button onclick="window.openHelp()" class="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-[#D4AF37] hover:text-black transition flex items-center gap-3">
+                                <span class="material-icons text-[18px]">help_outline</span> 
+                                <span class="font-medium">使用說明</span>
+                            </button>
+                            <div class="border-t border-[#333] my-1"></div>
+                            <button onclick="window.logout()" class="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-900/20 transition flex items-center gap-3">
+                                <span class="material-icons text-[18px]">logout</span> 
+                                <span class="font-medium">登出帳戶</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Overlay for closing -->
+                    <div id="user-menu-overlay" onclick="window.toggleUserMenu()" class="hidden fixed inset-0 z-[59] cursor-default bg-black/20 backdrop-blur-[1px]"></div>
+                </div>
             </div>
         </div>
     </header>
@@ -199,24 +230,20 @@
             <div id="stock-list-container" class="space-y-3 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 pb-24"></div>
         </section>
 
-        <!-- Account Section -->
-        <section id="page-account" class="hidden">
-             <div class="app-card p-10 text-center space-y-8 max-w-lg mx-auto">
-                 <div class="w-28 h-28 bg-[#1A1A1A] border border-gold/30 rounded-full mx-auto flex items-center justify-center relative shadow-xl">
-                    <span id="account-img-placeholder" class="material-icons text-6xl text-gold absolute inset-0 m-auto flex items-center justify-center">person_outline</span>
-                    <img id="account-avatar-lg" class="w-full h-full rounded-full object-cover hidden relative z-10" src="" onload="this.classList.remove('hidden');document.getElementById('account-img-placeholder').classList.add('hidden');" onerror="this.style.display='none';document.getElementById('account-img-placeholder').classList.remove('hidden');">
-                 </div>
-                 <div><h2 id="account-name-lg" class="text-gold font-bold tracking-widest text-3xl">User</h2><p class="text-sm text-gray-400 mt-2">Google Account Linked</p></div>
-                 <div class="space-y-4">
-                     <button onclick="window.openSettings()" class="w-full py-4 border border-[#444] rounded text-base text-gray-300 hover:border-gold hover:text-gold transition flex items-center justify-center gap-3 bg-[#1A1A1A] focus:outline-none"><span class="material-icons">link</span> 資料來源設定</button>
-                     <button onclick="window.logout()" class="w-full py-4 text-sm text-gray-500 hover:text-red-400 transition focus:outline-none">登出帳戶</button>
-                 </div>
+        <!-- Pick Stock Section (New Placeholder) -->
+        <section id="page-pick" class="hidden min-h-[70vh] flex flex-col items-center justify-center text-center p-8">
+             <div class="w-24 h-24 rounded-full bg-[#121212] border-2 border-dashed border-[#333] flex items-center justify-center mb-6 animate-pulse">
+                <span class="material-icons text-5xl text-gray-700">manage_search</span>
              </div>
+             <h2 class="text-2xl font-bold text-[#D4AF37] tracking-widest mb-3">撿股功能開發中</h2>
+             <p class="text-sm text-gray-500 font-mono leading-relaxed max-w-xs mx-auto">
+                 我們正在建構強大的選股工具<br>敬請期待...
+             </p>
         </section>
     </main>
 
     <!-- Settings Modal -->
-    <div id="settings-modal" class="modal fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+    <div id="settings-modal" class="modal fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
         <div class="app-card w-full max-w-sm p-6 space-y-5">
             <div class="flex justify-between items-center mb-1"><h3 class="text-gold font-bold tracking-widest text-lg">SETTINGS</h3><button onclick="window.openHelp()" class="text-gray-500 hover:text-gold transition focus:outline-none"><span class="material-icons">help_outline</span></button></div>
             <div class="space-y-2 relative"><label class="text-xs text-gray-400 font-bold uppercase tracking-widest">Google Apps Script URL</label><div class="relative"><input type="url" id="script-url-input" class="w-full bg-[#050505] border border-[#333] rounded p-3 text-xs text-gray-300 font-mono focus:border-gold outline-none pr-10" placeholder="Paste Exec URL here"><span id="settings-check-icon" class="material-icons absolute right-3 top-1/2 transform -translate-y-1/2 text-green-500 hidden animate-in fade-in zoom-in duration-300">check_circle</span></div></div>
@@ -227,7 +254,7 @@
     </div>
 
     <!-- Help Modal -->
-    <div id="help-modal" class="modal fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4">
+    <div id="help-modal" class="modal fixed inset-0 z-[75] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4">
         <div class="app-card w-full max-w-lg flex flex-col max-h-[85vh]">
             <div class="bg-[#111] p-4 flex justify-between items-center border-b border-[#333]"><h3 class="text-white text-sm font-bold tracking-widest">使用說明書</h3><button onclick="window.closeHelp()" class="text-gray-500 hover:text-white focus:outline-none"><span class="material-icons text-xl">close</span></button></div>
             <div class="p-6 overflow-y-auto text-sm text-gray-300 space-y-6 leading-relaxed help-content"><div id="help-content">Loading...</div></div>
@@ -258,9 +285,9 @@
         </div>
     </div>
     
-    <div id="system-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 hidden"><div class="app-card w-full max-w-xs p-6 space-y-4 border-gold/20"><h3 id="system-modal-title" class="text-gold font-bold text-sm tracking-widest">系統提示</h3><p id="system-modal-message" class="text-xs text-gray-300 leading-relaxed break-all font-mono"></p><div id="system-modal-actions" class="flex gap-2 justify-end pt-2"></div></div></div>
+    <div id="system-modal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 hidden"><div class="app-card w-full max-w-xs p-6 space-y-4 border-gold/20"><h3 id="system-modal-title" class="text-gold font-bold text-sm tracking-widest">系統提示</h3><p id="system-modal-message" class="text-xs text-gray-300 leading-relaxed break-all font-mono"></p><div id="system-modal-actions" class="flex gap-2 justify-end pt-2"></div></div></div>
 
-    <nav class="fixed bottom-0 w-full bottom-nav shadow-2xl z-40"><div class="max-w-md mx-auto flex justify-around items-center px-4 h-16"><button onclick="window.openTransactionModal('TW','')" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item hover:text-gold transition group"><span class="material-icons text-3xl mb-0.5 group-hover:scale-110 transition-transform">add_circle_outline</span><span class="text-xs font-bold">新增</span></button><button onclick="window.switchPage('home')" id="nav-home" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item active"><span class="material-icons text-2xl mb-0.5">dashboard</span><span class="text-xs font-bold">總覽</span></button><button onclick="window.switchPage('list')" id="nav-list" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item"><span class="material-icons text-2xl mb-0.5">list_alt</span><span class="text-xs font-bold">清單</span></button><button onclick="window.switchPage('account')" id="nav-account" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item"><span class="material-icons text-2xl mb-0.5">person</span><span class="text-xs font-bold">帳戶</span></button></div></nav>
+    <nav class="fixed bottom-0 w-full bottom-nav shadow-2xl z-40"><div class="max-w-md mx-auto flex justify-around items-center px-4 h-16"><button onclick="window.openTransactionModal('TW','')" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item hover:text-gold transition group"><span class="material-icons text-3xl mb-0.5 group-hover:scale-110 transition-transform">add_circle_outline</span><span class="text-xs font-bold">新增</span></button><button onclick="window.switchPage('home')" id="nav-home" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item active"><span class="material-icons text-2xl mb-0.5">dashboard</span><span class="text-xs font-bold">總覽</span></button><button onclick="window.switchPage('list')" id="nav-list" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item"><span class="material-icons text-2xl mb-0.5">list_alt</span><span class="text-xs font-bold">清單</span></button><button onclick="window.switchPage('pick')" id="nav-pick" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item"><span class="material-icons text-2xl mb-0.5">manage_search</span><span class="text-xs font-bold">撿股</span></button></div></nav>
 
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -294,11 +321,10 @@
                     </li>
                 </ul>
             </section>
-
+            <!-- ... (Help content continues as before) ... -->
             <section>
                 <h4 class="text-gold font-bold text-xl mb-4 border-b border-[#333] pb-2">2. 試算表結構 (Sheet Structure)</h4>
                 <p class="text-gray-300 mb-3">請確保您的 Google Sheet 包含以下 5 個分頁 (名稱必須完全一致，大小寫敏感)：</p>
-                
                 <div class="space-y-4">
                     <div class="bg-[#1A1A1A] p-4 rounded-lg border border-[#333]">
                         <div class="flex items-center gap-2 mb-2">
@@ -309,7 +335,6 @@
                             欄位順序：<code>Account</code>, <code>Currency</code>, <code>Rate</code>, <code>Position</code>
                         </div>
                     </div>
-
                     <div class="bg-[#1A1A1A] p-4 rounded-lg border border-[#333]">
                         <div class="flex items-center gap-2 mb-2">
                             <span class="text-white font-bold bg-blue-900 px-2 py-0.5 rounded text-xs">TW</span>
@@ -325,8 +350,7 @@
                             <code>Qty</code> (股數)
                         </div>
                     </div>
-
-                    <div class="bg-[#1A1A1A] p-4 rounded-lg border border-[#333]">
+                     <div class="bg-[#1A1A1A] p-4 rounded-lg border border-[#333]">
                         <div class="flex items-center gap-2 mb-2">
                             <span class="text-white font-bold bg-gray-700 px-2 py-0.5 rounded text-xs">History</span>
                             <span class="text-sm text-gray-500">交易歷史紀錄</span>
@@ -337,8 +361,7 @@
                     </div>
                 </div>
             </section>
-
-            <section>
+             <section>
                 <h4 class="text-gold font-bold text-xl mb-4 border-b border-[#333] pb-2">3. 交易功能 (Transaction)</h4>
                 <ul class="list-disc pl-5 space-y-3 text-gray-300 leading-relaxed">
                     <li>
@@ -355,8 +378,7 @@
                     </li>
                 </ul>
             </section>
-
-            <section>
+             <section>
                 <h4 class="text-gold font-bold text-xl mb-4 border-b border-[#333] pb-2">4. 常見問題 (FAQ)</h4>
                 <ul class="list-disc pl-5 space-y-3 text-gray-300 leading-relaxed">
                     <li>
@@ -429,17 +451,42 @@
             }
         }
 
+        // --- Modified updateUserUI for Plan A ---
         function updateUserUI(user) {
-            const u=document.getElementById('user-info'), a=document.getElementById('user-avatar'), i=document.getElementById('user-avatar-icon'), al=document.getElementById('account-avatar-lg'), ap=document.getElementById('account-img-placeholder');
-            if (!u) return;
+            const btnLogin = document.getElementById('btn-login');
+            const userMenu = document.getElementById('user-menu-container');
+            const avatarImg = document.getElementById('header-avatar-img');
+            const avatarIcon = document.getElementById('header-avatar-icon');
+            const menuUserName = document.getElementById('menu-user-name');
+
             if (user.isAnonymous) {
-                document.getElementById('btn-login').classList.remove('hidden'); u.classList.add('hidden');
-                document.getElementById('account-name-lg').innerText="Guest User"; 
-                if(al) al.classList.add('hidden'); if(ap) ap.classList.remove('hidden');
+                // Guest Mode
+                if(btnLogin) btnLogin.classList.remove('hidden');
+                if(userMenu) userMenu.classList.add('hidden');
             } else {
-                document.getElementById('btn-login').classList.add('hidden'); u.classList.remove('hidden');
-                const p=user.photoURL; if(p) { if(a) a.src=p; if(al) al.src=p; }
-                document.getElementById('account-name-lg').innerText=user.displayName||"User";
+                // Logged In Mode
+                if(btnLogin) btnLogin.classList.add('hidden');
+                if(userMenu) userMenu.classList.remove('hidden');
+                
+                // Update Avatar
+                const photo = user.photoURL;
+                if(photo && avatarImg) {
+                    avatarImg.src = photo;
+                    avatarImg.classList.remove('hidden');
+                    if(avatarIcon) avatarIcon.classList.add('hidden');
+                }
+                
+                // Update Name in Dropdown
+                if(menuUserName) menuUserName.innerText = user.displayName || user.email || "User";
+            }
+        }
+        
+        function toggleUserMenu() {
+            const menu = document.getElementById('user-menu-dropdown');
+            const overlay = document.getElementById('user-menu-overlay');
+            if(menu && overlay) {
+                menu.classList.toggle('hidden');
+                overlay.classList.toggle('hidden');
             }
         }
 
@@ -564,13 +611,16 @@
             c.innerHTML = html;
         }
 
-        function openSettings() { document.getElementById('settings-modal').classList.add('open'); }
+        function openSettings() { 
+            document.getElementById('settings-modal').classList.add('open'); 
+            window.toggleUserMenu(); // Close menu if open
+        }
         function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
         function closeTransactionModal() { document.getElementById('transaction-modal').classList.remove('open'); }
         function closeHelp() { document.getElementById('help-modal').classList.add('hidden'); }
         
         function switchPage(p) { 
-            ['page-home','page-list','page-account'].forEach(id=>document.getElementById(id).classList.add('hidden')); 
+            ['page-home','page-list','page-pick'].forEach(id=>document.getElementById(id).classList.add('hidden')); 
             document.getElementById('page-'+p).classList.remove('hidden'); 
             document.querySelectorAll('.bottom-nav-item').forEach(el=>el.classList.remove('active')); 
             document.getElementById('nav-'+p).classList.add('active'); 
@@ -711,6 +761,7 @@
             const helpModal = document.getElementById('help-modal'); const helpContent = document.getElementById('help-content');
             helpModal.classList.remove('hidden'); 
             helpContent.innerHTML = HELP_HTML_CONTENT;
+            window.toggleUserMenu(); // Close user menu if it's the trigger
         }
 
         function setTxType(t) { txType = t; window.resetTxStatus(); const bB=document.getElementById('btn-tx-buy'), bS=document.getElementById('btn-tx-sell'); if(t==='buy'){ bB.className="tx-btn tx-btn-buy-active flex-1"; bS.className="tx-btn tx-btn-inactive flex-1"; }else{ bB.className="tx-btn tx-btn-inactive flex-1"; bS.className="tx-btn tx-btn-sell-active flex-1"; } }
@@ -719,7 +770,7 @@
         function openTransactionModal(m, s) { const mS=document.getElementById('tx-market'), sI=document.getElementById('tx-symbol'), d=document.getElementById('tx-name-display'); mS.value=m||'TW'; sI.value=s||''; d.innerText=''; window.resetTxStatus(); if(s) window.lookupSymbolName(); mS.disabled=!!s; sI.readOnly=!!s; if(s) sI.classList.add('opacity-60','cursor-not-allowed'); else sI.classList.remove('opacity-60','cursor-not-allowed'); document.getElementById('tx-price').value=''; document.getElementById('tx-qty').value=''; window.setTxType('buy'); document.getElementById('transaction-modal').classList.add('open'); }
 
         // --- Window Binding & Init ---
-        window.updateUserUI=updateUserUI; window.loadUserSettings=loadUserSettings; window.closeSystemModal=closeSystemModal; window.showAlert=showAlert; window.renderChart=renderChart; window.filterStocks=filterStocks; window.renderStockList=renderStockList; window.openStockDetail=openStockDetail; window.closeStockDetail=closeStockDetail; window.loadReport=loadReport; window.syncSheetData=syncSheetData; window.saveSettings=saveSettings; window.setTxType=setTxType; window.resetTxStatus=resetTxStatus; window.lookupSymbolName=lookupSymbolName; window.openTransactionModal=openTransactionModal; window.saveTransaction=saveTransaction; window.openSettings=openSettings; window.closeSettings=closeSettings; window.closeHelp=closeHelp; window.scrollToTop=scrollToTop; window.switchPage=switchPage; window.loginGoogle=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){}}; window.logout=async()=>signOut(auth);
+        window.updateUserUI=updateUserUI; window.toggleUserMenu=toggleUserMenu; window.loadUserSettings=loadUserSettings; window.closeSystemModal=closeSystemModal; window.showAlert=showAlert; window.renderChart=renderChart; window.filterStocks=filterStocks; window.renderStockList=renderStockList; window.openStockDetail=openStockDetail; window.closeStockDetail=closeStockDetail; window.loadReport=loadReport; window.syncSheetData=syncSheetData; window.saveSettings=saveSettings; window.setTxType=setTxType; window.resetTxStatus=resetTxStatus; window.lookupSymbolName=lookupSymbolName; window.openTransactionModal=openTransactionModal; window.saveTransaction=saveTransaction; window.openSettings=openSettings; window.closeSettings=closeSettings; window.closeHelp=closeHelp; window.scrollToTop=scrollToTop; window.switchPage=switchPage; window.loginGoogle=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){}}; window.logout=async()=>signOut(auth);
         
         // Ensure ALL functions are bound
         window.toggleFilterMenu = toggleFilterMenu;
@@ -745,16 +796,13 @@
                 }
 
                 // Plan A: 智慧記憶模式 (Smart Memory Mode)
-                // 邏輯修改：依靠 onAuthStateChanged 自動判斷是否恢復舊登入，而非強制建立新訪客
                 onAuthStateChanged(auth, async (user) => { 
                     if(user) { 
-                        // 1. 發現舊登入紀錄 (或剛登入成功) -> 恢復該使用者狀態
                         currentUser = user; 
                         updateUserUI(user); 
                         loadUserSettings(user.uid); 
                         startDataListener(user.uid); 
                     } else {
-                        // 2. 真的沒有人登入 (第一次來 或 已登出) -> 自動補一張訪客證
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                              await signInWithCustomToken(auth, __initial_auth_token);
                         } else {
