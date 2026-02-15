@@ -1,10 +1,9 @@
 <!-- 
-  [VER] v2.3
-  [DESC] UI/UX 優化與架構重整版
-         1. 修復頂部安全距離 (Safe Area Padding)
-         2. 修復 Google 頭像 403 顯示問題
-         3. 實作說明書資料模組化 (Import help_data.js)
-         4. 優化個股詳情頁面佈局與字體一致性
+  [VER] v2.11 (GitHub Ready V1.0.0)
+  [DESC] GitHub 發布準備版
+         1. 恢復模組化架構：從 ./help_data.js 匯入 HELP_CONTENT
+         2. 保留所有 V2.10 的 UI 優化 (緊湊卡片、字體層級、無邊條)
+         3. 保留 saveSettings ReferenceError 的修復
 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -31,6 +30,15 @@
         * { -webkit-tap-highlight-color: transparent !important; outline: none !important; }
         button:focus, input:focus, select:focus { outline: none !important; box-shadow: none !important; }
         
+        /* --- Custom Scrollbar Styles --- */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background-color: #333; border-radius: 99px; transition: background-color 0.2s; }
+        ::-webkit-scrollbar-thumb:hover { background-color: #666; }
+        ::-webkit-scrollbar-thumb:active { background-color: #D4AF37; }
+        ::-webkit-scrollbar-corner { background: transparent; }
+        * { scrollbar-width: thin; scrollbar-color: #333 #000; }
+
         /* Color Utilities */
         .text-gold { color: #D4AF37; } .border-gold { border-color: #D4AF37; } .bg-gold { background-color: #D4AF37; color: #000; }
         
@@ -228,7 +236,8 @@
                     </div>
                 </div>
             </div>
-            <div id="stock-list-container" class="space-y-3 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 pb-24"></div>
+            <!-- REMOVED space-y-3 to use margins on cards instead -->
+            <div id="stock-list-container" class="md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 pb-24"></div>
         </section>
 
         <!-- Pick Stock Section -->
@@ -540,18 +549,62 @@
                 if(item.market === 'TW') badgeClass = "bg-blue-950 text-blue-300 border-blue-800";
                 else if(item.market === 'US') badgeClass = "bg-yellow-950 text-yellow-300 border-yellow-800";
                 else if(item.market === 'JP') badgeClass = "bg-red-950 text-red-300 border-red-800";
-                html += `<div onclick="window.openStockDetail('${item.market}', '${item.symbol}')" class="app-card p-4 flex flex-col justify-center cursor-pointer hover:bg-[#1A1A1A] transition-all mb-3 border-l-4 ${isGain?'border-l-[#E57373]':'border-l-[#4DB6AC]'} active:scale-[0.98] shadow-md hover:shadow-xl h-auto"><div class="flex justify-between items-center mb-1"><div class="flex items-center gap-2 min-w-0 flex-1 mr-2 overflow-hidden"><span class="text-[10px] px-1.5 py-0.5 rounded border font-bold uppercase min-w-[30px] text-center flex-shrink-0 ${badgeClass}">${item.market}</span><span class="text-base font-bold text-white font-mono tracking-wide flex-shrink-0">${item.symbol}</span><span class="text-sm text-gray-400 font-light truncate">${item.name || ''}</span></div><div class="text-lg font-bold text-gray-100 font-mono tracking-tight flex-shrink-0">${fmt(item.price)}</div></div><div class="flex justify-between items-center"><div class="text-xs text-gray-500 font-mono">${fmt(item.qty)} sh</div><div class="text-sm font-bold ${isGain?'text-[#E57373]':'text-[#4DB6AC]'} font-mono">${(isGain?'+':'')}${item.gainPct}% <span class="text-xs opacity-80 ml-1">(${gainAmt})</span></div></div></div>`;
+                
+                // UPDATED (V2.10): New compact UI, removed border-l, updated font sizes
+                html += `<div onclick="window.openStockDetail('${item.market}', '${item.symbol}')" class="app-card py-[5px] px-[10px] flex flex-col justify-center cursor-pointer hover:bg-[#1A1A1A] transition-all my-[10px] mx-[5px] active:scale-[0.98] shadow-md hover:shadow-xl h-full"><div class="flex justify-between items-center mb-1"><div class="flex items-center gap-2 min-w-0 flex-1 mr-2 overflow-hidden"><span class="text-xs px-1.5 py-0.5 rounded border font-bold uppercase min-w-[30px] text-center flex-shrink-0 ${badgeClass}">${item.market}</span><span class="text-[20px] font-bold text-white font-mono tracking-wide flex-shrink-0 leading-tight">${item.symbol}</span><span class="text-[18px] text-gray-400 font-light truncate leading-tight">${item.name || ''}</span></div><div class="text-[18px] font-bold text-gray-100 font-mono tracking-tight flex-shrink-0 leading-tight">${fmt(item.price)}</div></div><div class="flex justify-between items-center"><div class="text-[18px] text-gray-500 font-mono leading-tight">${fmt(item.qty)} sh</div><div class="text-[18px] font-bold ${isGain?'text-[#E57373]':'text-[#4DB6AC]'} font-mono leading-tight">${(isGain?'+':'')}${item.gainPct}% <span class="text-[18px] opacity-80 ml-1">(${gainAmt})</span></div></div></div>`;
             });
             c.innerHTML = html;
         }
 
+        // --- Important: Define saveSettings BEFORE using it in bindings ---
+        async function saveSettings() {
+            const btn = document.getElementById('btn-save-settings');
+            const statusDiv = document.getElementById('settings-status');
+            const urlInput = document.getElementById('script-url-input');
+            const url = urlInput.value.trim();
+            if(!url.startsWith('http')) return window.showAlert("網址格式錯誤");
+            btn.disabled = true; urlInput.disabled = true; statusDiv.innerText = "連線驗證中..."; statusDiv.className = "text-center text-xs h-4 font-mono text-gold"; 
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'config'), {scriptUrl:url}, {merge:true});
+                userScriptUrl = url; 
+                const res = await fetch(url); const data = await res.json(); 
+                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'portfolio', 'summary'), data, {merge:true});
+                statusDiv.innerText = "同步完成 ✅"; statusDiv.className = "text-center text-xs h-4 font-mono text-green-500"; 
+                setTimeout(() => { btn.disabled = false; urlInput.disabled = false; window.closeSettings(); }, 800);
+            } catch (e) { statusDiv.innerText = "同步失敗"; statusDiv.className = "text-center text-xs h-4 font-mono text-red-500"; btn.disabled = false; urlInput.disabled = false; }
+        }
+
         function openSettings() { 
             document.getElementById('settings-modal').classList.add('open'); 
-            window.toggleUserMenu(); // Close menu if open
+            const menu = document.getElementById('user-menu-dropdown');
+            const overlay = document.getElementById('user-menu-overlay');
+            if (menu && !menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+                if(overlay) overlay.classList.add('hidden');
+            }
         }
         function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
         function closeTransactionModal() { document.getElementById('transaction-modal').classList.remove('open'); }
-        function closeHelp() { document.getElementById('help-modal').classList.add('hidden'); }
+        
+        function openHelp() { 
+            const helpModal = document.getElementById('help-modal'); 
+            const helpContent = document.getElementById('help-content');
+            if(helpModal && helpContent) {
+                helpContent.innerHTML = HELP_CONTENT; 
+                helpModal.classList.add('open'); 
+                
+                const menu = document.getElementById('user-menu-dropdown');
+                const overlay = document.getElementById('user-menu-overlay');
+                if (menu && !menu.classList.contains('hidden')) {
+                    menu.classList.add('hidden');
+                    if(overlay) overlay.classList.add('hidden');
+                }
+            }
+        }
+
+        function closeHelp() { 
+            document.getElementById('help-modal').classList.remove('open'); 
+        }
         
         function switchPage(p) { 
             ['page-home','page-list','page-pick'].forEach(id=>document.getElementById(id).classList.add('hidden')); 
@@ -606,7 +659,6 @@
             
             const roiEl = document.getElementById('detail-roi');
             roiEl.innerText = (isGain ? "+" : "") + stock.gainPct + "%";
-            // UPDATED: Changed text-3xl to text-2xl here
             roiEl.className = `text-2xl font-bold tracking-tighter leading-none ${isGain ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
 
             const prefix = market === 'US' ? 'US$ ' : (market === 'JP' ? 'JP¥ ' : 'NT$ ');
@@ -675,50 +727,31 @@
             } catch (e) { window.showAlert("伺服器連線錯誤：" + e.message); } finally { document.getElementById('report-loading').classList.add('hidden'); }
         }
 
-        async function saveSettings() {
-            const btn = document.getElementById('btn-save-settings');
-            const statusDiv = document.getElementById('settings-status');
-            const urlInput = document.getElementById('script-url-input');
-            const url = urlInput.value.trim();
-            if(!url.startsWith('http')) return window.showAlert("網址格式錯誤");
-            btn.disabled = true; urlInput.disabled = true; statusDiv.innerText = "連線驗證中..."; statusDiv.className = "text-center text-xs h-4 font-mono text-gold"; 
-            try {
-                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'config'), {scriptUrl:url}, {merge:true});
-                userScriptUrl = url; 
-                const res = await fetch(url); const data = await res.json(); 
-                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'portfolio', 'summary'), data, {merge:true});
-                statusDiv.innerText = "同步完成 ✅"; statusDiv.className = "text-center text-xs h-4 font-mono text-green-500"; 
-                setTimeout(() => { btn.disabled = false; urlInput.disabled = false; window.closeSettings(); }, 800);
-            } catch (e) { statusDiv.innerText = "同步失敗"; statusDiv.className = "text-center text-xs h-4 font-mono text-red-500"; btn.disabled = false; urlInput.disabled = false; }
-        }
-
-        // --- UPDATED: openHelp uses import ---
-        async function openHelp() { 
-            const helpModal = document.getElementById('help-modal'); 
-            const helpContent = document.getElementById('help-content');
-            helpModal.classList.remove('hidden'); 
-            helpContent.innerHTML = HELP_CONTENT; // Use imported content
-            window.toggleUserMenu(); // Close user menu if it's the trigger
-        }
-
         function setTxType(t) { txType = t; window.resetTxStatus(); const bB=document.getElementById('btn-tx-buy'), bS=document.getElementById('btn-tx-sell'); if(t==='buy'){ bB.className="tx-btn tx-btn-buy-active flex-1"; bS.className="tx-btn tx-btn-inactive flex-1"; }else{ bB.className="tx-btn tx-btn-inactive flex-1"; bS.className="tx-btn tx-btn-sell-active flex-1"; } }
         function resetTxStatus() { const sD=document.getElementById('tx-status'), sB=document.getElementById('btn-tx-submit'); if(sD) sD.innerHTML=""; if(sB){ sB.disabled=false; sB.innerText="確認新增"; sB.classList.remove('opacity-50','cursor-not-allowed'); } }
         function lookupSymbolName() { const m=document.getElementById('tx-market').value, s=document.getElementById('tx-symbol').value.trim().toUpperCase(), d=document.getElementById('tx-name-display'); if(!s){d.innerText='';d.style.opacity='0';return;} const stock=allPortfolioData.find(i=>String(i.symbol).toUpperCase()===s && (i.market===m)); d.style.opacity='1'; if(stock){d.innerText=stock.name;d.className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-right text-gray-400 font-bold truncate max-w-[60%] pointer-events-none";}else{d.innerText="NEW";d.className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-blue-400 bg-blue-900/30 px-1.5 py-0.5 rounded border border-blue-900/50 pointer-events-none";}}
         function openTransactionModal(m, s) { const mS=document.getElementById('tx-market'), sI=document.getElementById('tx-symbol'), d=document.getElementById('tx-name-display'); mS.value=m||'TW'; sI.value=s||''; d.innerText=''; window.resetTxStatus(); if(s) window.lookupSymbolName(); mS.disabled=!!s; sI.readOnly=!!s; if(s) sI.classList.add('opacity-60','cursor-not-allowed'); else sI.classList.remove('opacity-60','cursor-not-allowed'); document.getElementById('tx-price').value=''; document.getElementById('tx-qty').value=''; window.setTxType('buy'); document.getElementById('transaction-modal').classList.add('open'); }
 
         // --- Window Binding & Init ---
-        window.updateUserUI=updateUserUI; window.toggleUserMenu=toggleUserMenu; window.loadUserSettings=loadUserSettings; window.closeSystemModal=closeSystemModal; window.showAlert=showAlert; window.renderChart=renderChart; window.filterStocks=filterStocks; window.renderStockList=renderStockList; window.openStockDetail=openStockDetail; window.closeStockDetail=closeStockDetail; window.loadReport=loadReport; window.syncSheetData=syncSheetData; window.saveSettings=saveSettings; window.setTxType=setTxType; window.resetTxStatus=resetTxStatus; window.lookupSymbolName=lookupSymbolName; window.openTransactionModal=openTransactionModal; window.saveTransaction=saveTransaction; window.openSettings=openSettings; window.closeSettings=closeSettings; window.closeHelp=closeHelp; window.scrollToTop=scrollToTop; window.switchPage=switchPage; window.loginGoogle=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){}}; window.logout=async()=>signOut(auth);
-        
-        // Ensure ALL functions are bound
-        window.toggleFilterMenu = toggleFilterMenu;
-        window.setMarketFilter = setMarketFilter;
-        window.toggleSortMenu = toggleSortMenu;
-        window.setSortField = setSortField;
-        window.toggleSortOrder = toggleSortOrder;
-        window.closeTransactionModal = closeTransactionModal;
-        window.setChartFilter = setChartFilter;
-        window.updateHomeChart = updateHomeChart;
-        window.openHelp = openHelp;
+        // Ensure all functions are defined before binding
+        try {
+            window.updateUserUI=updateUserUI; window.toggleUserMenu=toggleUserMenu; window.loadUserSettings=loadUserSettings; window.closeSystemModal=closeSystemModal; window.showAlert=showAlert; window.renderChart=renderChart; window.filterStocks=filterStocks; window.renderStockList=renderStockList; window.openStockDetail=openStockDetail; window.closeStockDetail=closeStockDetail; window.loadReport=loadReport; window.syncSheetData=syncSheetData; 
+            window.saveSettings=saveSettings; // Bound here
+            window.setTxType=setTxType; window.resetTxStatus=resetTxStatus; window.lookupSymbolName=lookupSymbolName; window.openTransactionModal=openTransactionModal; window.saveTransaction=saveTransaction; window.openSettings=openSettings; window.closeSettings=closeSettings; window.closeHelp=closeHelp; window.scrollToTop=scrollToTop; window.switchPage=switchPage; window.loginGoogle=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){}}; window.logout=async()=>signOut(auth);
+            
+            // Re-bind utility functions to window for safety
+            window.toggleFilterMenu = toggleFilterMenu;
+            window.setMarketFilter = setMarketFilter;
+            window.toggleSortMenu = toggleSortMenu;
+            window.setSortField = setSortField;
+            window.toggleSortOrder = toggleSortOrder;
+            window.closeTransactionModal = closeTransactionModal;
+            window.setChartFilter = setChartFilter;
+            window.updateHomeChart = updateHomeChart;
+            window.openHelp = openHelp;
+        } catch(e) {
+            console.error("Binding Error:", e);
+        }
 
         async function initApp() {
             try {
