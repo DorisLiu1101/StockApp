@@ -1,6 +1,6 @@
 {
-  "name": "投資儀表板",
-  "short_name": "投資看板",
+  "name": "維股利大師",
+  "short_name": "維股利",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#000000",
