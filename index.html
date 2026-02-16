@@ -303,7 +303,7 @@
             <div class="p-6 overflow-y-auto text-sm text-gray-300 space-y-6 leading-relaxed help-content"><div id="help-content">Loading...</div></div>
         </div>
     </div>
-
+ 
     <!-- Transaction Modal -->
     <div id="transaction-modal" class="modal fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
         <div class="app-card w-full max-w-sm flex flex-col max-h-[90vh]">
@@ -605,7 +605,44 @@
         function closeHelp() { 
             document.getElementById('help-modal').classList.remove('open'); 
         }
-        
+
+        // [New] 複製 GAS 代碼的核心功能
+        window.copyGasCode = function() {
+            const copyText = document.getElementById("gas-code-area");
+            if(!copyText) return;
+            
+            // 1. 選取文字框內容
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); /* 對應手機版操作 */
+
+            try {
+                // 2. 執行瀏覽器複製指令
+                const successful = document.execCommand('copy');
+                const btnText = document.getElementById('btn-copy-text');
+                
+                // 3. UI 回饋 (按鈕變文字)
+                if(successful) {
+                    const originalText = btnText.innerText;
+                    btnText.innerText = "已複製！";
+                    // 2秒後恢復原本文字
+                    setTimeout(() => {
+                        if(btnText) btnText.innerText = originalText;
+                    }, 2000);
+                } else {
+                    window.showAlert("複製失敗，請手動複製。");
+                }
+            } catch (err) {
+                console.error('Fallback copy failed', err);
+                window.showAlert("無法複製，請手動全選複製。");
+            }
+            
+            // 4. 取消反白 (讓畫面比較乾淨)
+            if (window.getSelection) {
+                window.getSelection().removeAllRanges();
+            }
+        };
+
+     
         function switchPage(p) { 
             ['page-home','page-list','page-pick'].forEach(id=>document.getElementById(id).classList.add('hidden')); 
             document.getElementById('page-'+p).classList.remove('hidden'); 
