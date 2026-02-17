@@ -1,9 +1,9 @@
 <!-- 
-  [VER] v2.17 (UI Polish)
+  [VER] v2.17 (Custom UI Polish)
   [DESC] 
-    1. 取代醜陋的原生 prompt()，改用自定義質感 Modal 進行名稱修改
-    2. 新增 #edit-name-modal 結構與對應 CSS
-    3. 更新 editStockName() 邏輯以呼叫新 Modal
+    1. UI美化: 廢除原生 prompt()，改用自定義深色風格 Modal 處理「修改名稱」
+    2. UX優化: 修改名稱時提供更流暢的輸入體驗與視覺回饋
+    3. 保留所有 v2.16.1 的功能與修正
 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -313,23 +313,14 @@
 
     <!-- Edit Name Modal (New Custom Modal) -->
     <div id="edit-name-modal" class="modal fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-        <div class="app-card w-full max-w-xs p-6 space-y-5 border border-[#333] shadow-2xl relative overflow-hidden">
-            <!-- Decorative Accent -->
-            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent opacity-50"></div>
-            
-            <div class="text-center">
-                <h3 class="text-gold font-bold tracking-widest text-lg mb-1">EDIT NAME</h3>
-                <p class="text-[10px] text-gray-500 uppercase tracking-wide">Update Stock Name</p>
-            </div>
-            
+        <div class="app-card w-full max-w-xs p-6 space-y-5 border border-gold/20">
+            <h3 class="text-white font-bold tracking-widest text-lg text-center">修改股票名稱</h3>
             <div class="space-y-1">
-                <label class="text-[10px] text-gray-400 font-bold tracking-wide block ml-1">新名稱</label>
-                <input type="text" id="edit-name-input" class="w-full bg-[#050505] border border-[#333] rounded-lg px-4 py-3 text-sm text-[#D4AF37] font-bold focus:border-gold outline-none transition-colors placeholder-gray-800 text-center" placeholder="輸入名稱">
+                <input type="text" id="edit-name-input" class="w-full bg-[#050505] border border-[#333] rounded p-3 text-sm text-[#D4AF37] font-bold focus:border-gold outline-none text-center" placeholder="請輸入新名稱">
             </div>
-            
-            <div class="grid grid-cols-2 gap-3 pt-2">
-                <button onclick="window.closeEditNameModal()" class="w-full bg-[#1A1A1A] hover:bg-[#252525] text-gray-400 font-bold py-2.5 rounded text-xs tracking-widest transition border border-[#333] focus:outline-none">CANCEL</button>
-                <button onclick="window.confirmEditName()" class="w-full bg-gold hover:bg-[#FFE082] text-black font-bold py-2.5 rounded text-xs tracking-widest shadow-lg transition active:scale-95 focus:outline-none">UPDATE</button>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="window.closeEditNameModal()" class="w-full bg-[#1A1A1A] hover:bg-[#333] text-gray-300 py-2.5 rounded font-bold text-sm transition focus:outline-none">取消</button>
+                <button onclick="window.confirmEditName()" class="w-full bg-gold hover:bg-[#FFE082] text-black py-2.5 rounded font-bold text-sm transition shadow-lg focus:outline-none">確認修改</button>
             </div>
         </div>
     </div>
@@ -677,6 +668,7 @@
             const helpModal = document.getElementById('help-modal'); 
             const helpContentEl = document.getElementById('help-content');
             if(helpModal && helpContentEl) {
+                // Dynamic assembly of help content
                 const GAS_SECTION = `
                 <section class="bg-[#1A1A1A] p-4 rounded-xl border border-[#333] shadow-lg mb-8">
                     <div class="flex justify-between items-end mb-3">
@@ -730,14 +722,17 @@
             if (window.getSelection) { window.getSelection().removeAllRanges(); }
         };
 
-        // --- NEW: Edit Name Modal Logic ---
+        // [New] Custom Modal Logic
         function openEditNameModal() {
             if (!currentDetailSymbol) return;
             const currentName = document.getElementById('detail-name').innerText;
+            const modal = document.getElementById('edit-name-modal');
             const input = document.getElementById('edit-name-input');
-            input.value = currentName === '--' ? '' : currentName; // Clear if placeholder
-            document.getElementById('edit-name-modal').classList.add('open');
-            input.focus();
+            if(modal && input) {
+                input.value = currentName;
+                modal.classList.add('open');
+                input.focus();
+            }
         }
 
         function closeEditNameModal() {
@@ -745,22 +740,15 @@
         }
 
         async function confirmEditName() {
-            const input = document.getElementById('edit-name-input');
-            const newName = input.value.trim();
-            const originalName = document.getElementById('detail-name').innerText;
+            const newName = document.getElementById('edit-name-input').value.trim();
+            const currentName = document.getElementById('detail-name').innerText;
+            
+            closeEditNameModal();
 
-            if (newName && newName !== originalName) {
-                if (!userScriptUrl) {
-                    closeEditNameModal();
-                    return window.showAlert("請先設定 GAS URL");
-                }
+            if (newName && newName !== currentName) {
+                if (!userScriptUrl) return window.showAlert("請先設定 GAS URL");
                 
-                const btn = document.querySelector('#edit-name-modal button:last-child');
-                const originalBtnText = btn.innerText;
-                btn.disabled = true;
-                btn.innerText = "UPDATING...";
-
-                // Optimistic UI Update
+                // Optimistic UI update
                 document.getElementById('detail-name').innerText = newName;
                 
                 try {
@@ -776,23 +764,16 @@
                         })
                     });
                     const json = await res.json();
-                    
                     if(json.success) {
-                        closeEditNameModal();
                         window.showAlert("名稱更新成功 ✅");
-                        await syncSheetData(); // Sync in background
+                        await syncSheetData(); 
                     } else {
                         throw new Error(json.message);
                     }
                 } catch(e) {
                     window.showAlert("更新失敗: " + e.message);
-                    document.getElementById('detail-name').innerText = originalName; // Revert
-                } finally {
-                    btn.disabled = false;
-                    btn.innerText = originalBtnText;
+                    document.getElementById('detail-name').innerText = currentName; // Revert
                 }
-            } else {
-                closeEditNameModal(); // No change
             }
         }
 
@@ -832,7 +813,7 @@
             const stock = allPortfolioData.find(s => s.market === market && s.symbol === symbol);
             if(!stock) return window.showAlert("無此持股資料");
             currentDetailSymbol = symbol;
-            currentDetailMarket = market; 
+            currentDetailMarket = market; // 儲存市場以便修改名稱使用
 
             const fmt = (n) => n.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1});
             const isGain = stock.gain >= 0;
@@ -858,6 +839,8 @@
             document.getElementById('detail-cost').innerText = fmt(stock.cost);
             const costOrg = stock.cost * stock.qty;
             
+            // UPDATED: Swap logic
+            // 1. Expected Return goes to GRID (Top Right)
             document.getElementById('detail-exp-return-grid').innerText = stock.expReturn ? stock.expReturn + "%" : "4%";
             
             document.getElementById('detail-cost-twd-primary').innerText = prefix + fmt(Math.round(costOrg));
@@ -882,6 +865,9 @@
                 document.getElementById('val-cheap').innerText = fmt(cheap);
                 document.getElementById('val-pricey').innerText = fmt(pricey);
                 
+                // UPDATED: REMOVED Total Cost from THERMOMETER (Bottom Right)
+                // document.getElementById('detail-cost-org-bottom').innerText = fmt(Math.round(costOrg));
+
                 let pct = 0; let badgeText = "現價"; let badgeColor = "bg-[#D4AF37] text-black";
                 if (price <= cheap) { pct = 0; badgeText = "低於淑價"; badgeColor = "bg-green-600 text-white"; } 
                 else if (price >= pricey) { pct = 100; badgeText = "高於貴價"; badgeColor = "bg-red-600 text-white"; } 
@@ -926,11 +912,14 @@
         function lookupSymbolName() { const m=document.getElementById('tx-market').value, s=document.getElementById('tx-symbol').value.trim().toUpperCase(), d=document.getElementById('tx-name-display'); if(!s){d.innerText='';d.style.opacity='0';return;} const stock=allPortfolioData.find(i=>String(i.symbol).toUpperCase()===s && (i.market===m)); d.style.opacity='1'; if(stock){d.innerText=stock.name;d.className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-right text-gray-400 font-bold truncate max-w-[60%] pointer-events-none";}else{d.innerText="NEW";d.className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-blue-400 bg-blue-900/30 px-1.5 py-0.5 rounded border border-blue-900/50 pointer-events-none";}}
         function openTransactionModal(m, s) { const mS=document.getElementById('tx-market'), sI=document.getElementById('tx-symbol'), d=document.getElementById('tx-name-display'); mS.value=m||'TW'; sI.value=s||''; d.innerText=''; window.resetTxStatus(); if(s) window.lookupSymbolName(); mS.disabled=!!s; sI.readOnly=!!s; if(s) sI.classList.add('opacity-60','cursor-not-allowed'); else sI.classList.remove('opacity-60','cursor-not-allowed'); document.getElementById('tx-price').value=''; document.getElementById('tx-qty').value=''; window.setTxType('buy'); document.getElementById('transaction-modal').classList.add('open'); }
 
+        // --- Window Binding & Init ---
+        // Ensure all functions are defined before binding
         try {
             window.updateUserUI=updateUserUI; window.toggleUserMenu=toggleUserMenu; window.loadUserSettings=loadUserSettings; window.closeSystemModal=closeSystemModal; window.showAlert=showAlert; window.renderChart=renderChart; window.filterStocks=filterStocks; window.renderStockList=renderStockList; window.openStockDetail=openStockDetail; window.closeStockDetail=closeStockDetail; window.loadReport=loadReport; window.syncSheetData=syncSheetData; 
-            window.saveSettings=saveSettings; 
+            window.saveSettings=saveSettings; // Bound here
             window.setTxType=setTxType; window.resetTxStatus=resetTxStatus; window.lookupSymbolName=lookupSymbolName; window.openTransactionModal=openTransactionModal; window.saveTransaction=saveTransaction; window.openSettings=openSettings; window.closeSettings=closeSettings; window.closeHelp=closeHelp; window.scrollToTop=scrollToTop; window.switchPage=switchPage; window.loginGoogle=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){}}; window.logout=async()=>signOut(auth);
             
+            // Re-bind utility functions to window for safety
             window.toggleFilterMenu = toggleFilterMenu;
             window.setMarketFilter = setMarketFilter;
             window.toggleSortMenu = toggleSortMenu;
@@ -940,10 +929,13 @@
             window.setChartFilter = setChartFilter;
             window.updateHomeChart = updateHomeChart;
             window.openHelp = openHelp;
-            window.copyGasCode = copyGasCode;
+            window.copyGasCode = copyGasCode; 
+            
+            // Bind new functions
             window.openEditNameModal = openEditNameModal;
             window.closeEditNameModal = closeEditNameModal;
             window.confirmEditName = confirmEditName;
+            
         } catch(e) {
             console.error("Binding Error:", e);
         }
@@ -953,12 +945,14 @@
                 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
                 auth = getAuth(app); db = getFirestore(app);
                 
+                // Auth Persistence Logic
                 try {
                     await setPersistence(auth, browserLocalPersistence);
                 } catch (error) {
                     console.error("Persistence Error:", error);
                 }
 
+                // Plan A: 智慧記憶模式 (Smart Memory Mode)
                 onAuthStateChanged(auth, async (user) => { 
                     if(user) { 
                         currentUser = user; 
