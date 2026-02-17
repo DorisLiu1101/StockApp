@@ -122,8 +122,7 @@
                 <div id="user-menu-container" class="relative hidden">
                     <button onclick="window.toggleUserMenu()" class="flex items-center justify-center relative w-9 h-9 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:border-gold hover:border-gold transition-colors bg-[#1A1A1A]">
                         <span id="header-avatar-icon" class="material-icons text-xl text-gray-500">account_circle</span>
-                        <img id="header-avatar-img" src="" referrerpolicy="no-referrer" crossorigin="anonymous" class="w-full h-full object-cover hidden absolute inset-0" onerror="this.style.display='none'; document.getElementById('header-avatar-icon').classList.remove('hidden');">
-                    
+                        <img id="header-avatar-img" src="" referrerpolicy="no-referrer" crossorigin="anonymous" class="w-full h-full object-cover hidden absolute inset-0" onerror="this.style.display='none';">
                     </button>
                     <div id="user-menu-dropdown" class="hidden absolute top-full mt-3 right-0 w-52 bg-[#1E1E1E] border border-[#333] rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-[60] overflow-hidden transform origin-top-right transition-all">
                         <div class="px-4 py-3 border-b border-[#333] bg-[#252525]">
@@ -476,7 +475,7 @@
                 if(photo && avatarImg) {
                     avatarImg.src = photo;
                     avatarImg.classList.remove('hidden');
-                    if(avatarIcon) avatarIcon.classList.add('hidden');
+                    
                 }
                 
                 if(menuUserName) menuUserName.innerText = user.displayName || user.email || "User";
