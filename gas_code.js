@@ -1,3 +1,4 @@
+export const GAS_SCRIPT_DATA = `
 /**
  * ==========================================
  * 維股利 後端 API (v24_交易同步更新名稱)
@@ -6,7 +7,6 @@
  * 1. 交易(add)邏輯增強: 針對「既有持股」，若前端有傳入名稱，一併更新 B 欄
  * ==========================================
  */
-export const GAS_SCRIPT_DATA = `
 var REPORT_FOLDER_ID = "1GdtSyWHYhwZ8JnugPGzgBhIRwXKScIZR";
 var FX_RATES = { 'TW': 1, 'US': 31.5, 'JP': 0.215 };
 
