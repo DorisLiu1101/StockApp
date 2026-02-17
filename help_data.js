@@ -1,6 +1,6 @@
 /*
-  [VER] v1.4
-  [DESC] 說明書靜態文字內容
+  [VER] v1.5
+  [DESC] 說明書靜態文字內容 (新增範例檔複製按鈕)
 */
 export const TEXT_CONTENT = `
     <section>
@@ -18,7 +18,14 @@ export const TEXT_CONTENT = `
     </section>
 
     <section>
-        <h4 class="text-gold font-bold text-xl mb-4 border-b border-[#333] pb-2">2. 試算表結構 (Sheet Structure)</h4>
+        <div class="flex justify-between items-end mb-4 border-b border-[#333] pb-2">
+            <h4 class="text-gold font-bold text-xl">2. 試算表結構 (Sheet Structure)</h4>
+            <a href="https://docs.google.com/spreadsheets/d/1P5SJc0wVdhKSoA3lUIZTbZNJVQSO0WpaCSpD19Ztg3M/edit?usp=sharing" target="_blank" class="bg-[#222] hover:bg-[#D4AF37] hover:text-black text-gray-300 text-[11px] font-bold px-3 py-1.5 rounded transition shadow-lg flex items-center gap-1 border border-gray-600 active:scale-95 no-underline">
+                <span class="material-icons text-sm">content_copy</span>
+                <span>範例檔複製</span>
+            </a>
+        </div>
+        
         <p class="text-gray-300 mb-3">請確保您的 Google Sheet 包含以下 5 個分頁 (名稱必須完全一致，大小寫敏感)：</p>
         
         <div class="space-y-4">
