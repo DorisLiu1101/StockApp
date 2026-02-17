@@ -1,12 +1,8 @@
 /*
-  [VER] v1.3
-  [DESC] 說明書資料模組 (Help Data Module)
-         1. 匯入 gas_code.js 顯示 App Script
-         2. 完整保留原本文字說明內容
+  [VER] v1.4
+  [DESC] 說明書靜態文字內容
 */
-
-// 原有：文字說明內容 (v1.0)
-const TEXT_CONTENT = `
+export const TEXT_CONTENT = `
     <section>
         <h4 class="text-gold font-bold text-xl mb-4 border-b border-[#333] pb-2">1. 快速開始 (Quick Start)</h4>
         <ul class="list-disc pl-5 space-y-3 text-gray-300 leading-relaxed">
@@ -95,39 +91,4 @@ const TEXT_CONTENT = `
             </li>
         </ul>
     </section>
-`;
-
-import { GAS_SCRIPT_DATA } from './gas_code.js';
-
-// 新增：後端代碼區塊
-const GAS_SECTION = `
-<section class="bg-[#1A1A1A] p-4 rounded-xl border border-[#333] shadow-lg mb-8">
-    <div class="flex justify-between items-end mb-3">
-        <div>
-            <h4 class="text-gold font-bold text-lg leading-none mb-1">系統後端代碼</h4>
-            <span class="text-[11px] text-gray-500 font-mono">Google Apps Script (v21)</span>
-        </div>
-        <button onclick="window.copyGasCode()" id="btn-copy-gas" class="bg-gold hover:bg-[#FFE082] text-black text-xs font-bold px-4 py-1.5 rounded transition shadow-lg flex items-center gap-1 active:scale-95 focus:outline-none">
-            <span class="material-icons text-sm">content_copy</span>
-            <span id="btn-copy-text">複製代碼</span>
-        </button>
-    </div>
-    
-    <div class="relative group">
-        <!-- h-48 約為 12rem (192px)，約可顯示 10-12 行 -->
-        <textarea id="gas-code-area" readonly class="w-full bg-[#0A0A0A] text-gray-400 text-[11px] font-mono p-3 rounded border border-[#333] h-48 resize-none focus:outline-none focus:border-gold/50 transition-colors selection:bg-gold selection:text-black leading-relaxed hide-scrollbar" spellcheck="false">${GAS_SCRIPT_DATA}</textarea>
-        
-        <!-- Hover Hint -->
-        <div class="absolute bottom-2 right-4 text-[10px] text-gray-600 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-            唯讀預覽 (Read Only)
-        </div>
-    </div>
-</section>
-`;
-
-export const HELP_CONTENT = `
-<div id="help-body" class="space-y-8 max-w-2xl mx-auto">
-    ${GAS_SECTION}
-    ${TEXT_CONTENT}
-</div>
 `;
