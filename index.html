@@ -1,10 +1,9 @@
 <!-- 
-  [VER] v2.16.1
+  [VER] v2.17 (UI Polish)
   [DESC] 
-    1. UI: 緊湊型新增交易視窗 (Compact Transaction Modal)
-    2. UI: 詳情頁佈局優化 (溫度計延展、總成本移除)
-    3. Logic: 支援新股名稱寫入與既有股名稱更新
-    4. Bug Fix: 修復綁定與語法錯誤
+    1. 取代醜陋的原生 prompt()，改用自定義質感 Modal 進行名稱修改
+    2. 新增 #edit-name-modal 結構與對應 CSS
+    3. 更新 editStockName() 邏輯以呼叫新 Modal
 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -109,7 +108,7 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
+    <!-- Header with enforced safe-area padding -->
     <header class="bg-[#050505] p-4 sticky top-0 z-50 border-b border-[#333] pt-[max(env(safe-area-inset-top),36px)]">
         <div class="flex justify-between items-center max-w-7xl mx-auto w-full">
             <div class="flex items-center gap-2">
@@ -118,12 +117,16 @@
             </div>
             
             <div class="flex gap-4 items-center">
+                <!-- Login Button -->
                 <button id="btn-login" class="hidden px-3 py-1.5 bg-[#111] border border-gold text-gold text-xs font-bold rounded" onclick="window.loginGoogle()">Login</button>
+
+                <!-- User Profile Dropdown -->
                 <div id="user-menu-container" class="relative hidden">
                     <button onclick="window.toggleUserMenu()" class="flex items-center justify-center relative w-9 h-9 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:border-gold hover:border-gold transition-colors bg-[#1A1A1A]">
                         <span id="header-avatar-icon" class="material-icons text-xl text-gray-500">account_circle</span>
                         <img id="header-avatar-img" src="" referrerpolicy="no-referrer" crossorigin="anonymous" class="w-full h-full object-cover hidden absolute inset-0" onerror="this.style.display='none';">
                     </button>
+
                     <div id="user-menu-dropdown" class="hidden absolute top-full mt-3 right-0 w-52 bg-[#1E1E1E] border border-[#333] rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-[60] overflow-hidden transform origin-top-right transition-all">
                         <div class="px-4 py-3 border-b border-[#333] bg-[#252525]">
                             <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Signed in as</p>
@@ -131,17 +134,21 @@
                         </div>
                         <div class="py-1">
                             <button onclick="window.openSettings()" class="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-[#D4AF37] hover:text-black transition flex items-center gap-3">
-                                <span class="material-icons text-[18px]">settings</span> <span class="font-medium">資料來源設定</span>
+                                <span class="material-icons text-[18px]">settings</span> 
+                                <span class="font-medium">資料來源設定</span>
                             </button>
                             <button onclick="window.openHelp()" class="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-[#D4AF37] hover:text-black transition flex items-center gap-3">
-                                <span class="material-icons text-[18px]">help_outline</span> <span class="font-medium">使用說明</span>
+                                <span class="material-icons text-[18px]">help_outline</span> 
+                                <span class="font-medium">使用說明</span>
                             </button>
                             <div class="border-t border-[#333] my-1"></div>
                             <button onclick="window.logout()" class="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-900/20 transition flex items-center gap-3">
-                                <span class="material-icons text-[18px]">logout</span> <span class="font-medium">登出帳戶</span>
+                                <span class="material-icons text-[18px]">logout</span> 
+                                <span class="font-medium">登出帳戶</span>
                             </button>
                         </div>
                     </div>
+                    
                     <div id="user-menu-overlay" onclick="window.toggleUserMenu()" class="hidden fixed inset-0 z-[59] cursor-default bg-black/20 backdrop-blur-[1px]"></div>
                 </div>
             </div>
@@ -196,7 +203,7 @@
             </div>
         </section>
 
-        <!-- List Section -->
+        <!-- List Section (Optimized Gap) -->
         <section id="page-list" class="hidden space-y-2">
             <div class="sticky top-0 bg-[#000] pt-1 pb-3 z-10 space-y-3 shadow-lg -mx-4 px-4 md:mx-0 md:px-0 md:static md:bg-transparent md:shadow-none">
                 <div class="relative">
@@ -247,6 +254,7 @@
     <!-- Detail Modal -->
     <div id="detail-modal" class="modal-fullscreen fixed inset-0 z-[55] bg-[#000] flex flex-col">
         <div class="flex-1 overflow-y-auto p-5 pb-10 hide-scrollbar">
+            <!-- Header -->
             <div class="relative mb-6 pt-4">
                 <button onclick="window.closeStockDetail()" class="absolute -top-1 -right-2 p-2 text-gray-500 hover:text-white z-10 focus:outline-none">
                     <span class="material-icons text-2xl">close</span>
@@ -259,7 +267,7 @@
                     <div class="flex items-baseline gap-2 overflow-hidden">
                         <h2 id="detail-symbol" class="text-2xl font-bold text-white font-mono leading-none flex-shrink-0">--</h2>
                         <h2 id="detail-name" class="text-2xl font-bold text-[#E5E7EB] truncate">--</h2>
-                        <button onclick="window.editStockName()" class="text-gray-500 hover:text-[#D4AF37] transition-colors focus:outline-none p-1">
+                        <button onclick="window.openEditNameModal()" class="text-gray-500 hover:text-[#D4AF37] transition-colors focus:outline-none p-1">
                              <span class="material-icons text-base">edit</span>
                         </button>
                     </div>
@@ -300,6 +308,29 @@
             </div>
             
             <div class="mb-12"><div class="flex items-center gap-3 mb-4"><button onclick="window.loadReport()" class="px-4 py-2 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black transition-all text-[#D4AF37] text-[12px] font-bold tracking-widest rounded border border-[#D4AF37]/30 flex items-center gap-2 shadow-lg focus:outline-none"><span class="material-icons text-base">cloud_search</span> 搜尋雲端報告</button><div class="flex items-center text-[12px] text-gray-500 font-mono"><span class="mr-2">目標:</span><span id="debug-symbol" class="text-[#D4AF37] font-bold">--</span></div></div><div id="report-section" class="rounded-xl overflow-hidden relative min-h-[0px]"><div id="report-loading" class="hidden flex-col items-center py-10"><span class="material-icons animate-spin text-[#D4AF37] mb-3 text-4xl">sync</span><p class="text-[13px] text-gray-500 tracking-[0.3em] font-bold">SEARCHING...</p></div><div id="report-content" class="w-full hidden bg-white"><iframe id="report-frame" class="w-full border-none block" scrolling="no"></iframe></div></div></div>
+        </div>
+    </div>
+
+    <!-- Edit Name Modal (New Custom Modal) -->
+    <div id="edit-name-modal" class="modal fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+        <div class="app-card w-full max-w-xs p-6 space-y-5 border border-[#333] shadow-2xl relative overflow-hidden">
+            <!-- Decorative Accent -->
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent opacity-50"></div>
+            
+            <div class="text-center">
+                <h3 class="text-gold font-bold tracking-widest text-lg mb-1">EDIT NAME</h3>
+                <p class="text-[10px] text-gray-500 uppercase tracking-wide">Update Stock Name</p>
+            </div>
+            
+            <div class="space-y-1">
+                <label class="text-[10px] text-gray-400 font-bold tracking-wide block ml-1">新名稱</label>
+                <input type="text" id="edit-name-input" class="w-full bg-[#050505] border border-[#333] rounded-lg px-4 py-3 text-sm text-[#D4AF37] font-bold focus:border-gold outline-none transition-colors placeholder-gray-800 text-center" placeholder="輸入名稱">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button onclick="window.closeEditNameModal()" class="w-full bg-[#1A1A1A] hover:bg-[#252525] text-gray-400 font-bold py-2.5 rounded text-xs tracking-widest transition border border-[#333] focus:outline-none">CANCEL</button>
+                <button onclick="window.confirmEditName()" class="w-full bg-gold hover:bg-[#FFE082] text-black font-bold py-2.5 rounded text-xs tracking-widest shadow-lg transition active:scale-95 focus:outline-none">UPDATE</button>
+            </div>
         </div>
     </div>
 
@@ -646,7 +677,6 @@
             const helpModal = document.getElementById('help-modal'); 
             const helpContentEl = document.getElementById('help-content');
             if(helpModal && helpContentEl) {
-                // Dynamic assembly of help content
                 const GAS_SECTION = `
                 <section class="bg-[#1A1A1A] p-4 rounded-xl border border-[#333] shadow-lg mb-8">
                     <div class="flex justify-between items-end mb-3">
@@ -700,31 +730,69 @@
             if (window.getSelection) { window.getSelection().removeAllRanges(); }
         };
 
-        async function editStockName() {
-            if (!currentDetailSymbol || !currentDetailMarket) return;
+        // --- NEW: Edit Name Modal Logic ---
+        function openEditNameModal() {
+            if (!currentDetailSymbol) return;
             const currentName = document.getElementById('detail-name').innerText;
-            const newName = prompt("請輸入新的股票名稱:", currentName);
-            
-            if (newName && newName !== currentName) {
-                if (!userScriptUrl) return window.showAlert("請先設定 GAS URL");
+            const input = document.getElementById('edit-name-input');
+            input.value = currentName === '--' ? '' : currentName; // Clear if placeholder
+            document.getElementById('edit-name-modal').classList.add('open');
+            input.focus();
+        }
+
+        function closeEditNameModal() {
+            document.getElementById('edit-name-modal').classList.remove('open');
+        }
+
+        async function confirmEditName() {
+            const input = document.getElementById('edit-name-input');
+            const newName = input.value.trim();
+            const originalName = document.getElementById('detail-name').innerText;
+
+            if (newName && newName !== originalName) {
+                if (!userScriptUrl) {
+                    closeEditNameModal();
+                    return window.showAlert("請先設定 GAS URL");
+                }
+                
+                const btn = document.querySelector('#edit-name-modal button:last-child');
+                const originalBtnText = btn.innerText;
+                btn.disabled = true;
+                btn.innerText = "UPDATING...";
+
+                // Optimistic UI Update
                 document.getElementById('detail-name').innerText = newName;
+                
                 try {
                     const res = await fetch(userScriptUrl, {
                         method: 'POST',
                         body: JSON.stringify({
                             action: 'edit_name',
-                            data: { market: currentDetailMarket, symbol: currentDetailSymbol, newName: newName }
+                            data: {
+                                market: currentDetailMarket,
+                                symbol: currentDetailSymbol,
+                                newName: newName
+                            }
                         })
                     });
                     const json = await res.json();
+                    
                     if(json.success) {
+                        closeEditNameModal();
                         window.showAlert("名稱更新成功 ✅");
-                        await syncSheetData(); 
-                    } else { throw new Error(json.message); }
+                        await syncSheetData(); // Sync in background
+                    } else {
+                        throw new Error(json.message);
+                    }
                 } catch(e) {
                     window.showAlert("更新失敗: " + e.message);
-                    document.getElementById('detail-name').innerText = currentName; 
+                    document.getElementById('detail-name').innerText = originalName; // Revert
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = originalBtnText;
                 }
+            } else {
+                closeEditNameModal(); // No change
             }
         }
 
@@ -855,32 +923,8 @@
 
         function setTxType(t) { txType = t; window.resetTxStatus(); const bB=document.getElementById('btn-tx-buy'), bS=document.getElementById('btn-tx-sell'); if(t==='buy'){ bB.className="tx-btn tx-btn-buy-active flex-1"; bS.className="tx-btn tx-btn-inactive flex-1"; }else{ bB.className="tx-btn tx-btn-inactive flex-1"; bS.className="tx-btn tx-btn-sell-active flex-1"; } }
         function resetTxStatus() { const sD=document.getElementById('tx-status'), sB=document.getElementById('btn-tx-submit'); if(sD) sD.innerHTML=""; if(sB){ sB.disabled=false; sB.innerText="確認新增"; sB.classList.remove('opacity-50','cursor-not-allowed'); } }
-        
-        function lookupSymbolName() { 
-            const m = document.getElementById('tx-market').value;
-            const s = document.getElementById('tx-symbol').value.trim().toUpperCase();
-            const nameInput = document.getElementById('tx-name');
-            
-            if(!s) {
-                nameInput.value = '';
-                return;
-            } 
-            
-            const stock = allPortfolioData.find(i => String(i.symbol).toUpperCase() === s && (i.market === m)); 
-            if(stock) {
-                nameInput.value = stock.name || "";
-                nameInput.setAttribute('data-auto-filled', 'true');
-            } else {
-                if (document.activeElement !== nameInput) {
-                     if (!nameInput.value || nameInput.getAttribute('data-auto-filled') === 'true') {
-                         nameInput.value = '';
-                         nameInput.removeAttribute('data-auto-filled');
-                     }
-                }
-            }
-        }
-        
-        function openTransactionModal(m, s) { const mS=document.getElementById('tx-market'), sI=document.getElementById('tx-symbol'), d=document.getElementById('tx-name-display'); mS.value=m||'TW'; sI.value=s||''; document.getElementById('tx-name').value = ''; window.resetTxStatus(); if(s) window.lookupSymbolName(); mS.disabled=!!s; sI.readOnly=!!s; if(s) sI.classList.add('opacity-60','cursor-not-allowed'); else sI.classList.remove('opacity-60','cursor-not-allowed'); document.getElementById('tx-price').value=''; document.getElementById('tx-qty').value=''; window.setTxType('buy'); document.getElementById('transaction-modal').classList.add('open'); }
+        function lookupSymbolName() { const m=document.getElementById('tx-market').value, s=document.getElementById('tx-symbol').value.trim().toUpperCase(), d=document.getElementById('tx-name-display'); if(!s){d.innerText='';d.style.opacity='0';return;} const stock=allPortfolioData.find(i=>String(i.symbol).toUpperCase()===s && (i.market===m)); d.style.opacity='1'; if(stock){d.innerText=stock.name;d.className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-right text-gray-400 font-bold truncate max-w-[60%] pointer-events-none";}else{d.innerText="NEW";d.className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[10px] font-bold text-blue-400 bg-blue-900/30 px-1.5 py-0.5 rounded border border-blue-900/50 pointer-events-none";}}
+        function openTransactionModal(m, s) { const mS=document.getElementById('tx-market'), sI=document.getElementById('tx-symbol'), d=document.getElementById('tx-name-display'); mS.value=m||'TW'; sI.value=s||''; d.innerText=''; window.resetTxStatus(); if(s) window.lookupSymbolName(); mS.disabled=!!s; sI.readOnly=!!s; if(s) sI.classList.add('opacity-60','cursor-not-allowed'); else sI.classList.remove('opacity-60','cursor-not-allowed'); document.getElementById('tx-price').value=''; document.getElementById('tx-qty').value=''; window.setTxType('buy'); document.getElementById('transaction-modal').classList.add('open'); }
 
         try {
             window.updateUserUI=updateUserUI; window.toggleUserMenu=toggleUserMenu; window.loadUserSettings=loadUserSettings; window.closeSystemModal=closeSystemModal; window.showAlert=showAlert; window.renderChart=renderChart; window.filterStocks=filterStocks; window.renderStockList=renderStockList; window.openStockDetail=openStockDetail; window.closeStockDetail=closeStockDetail; window.loadReport=loadReport; window.syncSheetData=syncSheetData; 
@@ -897,7 +941,9 @@
             window.updateHomeChart = updateHomeChart;
             window.openHelp = openHelp;
             window.copyGasCode = copyGasCode;
-            window.editStockName = editStockName;
+            window.openEditNameModal = openEditNameModal;
+            window.closeEditNameModal = closeEditNameModal;
+            window.confirmEditName = confirmEditName;
         } catch(e) {
             console.error("Binding Error:", e);
         }
