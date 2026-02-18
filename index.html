@@ -1,5 +1,12 @@
-// v2.16.2 (Hotfix)
 
+<!-- 
+  [VER] v2.16.1
+  [DESC] 
+    1. UI: 緊湊型新增交易視窗 (Compact Transaction Modal)
+    2. UI: 詳情頁佈局優化 (溫度計延展、總成本移除)
+    3. Logic: 支援新股名稱寫入與既有股名稱更新
+    4. Bug Fix: 修復綁定與語法錯誤
+-->
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -7,6 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>維股利</title>
     
+    <!-- PWA Settings -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -102,6 +110,7 @@
     </style>
 </head>
 <body>
+    <!-- Header -->
     <header class="bg-[#050505] p-4 sticky top-0 z-50 border-b border-[#333] pt-[max(env(safe-area-inset-top),36px)]">
         <div class="flex justify-between items-center max-w-7xl mx-auto w-full">
             <div class="flex items-center gap-2">
@@ -140,7 +149,9 @@
         </div>
     </header>
 
+    <!-- Main Content -->
     <main class="w-full max-w-md md:max-w-7xl mx-auto p-4 space-y-6 min-h-screen">
+        <!-- Home Section -->
         <section id="page-home" class="active space-y-6 md:space-y-0 md:grid md:grid-cols-2 md:gap-6 lg:gap-8">
             <div class="app-card p-6 relative overflow-hidden">
                 <div class="absolute -right-6 -top-6 opacity-10"><span class="material-icons text-9xl text-gold">account_balance</span></div>
@@ -186,6 +197,7 @@
             </div>
         </section>
 
+        <!-- List Section -->
         <section id="page-list" class="hidden space-y-2">
             <div class="sticky top-0 bg-[#000] pt-1 pb-3 z-10 space-y-3 shadow-lg -mx-4 px-4 md:mx-0 md:px-0 md:static md:bg-transparent md:shadow-none">
                 <div class="relative">
@@ -221,6 +233,7 @@
             <div id="stock-list-container" class="md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 pb-24"></div>
         </section>
 
+        <!-- Pick Stock Section -->
         <section id="page-pick" class="hidden min-h-[70vh] flex flex-col items-center justify-center text-center p-8">
              <div class="w-24 h-24 rounded-full bg-[#121212] border-2 border-dashed border-[#333] flex items-center justify-center mb-6 animate-pulse">
                 <span class="material-icons text-5xl text-gray-700">manage_search</span>
@@ -232,6 +245,7 @@
         </section>
     </main>
 
+    <!-- Detail Modal -->
     <div id="detail-modal" class="modal-fullscreen fixed inset-0 z-[55] bg-[#000] flex flex-col">
         <div class="flex-1 overflow-y-auto p-5 pb-10 hide-scrollbar">
             <div class="relative mb-6 pt-4">
@@ -290,6 +304,7 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
     <div id="settings-modal" class="modal fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
         <div class="app-card w-full max-w-sm p-6 space-y-5">
             <div class="flex justify-between items-center mb-1"><h3 class="text-gold font-bold tracking-widest text-lg">SETTINGS</h3><button onclick="window.openHelp()" class="text-gray-500 hover:text-gold transition focus:outline-none"><span class="material-icons">help_outline</span></button></div>
@@ -300,6 +315,7 @@
         </div>
     </div>
 
+    <!-- Help Modal -->
     <div id="help-modal" class="modal fixed inset-0 z-[75] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4">
         <div class="app-card w-full max-w-lg flex flex-col max-h-[85vh]">
             <div class="bg-[#111] p-4 flex justify-between items-center border-b border-[#333]"><h3 class="text-white text-sm font-bold tracking-widest">使用說明書</h3><button onclick="window.closeHelp()" class="text-gray-500 hover:text-white focus:outline-none"><span class="material-icons text-xl">close</span></button></div>
@@ -307,6 +323,7 @@
         </div>
     </div>
  
+    <!-- Transaction Modal (Compact) -->
     <div id="transaction-modal" class="modal fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
         <div class="app-card w-full max-w-sm flex flex-col max-h-[90vh]">
             <div class="bg-[#111] p-4 flex justify-between items-center border-b border-[#333]">
@@ -367,8 +384,7 @@
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        
+    
         import { TEXT_CONTENT } from './help_data.js';
 
         let firebaseConfig = { apiKey: "AIzaSyCG3akQbcQvm1khoNyJ0S5xmwNftruo2D8", authDomain: "investment-dashboard-741c3.firebaseapp.com", projectId: "investment-dashboard-741c3", storageBucket: "investment-dashboard-741c3.firebasestorage.app", messagingSenderId: "542046198044", appId: "1:542046198044:web:e3949cae05a0c8a14cc2d9" };
@@ -448,9 +464,6 @@
             const avatarIcon = document.getElementById('header-avatar-icon');
             const menuUserName = document.getElementById('menu-user-name');
 
-            // 【關鍵修正 1】每次更新 UI 時，先強制「顯示」灰頭像 (確保它永遠在底部待命)
-            if(avatarIcon) avatarIcon.classList.remove('hidden');
-
             if (user.isAnonymous) {
                 if(btnLogin) btnLogin.classList.remove('hidden');
                 if(userMenu) userMenu.classList.add('hidden');
@@ -460,15 +473,8 @@
                 
                 const photo = user.photoURL;
                 if(photo && avatarImg) {
-                    // 【關鍵修正 2】如果之前 onerror 觸發過，會留下 display:none，這裡必須強制清除！
-                    avatarImg.style.display = ''; 
-                    
                     avatarImg.src = photo;
                     avatarImg.classList.remove('hidden');
-                    // 注意：這裡絕對不要寫 avatarIcon.classList.add('hidden')
-                } else {
-                    // 沒照片時，隱藏圖片層，讓底下的灰頭像露出來
-                    if(avatarImg) avatarImg.classList.add('hidden');
                 }
                 
                 if(menuUserName) menuUserName.innerText = user.displayName || user.email || "User";
@@ -639,8 +645,26 @@
             const helpModal = document.getElementById('help-modal'); 
             const helpContentEl = document.getElementById('help-content');
             if(helpModal && helpContentEl) {
-                // [修改] 移除 GAS_SECTION 代碼區塊，直接顯示 help_data.js 的內容
-                const FULL_HELP_HTML = `<div id="help-body" class="space-y-8 max-w-2xl mx-auto">${TEXT_CONTENT}</div>`;
+                // Dynamic assembly of help content
+                const GAS_SECTION = `
+                <section class="bg-[#1A1A1A] p-4 rounded-xl border border-[#333] shadow-lg mb-8">
+                    <div class="flex justify-between items-end mb-3">
+                        <div>
+                            <h4 class="text-gold font-bold text-lg leading-none mb-1">系統後端代碼</h4>
+                            <span class="text-[11px] text-gray-500 font-mono">Google Apps Script (v24)</span>
+                        </div>
+                        <button onclick="window.copyGasCode()" id="btn-copy-gas" class="bg-gold hover:bg-[#FFE082] text-black text-xs font-bold px-4 py-1.5 rounded transition shadow-lg flex items-center gap-1 active:scale-95 focus:outline-none">
+                            <span class="material-icons text-sm">content_copy</span>
+                            <span id="btn-copy-text">複製代碼</span>
+                        </button>
+                    </div>
+                    <div class="relative group">
+                        <textarea id="gas-code-area" readonly class="w-full bg-[#0A0A0A] text-gray-400 text-[11px] font-mono p-3 rounded border border-[#333] h-48 resize-none focus:outline-none focus:border-gold/50 transition-colors selection:bg-gold selection:text-black leading-relaxed hide-scrollbar" spellcheck="false">${GAS_SCRIPT_DATA}</textarea>
+                        <div class="absolute bottom-2 right-4 text-[10px] text-gray-600 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">唯讀預覽 (Read Only)</div>
+                    </div>
+                </section>`;
+
+                const FULL_HELP_HTML = `<div id="help-body" class="space-y-8 max-w-2xl mx-auto">${GAS_SECTION}${TEXT_CONTENT}</div>`;
                 
                 helpContentEl.innerHTML = FULL_HELP_HTML; 
                 helpModal.classList.add('open'); 
