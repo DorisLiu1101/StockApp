@@ -1,9 +1,10 @@
 <!-- 
-  [VER] v2.16.5
+  [VER] v2.16.6
   [DESC] 
     1. Google 登入機制由「彈出視窗」改為更適合行動端的「頁面跳轉」，並補上錯誤提示防護網]
     2. 修復未寫入closeHelp導致的無法關閉說明視窗問題
     3. 修復頭像載入錯誤導致的菜單無法顯示問題
+    4. 修改公司名稱，廢除瀏覽器預設彈窗，改為行內編輯框
 
 
 -->
@@ -634,34 +635,47 @@
             alert("建構中");
         }
         function closeHelp() {}
-
-        async function editStockName() {
+       
+        function editStockName() {
             if (!currentDetailSymbol || !currentDetailMarket) return;
-            const currentName = document.getElementById('detail-name').innerText;
-            const newName = prompt("請輸入新的股票名稱:", currentName);
+            const nameEl = document.getElementById('detail-name');
+            // 防止重複點擊產生多個輸入框
+            if (nameEl.querySelector('input')) return; 
             
-            if (newName && newName !== currentName) {
-                if (!userScriptUrl) return window.showAlert("請先設定 GAS URL");
-                document.getElementById('detail-name').innerText = newName;
-                try {
-                    const res = await fetch(userScriptUrl, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            action: 'edit_name',
-                            data: { market: currentDetailMarket, symbol: currentDetailSymbol, newName: newName }
-                        })
-                    });
-                    const json = await res.json();
-                    if(json.success) {
-                        window.showAlert("名稱更新成功 ✅");
-                        await syncSheetData(); 
-                    } else { throw new Error(json.message); }
-                } catch(e) {
-                    window.showAlert("更新失敗: " + e.message);
-                    document.getElementById('detail-name').innerText = currentName; 
-                }
-            }
+            const currentName = nameEl.innerText;
+            // 動態將文字替換為「輸入框 + 勾勾 + 叉叉」的精緻 UI
+            nameEl.innerHTML = `<div class="flex items-center gap-2"><input type="text" id="inline-name-input" value="${currentName}" class="bg-[#1A1A1A] border border-[#D4AF37] rounded px-2 py-0.5 text-[18px] text-white w-28 focus:outline-none shadow-inner"><button onclick="window.saveInlineName('${currentName}')" class="text-green-500 hover:text-green-400 p-1 flex items-center bg-[#2A2A2A] rounded border border-green-900/50"><span class="material-icons text-sm">check</span></button><button onclick="window.cancelInlineName('${currentName}')" class="text-red-500 hover:text-red-400 p-1 flex items-center bg-[#2A2A2A] rounded border border-red-900/50"><span class="material-icons text-sm">close</span></button></div>`;
         }
+
+        window.cancelInlineName = (oldName) => { 
+            document.getElementById('detail-name').innerText = oldName; 
+        };
+
+        window.saveInlineName = async (oldName) => {
+            const newName = document.getElementById('inline-name-input').value.trim();
+            const nameEl = document.getElementById('detail-name');
+            // 如果沒改字或空白，直接恢復原狀
+            if (!newName || newName === oldName) { nameEl.innerText = oldName; return; }
+            if (!userScriptUrl) { window.showAlert("請先設定 GAS URL"); nameEl.innerText = oldName; return; }
+            
+            // 顯示存檔中的過場動畫
+            nameEl.innerHTML = `<span class="text-sm text-gray-400 animate-pulse font-mono tracking-widest">Saving...</span>`;
+            
+            try {
+                const res = await fetch(userScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'edit_name', data: { market: currentDetailMarket, symbol: currentDetailSymbol, newName: newName } }) });
+                const json = await res.json();
+                if(json.success) { 
+                    nameEl.innerText = newName; 
+                    await syncSheetData(); 
+                } else { 
+                    throw new Error(json.message); 
+                }
+            } catch(e) { 
+                window.showAlert("更新失敗: " + e.message); 
+                nameEl.innerText = oldName; 
+            }
+        };
+
 
         function switchPage(p) { 
             ['page-home','page-list','page-pick'].forEach(id=>document.getElementById(id).classList.add('hidden')); 
