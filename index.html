@@ -1,7 +1,7 @@
 <!-- 
-  [VER] v2.16.3
+  [VER] v2.16.4
   [DESC] 
-    1. 移除說明書內容
+    1. Google 登入機制由「彈出視窗」改為更適合行動端的「頁面跳轉」，並補上錯誤提示防護網]
     2. 修復頭像載入錯誤導致的菜單無法顯示問題
 
 
@@ -365,7 +365,8 @@
 
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        
         import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     
         let firebaseConfig = { apiKey: "AIzaSyCG3akQbcQvm1khoNyJ0S5xmwNftruo2D8", authDomain: "investment-dashboard-741c3.firebaseapp.com", projectId: "investment-dashboard-741c3", storageBucket: "investment-dashboard-741c3.firebasestorage.app", messagingSenderId: "542046198044", appId: "1:542046198044:web:e3949cae05a0c8a14cc2d9" };
@@ -817,7 +818,10 @@
         try {
             window.updateUserUI=updateUserUI; window.toggleUserMenu=toggleUserMenu; window.loadUserSettings=loadUserSettings; window.closeSystemModal=closeSystemModal; window.showAlert=showAlert; window.renderChart=renderChart; window.filterStocks=filterStocks; window.renderStockList=renderStockList; window.openStockDetail=openStockDetail; window.closeStockDetail=closeStockDetail; window.loadReport=loadReport; window.syncSheetData=syncSheetData; 
             window.saveSettings=saveSettings; 
-            window.setTxType=setTxType; window.resetTxStatus=resetTxStatus; window.lookupSymbolName=lookupSymbolName; window.openTransactionModal=openTransactionModal; window.saveTransaction=saveTransaction; window.openSettings=openSettings; window.closeSettings=closeSettings; window.closeHelp=closeHelp; window.scrollToTop=scrollToTop; window.switchPage=switchPage; window.loginGoogle=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){}}; window.logout=async()=>signOut(auth);
+            window.setTxType=setTxType; window.resetTxStatus=resetTxStatus; window.lookupSymbolName=lookupSymbolName; window.openTransactionModal=openTransactionModal; window.saveTransaction=saveTransaction; window.openSettings=openSettings; window.closeSettings=closeSettings; window.closeHelp=closeHelp; window.scrollToTop=scrollToTop; window.switchPage=switchPage; 
+            
+            window.loginGoogle=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){window.showAlert("無法開啟登入畫面：" + e.message, "系統提示");}};
+            window.logout=async()=>{try{await signOut(auth); window.showAlert("已登出", "系統提示");}catch(e){window.showAlert("登出失敗：" + e.message, "系統提示");}};
             
             window.toggleFilterMenu = toggleFilterMenu;
             window.setMarketFilter = setMarketFilter;
