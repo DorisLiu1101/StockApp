@@ -1,11 +1,10 @@
-
 <!-- 
-  [VER] v2.16.1
+  [VER] v2.16.3
   [DESC] 
-    1. UI: 緊湊型新增交易視窗 (Compact Transaction Modal)
-    2. UI: 詳情頁佈局優化 (溫度計延展、總成本移除)
-    3. Logic: 支援新股名稱寫入與既有股名稱更新
-    4. Bug Fix: 修復綁定與語法錯誤
+    1. 移除說明書內容
+    2. 修復頭像載入錯誤導致的菜單無法顯示問題
+
+
 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -66,8 +65,8 @@
         .spin { animation: spin 1s linear infinite; } @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         
         /* Custom Dropdown */
         .custom-dropdown { background-color: #1E1E1E; border: 1px solid #4B5563; border-radius: 0.75rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); overflow: hidden; z-index: 60; min-width: 180px; }
@@ -94,14 +93,6 @@
         /* Chart Filter Chip */
         .chart-filter-chip { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; cursor: pointer; border: 1px solid #333; color: #666; transition: all 0.2s; }
         .chart-filter-chip.active { background-color: #D4AF37; color: #000; border-color: #D4AF37; }
-        
-        /* Help Content Styles */
-        .help-content h4 { color: #D4AF37; font-weight: bold; font-size: 1.25rem; margin-bottom: 1rem; border-bottom: 1px solid #333; padding-bottom: 0.5rem; }
-        .help-content ul { padding-left: 1.25rem; list-style-type: disc; margin-bottom: 1.5rem; color: #D1D5DB; line-height: 1.625; }
-        .help-content li { margin-bottom: 0.75rem; }
-        .help-content strong { color: #FFFFFF; }
-        .help-content code { background: #222; padding: 2px 5px; border-radius: 4px; font-family: monospace; color: #4DB6AC; }
-        .help-content .bg-gold { background-color: #D4AF37; color: black; }
         
         .ai-response h3 { color: #D4AF37; font-weight: bold; margin-bottom: 0.5em; font-size: 1.1em; }
         .ai-response p { margin-bottom: 0.8em; line-height: 1.6; color: #E5E7EB; }
@@ -315,14 +306,6 @@
         </div>
     </div>
 
-    <!-- Help Modal -->
-    <div id="help-modal" class="modal fixed inset-0 z-[75] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4">
-        <div class="app-card w-full max-w-lg flex flex-col max-h-[85vh]">
-            <div class="bg-[#111] p-4 flex justify-between items-center border-b border-[#333]"><h3 class="text-white text-sm font-bold tracking-widest">使用說明書</h3><button onclick="window.closeHelp()" class="text-gray-500 hover:text-white focus:outline-none"><span class="material-icons text-xl">close</span></button></div>
-            <div class="p-6 overflow-y-auto text-sm text-gray-300 space-y-6 leading-relaxed help-content"><div id="help-content">Loading...</div></div>
-        </div>
-    </div>
- 
     <!-- Transaction Modal (Compact) -->
     <div id="transaction-modal" class="modal fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
         <div class="app-card w-full max-w-sm flex flex-col max-h-[90vh]">
@@ -385,8 +368,6 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     
-        import { TEXT_CONTENT } from './help_data.js';
-
         let firebaseConfig = { apiKey: "AIzaSyCG3akQbcQvm1khoNyJ0S5xmwNftruo2D8", authDomain: "investment-dashboard-741c3.firebaseapp.com", projectId: "investment-dashboard-741c3", storageBucket: "investment-dashboard-741c3.firebasestorage.app", messagingSenderId: "542046198044", appId: "1:542046198044:web:e3949cae05a0c8a14cc2d9" };
         if (typeof __firebase_config !== 'undefined' && __firebase_config) { try { firebaseConfig = JSON.parse(__firebase_config); } catch(e) {} }
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -473,8 +454,14 @@
                 
                 const photo = user.photoURL;
                 if(photo && avatarImg) {
+                 // 【關鍵修正 2】如果之前 onerror 觸發過，會留下 display:none，這裡必須強制清除！
+                    avatarImg.style.display = '';   
                     avatarImg.src = photo;
                     avatarImg.classList.remove('hidden');
+                    // 注意：這裡絕對不要寫 avatarIcon.classList.add('hidden')
+                } else {
+                    // 沒照片時，隱藏圖片層，讓底下的灰頭像露出來
+                    if(avatarImg) avatarImg.classList.add('hidden');
                 }
                 
                 if(menuUserName) menuUserName.innerText = user.displayName || user.email || "User";
@@ -642,62 +629,8 @@
         function closeTransactionModal() { document.getElementById('transaction-modal').classList.remove('open'); }
         
         function openHelp() { 
-            const helpModal = document.getElementById('help-modal'); 
-            const helpContentEl = document.getElementById('help-content');
-            if(helpModal && helpContentEl) {
-                // Dynamic assembly of help content
-                const GAS_SECTION = `
-                <section class="bg-[#1A1A1A] p-4 rounded-xl border border-[#333] shadow-lg mb-8">
-                    <div class="flex justify-between items-end mb-3">
-                        <div>
-                            <h4 class="text-gold font-bold text-lg leading-none mb-1">系統後端代碼</h4>
-                            <span class="text-[11px] text-gray-500 font-mono">Google Apps Script (v24)</span>
-                        </div>
-                        <button onclick="window.copyGasCode()" id="btn-copy-gas" class="bg-gold hover:bg-[#FFE082] text-black text-xs font-bold px-4 py-1.5 rounded transition shadow-lg flex items-center gap-1 active:scale-95 focus:outline-none">
-                            <span class="material-icons text-sm">content_copy</span>
-                            <span id="btn-copy-text">複製代碼</span>
-                        </button>
-                    </div>
-                    <div class="relative group">
-                        <textarea id="gas-code-area" readonly class="w-full bg-[#0A0A0A] text-gray-400 text-[11px] font-mono p-3 rounded border border-[#333] h-48 resize-none focus:outline-none focus:border-gold/50 transition-colors selection:bg-gold selection:text-black leading-relaxed hide-scrollbar" spellcheck="false">${GAS_SCRIPT_DATA}</textarea>
-                        <div class="absolute bottom-2 right-4 text-[10px] text-gray-600 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">唯讀預覽 (Read Only)</div>
-                    </div>
-                </section>`;
-
-                const FULL_HELP_HTML = `<div id="help-body" class="space-y-8 max-w-2xl mx-auto">${GAS_SECTION}${TEXT_CONTENT}</div>`;
-                
-                helpContentEl.innerHTML = FULL_HELP_HTML; 
-                helpModal.classList.add('open'); 
-                
-                const menu = document.getElementById('user-menu-dropdown');
-                const overlay = document.getElementById('user-menu-overlay');
-                if (menu && !menu.classList.contains('hidden')) {
-                    menu.classList.add('hidden');
-                    if(overlay) overlay.classList.add('hidden');
-                }
-            }
+            alert("建構中");
         }
-
-        function closeHelp() { 
-            document.getElementById('help-modal').classList.remove('open'); 
-        }
-
-        function copyGasCode() {
-            const copyText = document.getElementById("gas-code-area");
-            if(!copyText) return;
-            copyText.select();
-            copyText.setSelectionRange(0, 99999); 
-            try {
-                const successful = document.execCommand('copy');
-                const btnText = document.getElementById('btn-copy-text');
-                if(successful) {
-                    const originalText = btnText.innerText;
-                    btnText.innerText = "已複製！";
-                    setTimeout(() => { if(btnText) btnText.innerText = originalText; }, 2000);
-                } else { window.showAlert("複製失敗，請手動複製。"); }
-            } catch (err) { console.error('Fallback copy failed', err); window.showAlert("無法複製，請手動全選複製。"); }
-            if (window.getSelection) { window.getSelection().removeAllRanges(); }
-        };
 
         async function editStockName() {
             if (!currentDetailSymbol || !currentDetailMarket) return;
@@ -895,7 +828,6 @@
             window.setChartFilter = setChartFilter;
             window.updateHomeChart = updateHomeChart;
             window.openHelp = openHelp;
-            window.copyGasCode = copyGasCode;
             window.editStockName = editStockName;
         } catch(e) {
             console.error("Binding Error:", e);
