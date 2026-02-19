@@ -1,8 +1,9 @@
 <!-- 
-  [VER] v2.16.4
+  [VER] v2.16.5
   [DESC] 
     1. Google 登入機制由「彈出視窗」改為更適合行動端的「頁面跳轉」，並補上錯誤提示防護網]
-    2. 修復頭像載入錯誤導致的菜單無法顯示問題
+    2. 修復未寫入closeHelp導致的無法關閉說明視窗問題
+    3. 修復頭像載入錯誤導致的菜單無法顯示問題
 
 
 -->
@@ -632,6 +633,7 @@
         function openHelp() { 
             alert("建構中");
         }
+        function closeHelp() {}
 
         async function editStockName() {
             if (!currentDetailSymbol || !currentDetailMarket) return;
