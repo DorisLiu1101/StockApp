@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>維股利投資分析報告 - 智能動態版</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <style type="text/css">
+        /* --- 1. 設計師調色盤 (保留您原本的絕美設計) --- */
+        :root {
+            --bg-body: #0f1014;
+            --glass-bg: rgba(30, 34, 45, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --color-primary: #FFD700; 
+            --color-text: #F0F0F0; 
+            --color-muted: #94A3B8; 
+            --color-up: #4ADE80;   
+            --color-down: #F87171; 
+            --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --radius: 16px;
+            --spacing: 10px;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 3px; transition: background 0.3s; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+        * { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.15) transparent; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-body);
+            background-image: radial-gradient(at 0% 0%, rgba(88, 28, 135, 0.15) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(15, 118, 110, 0.15) 0px, transparent 50%);
+            background-attachment: fixed; color: var(--color-text); font-family: 'Roboto', 'Noto Sans TC', sans-serif;
+            margin: 0; padding: 20px; font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+        }
+
+        /* 嚴格字體限制 */
+        small, footer, .tag, .text-sm { font-size: 11pt !important; opacity: 0.9; }
+        a { color: var(--color-primary); text-decoration: none; border-bottom: 1px dotted transparent; }
+        a:hover { text-decoration: none; border-bottom-color: var(--color-primary); opacity: 0.8; }
+
+        .container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--spacing); }
+        .card { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: var(--radius); padding: 10px; box-shadow: var(--shadow-card); border: 1px solid var(--glass-border); }
+
+        .report-section { padding: 25px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.15); background: transparent; }
+        .report-section:last-child { border-bottom: none; }
+        .report-section h2 { margin-top: 0; font-size: 1.5rem; color: var(--color-primary); border-left: 4px solid var(--color-primary); padding-left: 10px; margin-bottom: 15px; }
+        .report-section h2::before { display: none; }
+
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 5px; }
+        @media (max-width: 768px) { .grid-3 { grid-template-columns: 1fr; } body { padding: 15px; } .header-card { padding-top: 45px !important; } }
+
+        h1, h2, h3 { margin: 0 0 12px 0; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
+        h1 { font-size: 2rem; color: #fff; }
+        .card h2 { font-size: 1.4rem; display: flex; align-items: center; margin-top: 10px; margin-bottom: 20px; }
+        .card h2::before { content: ''; display: inline-block; width: 4px; height: 20px; background: var(--color-primary); margin-right: 12px; border-radius: 2px; }
+        h3 { font-size: 1.1rem; color: var(--color-text); display: flex; align-items: center; gap: 10px; opacity: 0.95; }
+        .report-section h3 { justify-content: flex-start; margin-top: 20px; }
+        .card h3 { justify-content: center; } .text-left h3 { justify-content: flex-start; } h3 i { color: var(--color-primary); }
+
+        .header-card { position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%); }
+        .header-card h1 { margin-bottom: 4px; line-height: 1.2; }
+        .header-card p { margin: 0; }
+        .report-date-stamp { position: absolute; top: 10px; left: 10px; font-family: 'Roboto', monospace; font-size: 11pt; color: var(--color-muted); z-index: 10; opacity: 0.6; }
+        .btn-header-download { position: absolute; top: 10px; right: 10px; font-family: 'Roboto', monospace; font-size: 11pt; color: var(--color-muted); border: none; padding: 0; background: none; cursor: pointer; display: flex; align-items: center; gap: 6px; z-index: 10; opacity: 0.6; }
+        .btn-header-download:hover { color: var(--color-primary); opacity: 1; }
+
+        .rating-split-container { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.05); }
+        .rating-col { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0 5px; }
+        .rating-col-left { border-right: 1px solid rgba(255,255,255,0.1); }
+        .rating-price-main { font-size: 1.6rem; font-weight: 700; color: #fff; line-height: 1.1; font-family: monospace; }
+        .rating-price-date { font-size: 11pt; color: var(--color-muted); margin-top: 2px; font-family: 'Roboto', monospace; }
+        .rating-buy-text { font-size: 1.6rem; font-weight: 800; color: var(--color-primary); line-height: 1.1; letter-spacing: 1px; }
+        .rating-signal-text { font-size: 11pt; color: var(--color-muted); margin-top: 2px; }
+
+        .gauge-container { position: relative; width: 140px; height: 70px; margin: 5px auto; overflow: hidden; }
+        .gauge-bg { position: absolute; top: 0; left: 0; width: 140px; height: 140px; background: #2c3e50; border-radius: 50%; mask: radial-gradient(transparent 53%, black 55%); -webkit-mask: radial-gradient(transparent 53%, black 55%); }
+        .gauge-fill { position: absolute; top: 0; left: 0; width: 140px; height: 140px; background: conic-gradient(from 270deg, #785a00 0%, #d4af37 50%, #fdd835 75%, transparent 75%); border-radius: 50%; mask: radial-gradient(transparent 53%, black 55%); -webkit-mask: radial-gradient(transparent 53%, black 55%); filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.5)); transition: transform 1s ease-out; }
+        .gauge-value-center { position: absolute; bottom: 0; left: 0; width: 100%; text-align: center; font-size: 2.5rem; font-weight: 800; color: #fff; line-height: 1; z-index: 20; text-shadow: 0 0 20px rgba(0,0,0,0.5); font-family: monospace; }
+
+        .thermometer-bar { height: 12px; background: linear-gradient(90deg, #4ade80 0%, #facc15 50%, #f87171 100%); border-radius: 50px; position: relative; margin: 24px 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); }
+        .thermometer-marker { position: absolute; top: -6px; width: 6px; height: 24px; background: #fff; border-radius: 4px; box-shadow: 0 0 4px #fff; transform: translateX(-50%); transition: left 1s ease-out; }
+
+        .valuation-row { display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+        .value-block { display: flex; flex-direction: column; align-items: center; min-width: 100px; }
+        .value-range { font-size: 11pt; color: var(--color-muted); margin-top: 2px; display: block; font-family: monospace; }
+        .big-number { font-size: 1.8rem; font-weight: 700; color: var(--color-primary); text-align: center; display: block; margin: 8px 0 2px 0; line-height: 1.2; font-family: monospace; }
+        .val-cheap { color: var(--color-up) !important; font-family: monospace; }
+        .val-expensive { color: var(--color-down) !important; font-family: monospace; }
+
+        details { margin-top: 15px; background: transparent; border-radius: 0; overflow: visible; border: none; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 15px; }
+        summary { padding: 10px 0; cursor: pointer; font-weight: 500; color: var(--color-primary); user-select: none; display: flex; justify-content: space-between; align-items: center; }
+        summary:hover { background: none; text-decoration: underline; }
+        summary::after { content: '+'; font-size: 1.2rem; font-weight: bold; }
+        details[open] summary::after { content: '-'; }
+
+        .table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; white-space: nowrap; margin-top: 0; }
+        th, td { padding: 14px 10px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 11pt; }
+        th { color: var(--color-muted); font-weight: 500; background: rgba(255,255,255,0.03); }
+        td { font-feature-settings: "tnum"; font-family: monospace; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255,255,255,0.03); }
+
+        .tag { padding: 4px 10px; border-radius: 20px; font-weight: 600; display: inline-block; letter-spacing: 0.5px; }
+        .tag-buy { background: rgba(74, 222, 128, 0.15); color: #4ADE80; border: 1px solid rgba(74, 222, 128, 0.3); }
+        .tag-sell { background: rgba(248, 113, 113, 0.15); color: #F87171; border: 1px solid rgba(248, 113, 113, 0.3); }
+        .tag-hold { background: rgba(250, 204, 21, 0.15); color: #FACC15; border: 1px solid rgba(250, 204, 21, 0.3); }
+
+        .summary-highlight { font-size: 1.05rem; font-weight: 400; line-height: 1.7; color: #fff; padding: 10px; border-left: 3px solid var(--color-primary); background: rgba(255, 255, 255, 0.05); margin-bottom: 16px; border-radius: 0; }
+        .alert-box { background: rgba(183, 28, 28, 0.2); border: 1px solid rgba(183, 28, 28, 0.5); color: #FECACA; padding: 10px; border-radius: 4px; margin-bottom: 16px; display: flex; gap: 10px; align-items: flex-start; }
+
+        @media print {
+            .no-print, .btn-header-download { display: none !important; }
+            body { background: #fff; color: #000; }
+            .card, .report-section { border: none; box-shadow: none; background: none; color: #000; backdrop-filter: none; border-bottom: 1px solid #ddd; }
+            h1, h2, h3, .rating-price-main, .gauge-value-center, .rating-buy-text, .big-number, .val-cheap, .val-expensive { color: #000 !important; text-shadow: none !important; }
+            details { display: block !important; border: 1px solid #eee; }
+            .summary-highlight { background: #f9f9f9; border-left-color: #000; color: #000; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    
+    <div class="card header-card">
+        <div class="report-date-stamp" id="var-report-date">YYYY/MM/DD</div>
+        <button class="btn-header-download no-print" onclick="downloadReport()" title="下載報告">
+            <i class="fas fa-download"></i> 下載
+        </button>
+        <div>
+            <h1 id="var-stock-title">---- --</h1>
+            <p class="text-sm" id="var-biz-intro" style="color: var(--color-muted);">公司核心業務簡介載入中...</p>
+        </div>
+    </div>
+
+    <div class="grid-3">
+        <div class="card" style="text-align: center;">
+            <h3 style="margin-bottom: 5px;">投資評級</h3>
+            <div class="rating-split-container">
+                <div class="rating-col rating-col-left">
+                    <div class="rating-price-main" id="var-current-price">$---.--</div>
+                    <div class="rating-price-date" id="var-price-date">Date: YYYY/MM/DD</div>
+                </div>
+                <div class="rating-col">
+                    <div class="rating-buy-text" id="var-rating-text">--</div>
+                    <div class="rating-signal-text" id="var-rating-signal">訊號運算中...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="text-align: center;">
+            <h3 style="margin-bottom: 5px;">市場信心</h3>
+            <div class="gauge-container">
+                <div class="gauge-bg">&nbsp;</div>
+                <div class="gauge-fill" id="var-gauge-fill" style="transform: rotate(0deg);">&nbsp;</div>
+                <div class="gauge-value-center" id="var-confidence-score">0</div>
+            </div>
+        </div>
+
+        <div class="card" style="text-align: center;">
+            <h3 style="margin-bottom: 5px;">預期報酬</h3>
+            <span class="big-number" id="var-irr-avg">--%</span>
+            <small class="value-range" id="var-irr-range" style="justify-content: center;">(區間：--% ~ --%)</small>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="text-left"><h3>估值儀表板</h3></div>
+        <div class="valuation-row">
+            <div class="value-block">
+                <small>淑價 (Cheap)</small>
+                <div class="val-cheap" style="font-size: 1.2rem; font-weight: bold;" id="var-cheap-avg">$---</div>
+                <small class="value-range" id="var-cheap-range">($--- ~ $---)</small>
+            </div>
+            <div style="flex: 1; margin: 0 10px; text-align: center;">
+                <small style="margin-bottom: 5px; display:block;">目前位置</small>
+                <div class="thermometer-bar">
+                    <div class="thermometer-marker" id="var-therm-marker" style="left: 0%;">&nbsp;</div>
+                </div>
+            </div>
+            <div class="value-block">
+                <small>貴價 (Expensive)</small>
+                <div class="val-expensive" style="font-size: 1.2rem; font-weight: bold;" id="var-exp-avg">$---</div>
+                <small class="value-range" id="var-exp-range">($--- ~ $---)</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="report-section">
+        <div class="text-left"><h3 id="var-op-advice">操作建議：運算中...</h3></div>
+        <p id="var-op-desc">結合股價位階與總體經濟的具體操作建議載入中...</p>
+    </div>
+
+    <div class="report-section">
+        <h2>公司概要</h2>
+        <ul>
+            <li id="var-co-dynamic"><strong>營運與動態：</strong> 載入中...</li>
+            <li id="var-co-metrics"><strong>基本指標：</strong> 載入中...</li>
+        </ul>
+    </div>
+
+    <div class="report-section">
+        <h2>1. 基本面檢視 (Fundamentals)</h2>
+        
+        <div class="text-left"><h3>A. 巴菲特五維壓力測試</h3></div>
+        <div class="summary-highlight" id="var-test-summary"><strong>測試結果摘要：</strong> 運算中...</div>
+        <details>
+            <summary>點擊展開詳細檢核結果</summary>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>檢核項目</th><th>最新數據</th><th>狀態</th></tr></thead>
+                    <tbody id="var-test-table-body">
+                        </tbody>
+                </table>
+            </div>
+        </details>
+
+        <div class="text-left"><h3>B. 數據表格 (近 5 年)</h3></div>
+        <div class="summary-highlight" id="var-fin-summary">
+            <strong>數據摘要：</strong> 運算中...<br />
+            <strong>平均殖利率：</strong> <span id="var-fin-yield">運算中...</span>
+        </div>
+        <details>
+            <summary>點擊展開詳細財務數據 (近5年)</summary>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>年度</th><th>現金股利</th><th>殖利率</th><th>EPS</th><th>配息率</th><th>ROE</th></tr></thead>
+                    <tbody id="var-fin-table-body">
+                        </tbody>
+                </table>
+            </div>
+        </details>
+
+        <div class="text-left"><h3 id="var-health-title">C. 體質總評：[---]</h3></div>
+        <div class="summary-highlight" id="var-health-desc"><strong>體質細節說明：</strong> 運算中...</div>
+        <details>
+            <summary>點擊展開檢核項目數據</summary>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>檢核項目</th><th>數據</th><th>評價</th></tr></thead>
+                    <tbody id="var-health-table-body">
+                        </tbody>
+                </table>
+            </div>
+        </details>
+    </div>
+
+    <div class="report-section">
+        <h2>2. 估價分析 (8年股息折現模型)</h2>
+        <div class="alert-box" id="var-val-alert" style="display:none;"></div>
+        <details>
+            <summary>點擊查看估價模型詳細參數與情境</summary>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>比較項目</th><th>情境 A (保守版 - 防禦)</th><th>情境 B (標準版 - 循環)</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>設定參數 (ROE)</strong></td><td id="var-val-roe-a">--%</td><td id="var-val-roe-b">--%</td></tr>
+                        <tr><td><strong>淑價 (Cheap)</strong></td><td id="var-val-cheap-a">$--</td><td id="var-val-cheap-b">$--</td></tr>
+                        <tr><td><strong>貴價 (Expensive)</strong></td><td id="var-val-exp-a">$--</td><td id="var-val-exp-b">$--</td></tr>
+                        <tr><td><strong>預期報酬率 (IRR)</strong></td><td id="var-val-irr-a">--%</td><td id="var-val-irr-b">--%</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p style="margin-top: 10px; font-size: 11pt; color: var(--color-muted);">(註：若情境 A 之 IRR 為負值或極低，代表目前股價在保守假設下缺乏安全邊際)</p>
+        </details>
+    </div>
+
+    <div class="report-section">
+        <h2>3. 市場資訊分析</h2>
+        
+        <div class="text-left"><h3>總體宏觀</h3></div>
+        <ul>
+            <li id="var-mkt-policy"><strong>政策風險：</strong> 聯網查證中...</li>
+            <li id="var-mkt-fx"><strong>匯率敏感度：</strong> 聯網查證中...</li>
+        </ul>
+
+        <div class="text-left"><h3>市場情緒</h3></div>
+        <ul>
+            <li id="var-mkt-sentiment"><strong>市場總體情緒：</strong> 聯網查證中...</li>
+            <li id="var-mkt-news"><strong>關鍵新聞：</strong> 聯網查證中...</li>
+            <li id="var-mkt-analyst"><strong>分析師觀點：</strong> 聯網查證中...</li>
+        </ul>
+
+        <div class="text-left"><h3>風險警示</h3></div>
+        <h4>1. 信心指數拆解</h4>
+        <ul id="var-risk-confidence-list">
+            <li>信心指數解讀載入中...</li>
+        </ul>
+
+        <h4>2. 風險標註 (Risk Flags)</h4>
+        <ul id="var-risk-flags-list">
+            <li>檢查中...</li>
+        </ul>
+
+        <h4>3. 三情境風險矩陣</h4>
+        <div class="table-container">
+            <table>
+                <thead><tr><th>情境</th><th>機率</th><th>假設與影響</th></tr></thead>
+                <tbody>
+                    <tr><td>🐂 <strong>牛市 (Bull)</strong></td><td id="var-matrix-prob-bull">--%</td><td id="var-matrix-desc-bull">載入中...</td></tr>
+                    <tr><td>⚖️ <strong>標準 (Base)</strong></td><td id="var-matrix-prob-base">--%</td><td id="var-matrix-desc-base">載入中...</td></tr>
+                    <tr><td>🐻 <strong>熊市 (Bear)</strong></td><td id="var-matrix-prob-bear">--%</td><td id="var-matrix-desc-bear">載入中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card" style="border-left: 5px solid var(--color-primary);">
+        <h2>4. 分析師關鍵點評</h2>
+        <ul>
+            <li id="var-conc-price-level"><strong>價格位階：</strong> 運算中...</li>
+            <li id="var-conc-gdp-signal"><strong>GDP 訊號：</strong> 運算中...</li>
+        </ul>
+        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-top: 15px;">
+            <div class="text-left"><h3>💡 最終策略建議</h3></div>
+            <p><em>"好公司 = 穩定的ROE + ROE 大於 15% + 盈再率 小於 80% + 配息率 大於 40% + 常利 大於 USD 75M + 產品不會變"</em></p>
+            <p id="var-conc-strategy">最終投資建議載入中...</p>
+        </div>
+    </div>
+
+    <footer style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; color: var(--color-muted);">
+        <p id="var-footer-sources"><strong>數據資料來源：</strong> 聯網查證中...</p>
+        <p style="font-size: 11pt; margin-top: 10px;"><em>本報告為混合 AI 動態查證與本地程式嚴謹運算生成，數據僅供參考，投資請審慎評估。</em></p>
+    </footer>
+</div>
+<script>
+    function downloadReport() {
+        const htmlContent = document.documentElement.outerHTML;
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const stockTitle = document.getElementById('var-stock-title').innerText || "報告";
+        const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+        const fileName = `${stockTitle.replace(/\s+/g, '_')}_${date}.html`;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+    }
+</script>
+</body>
+</html>
