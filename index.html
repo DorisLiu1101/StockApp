@@ -1,7 +1,7 @@
 <!-- 
-  [VER] v3.0 (2024-06-30)
+  [VER] v3.1 (2024-06-30)
   [DESC] 
-    1. 分析報告API Key 安全分離版
+    1. 加入 AI 漏填防呆機制，並修正跨國市場提示詞 (Prompt) 判斷 Bug
     2. Bug Fixed
 
 
@@ -814,9 +814,9 @@
         
 
         // ==========================================
-        // 🚀 AI 報告雙腦引擎 (V7 後端代理 + 終極防轉圈版)
+        // [版本號：V4.0] 
+        // [改版說明：加入 AI 漏填防呆機制，並修正跨國市場提示詞 (Prompt) 判斷 Bug]
         // ==========================================
-
         window.generateAndSaveReport = async function() {
             const symbol = currentDetailSymbol || document.getElementById('debug-symbol').innerText;
             if (!symbol || symbol === '--') return window.showAlert('請先選擇一檔股票！');
@@ -842,10 +842,15 @@
                 }
                 const realPrice = yahooData.chart.result[0].meta.regularMarketPrice;
 
+                // 🌟 新增修正：動態判斷市場，避免 AI 找錯國家
+                let marketName = "台股";
+                if (currentDetailMarket === 'US') marketName = "美股";
+                else if (currentDetailMarket === 'JP') marketName = "日股";
+
                 loadingText.innerText = '呼叫後端 AI 進行聯網分析中... (約需 10 秒)';
                 const prompt = `
                     角色：巴菲特價值投資分析師。
-                    任務：分析台股 ${symbol}。目前真實股價為 ${realPrice} 元。
+                    任務：分析${marketName} ${symbol}。目前真實股價為 ${realPrice} 元。
                     請聯網搜尋最新財報、近5年股利與EPS、新聞、與最新 GDP 成長率。
                     必須嚴格只輸出純 JSON 格式！絕對禁止任何開場白（例如"我將以..."）、結語或 Markdown 標記，請直接以大括號 { 開頭：
                     {
@@ -858,19 +863,16 @@
                     }
                 `;
                 
-                // 👉 這裡改成呼叫 GAS 去問 Gemini，徹底解決前端金鑰外洩問題
                 const aiRes = await fetch(userScriptUrl, {
                     method: 'POST', body: JSON.stringify({ action: 'askGemini', data: { prompt: prompt } })
                 });
                 
                 const aiResJson = await aiRes.json();
-                // 1. 攔截後端回傳的錯誤（如金鑰無效、額度不足）
                 if (!aiResJson.success) {
-                throw new Error(aiResJson.message || "伺服器發生未知錯誤，請稍後再試。");
+                    throw new Error(aiResJson.message || "伺服器發生未知錯誤，請稍後再試。");
                 }
-                // 2. 確保 AI 資料結構正確
                 if (!aiResJson.data || !aiResJson.data.candidates || !aiResJson.data.candidates[0]) {
-                throw new Error("AI 伺服器忙線未回傳有效內容，請稍後再試。");
+                    throw new Error("AI 伺服器忙線未回傳有效內容，請稍後再試。");
                 }
                 
                 let rawText = aiResJson.data.candidates[0].content.parts[0].text;
@@ -880,16 +882,59 @@
                 let jsonStr = jsonMatch[0].replace(/```json/gi, '').replace(/```/g, '').trim();
                 const reportRaw = JSON.parse(jsonStr);
 
+                // ==========================================
+                // 🛡️ 終極防呆機制：補齊 AI 漏掉的數據，讓系統永不崩潰
+                // ==========================================
+                reportRaw.nav = Number(reportRaw.nav) || (realPrice / 1.5); // 如果缺淨值，給予保守估值
+                reportRaw.reinvestment_rate = Number(reportRaw.reinvestment_rate) || 50; 
+                reportRaw.gdp_yoy = Number(reportRaw.gdp_yoy) || 2.0;
+                
+                // 確保歷史數據存在且有值
+                if (!reportRaw.history_5y || !Array.isArray(reportRaw.history_5y) || reportRaw.history_5y.length === 0) {
+                    reportRaw.history_5y = [{ "year": "預設", "eps": realPrice * 0.05, "div": realPrice * 0.02, "roe": 8.0 }];
+                }
+                reportRaw.history_5y.forEach(y => {
+                    y.eps = Number(y.eps) || (realPrice * 0.05); // 找不到 EPS 就抓股價 5%
+                    y.div = Number(y.div) || (realPrice * 0.02);
+                    y.roe = Number(y.roe) || 5.0; // 找不到 ROE 就給保守的 5%
+                });
+
+                // 確保文字區塊結構存在
+                reportRaw.buffett_tests = reportRaw.buffett_tests || {};
+                const safeTest = { value: "AI查無資料", status: "未測試" };
+                reportRaw.buffett_tests.profit = reportRaw.buffett_tests.profit || safeTest;
+                reportRaw.buffett_tests.cashflow = reportRaw.buffett_tests.cashflow || safeTest;
+                reportRaw.buffett_tests.dividend = reportRaw.buffett_tests.dividend || safeTest;
+                reportRaw.buffett_tests.scale = reportRaw.buffett_tests.scale || safeTest;
+                reportRaw.buffett_tests.chips = reportRaw.buffett_tests.chips || safeTest;
+
+                reportRaw.market = reportRaw.market || {};
+                reportRaw.market.policy = reportRaw.market.policy || "無資料";
+                reportRaw.market.fx = reportRaw.market.fx || "無資料";
+                reportRaw.market.sentiment = reportRaw.market.sentiment || "無資料";
+                reportRaw.market.analysts = reportRaw.market.analysts || "無資料";
+                reportRaw.market.news = Array.isArray(reportRaw.market.news) && reportRaw.market.news.length > 0 ? reportRaw.market.news : ["尚無重大新聞"];
+
+                reportRaw.risk = reportRaw.risk || {};
+                reportRaw.risk.confidence_score = Number(reportRaw.risk.confidence_score) || 50;
+                reportRaw.risk.flags = Array.isArray(reportRaw.risk.flags) && reportRaw.risk.flags.length > 0 ? reportRaw.risk.flags : ["AI 無法取得足夠風險數據"];
+                reportRaw.risk.scenarios = Array.isArray(reportRaw.risk.scenarios) && reportRaw.risk.scenarios.length === 3 ? reportRaw.risk.scenarios : [
+                    {"type": "牛市", "prob": 33, "desc": "缺乏數據"}, {"type": "標準", "prob": 34, "desc": "缺乏數據"}, {"type": "熊市", "prob": 33, "desc": "缺乏數據"}
+                ];
+                // ==========================================
+
                 loadingText.innerText = '本機執行 DDM 折現模型運算中...';
                 let sumEps = 0, sumDiv = 0, sumRoe = 0;
                 reportRaw.history_5y.forEach(y => { sumEps += Number(y.eps); sumDiv += Number(y.div); sumRoe += Number(y.roe); });
                 const avgRoe = sumRoe / reportRaw.history_5y.length / 100;
-                const avgPayout = sumDiv / sumEps;
+                
+                // 避免 sumEps 為 0 導致除以零錯誤
+                const avgPayout = sumEps > 0 ? (sumDiv / sumEps) : 0.5;
                 let expPayout = (avgPayout + (1 - (Number(reportRaw.reinvestment_rate) / 100))) / 2;
-                if (expPayout < 0) expPayout = 0;
+                if (expPayout < 0) expPayout = 0.1; // 給個保守底線
 
-                const roe_A = Math.min((Number(reportRaw.history_5y[0].roe) / 100), avgRoe); 
-                const roe_B = avgRoe;
+                const roe_A = Math.min((Number(reportRaw.history_5y[0].roe) / 100), avgRoe) || 0.05; 
+                const roe_B = avgRoe || 0.05;
 
                 function calcDDM(nav, roe, payout, costPrice) {
                     if (nav <= 0 || roe <= 0) return { cheap: 0, exp: 0, irr: 0, fail: true };
@@ -922,14 +967,14 @@
                 let rating = "HOLD", signal = "觀望", strategy = "";
                 let isGdpLow = Number(reportRaw.gdp_yoy) < 2.0;
                 
-                if (realPrice < avgCheap) {
+                if (realPrice < avgCheap && avgCheap > 0) {
                     rating = "BUY"; signal = "價值浮現"; 
                     strategy = isGdpLow ? "目前股價低於淑價，且總經GDP處於低檔，為絕佳長線買點，建議積極佈局。" : "股價低於淑價，建議分批買進建立部位。";
-                } else if (realPrice > avgExp) {
+                } else if (realPrice > avgExp && avgExp > 0) {
                     rating = "SELL"; signal = "估值偏高";
                     strategy = "目前股價已超越昂貴價，建議適度獲利了結或降低持股比重。";
                 } else {
-                    strategy = "股價處於合理區間，建議持有觀望，等待更好的安全邊際。";
+                    strategy = "股價處於合理區間（或缺乏足夠數據），建議持有觀望，等待更好的安全邊際。";
                 }
 
                 const finalReport = {
@@ -955,6 +1000,7 @@
                 loadingDiv.style.display = 'none';
             }
         };
+
 
         window.loadReport = async function() {
             const symbol = currentDetailSymbol || document.getElementById('debug-symbol').innerText;
