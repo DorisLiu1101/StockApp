@@ -1,8 +1,9 @@
 <!-- 
-  [VER] v3.2 (2026-02-21)
+  [VER] v3.3 (2026-02-21)
   [DESC] 
     1. 加入 AI 漏填防呆機制，並修正跨國市場提示詞 (Prompt) 判斷 Bug
     2. 導入「誠實呈現模式」，動態判斷跨國市場，若 AI 漏給財報則標示無資料並暫停估值，絕不杜撰數據
+    3. 新增台股上市(.TW)與上櫃(.TWO)自動偵測切換機制，徹底解決上櫃股票報錯問題
 
 
 -->
@@ -814,8 +815,8 @@
         
 
         // ==========================================
-        // [版本號：V4.1] 
-        // [改版說明：導入「誠實呈現模式」，動態判斷跨國市場，若 AI 漏給財報則標示無資料並暫停估值，絕不杜撰數據]
+        // [版本號：V4.2] 
+        // [改版說明：新增台股上市(.TW)與上櫃(.TWO)自動偵測切換機制，徹底解決上櫃股票報錯問題]
         // ==========================================
         window.generateAndSaveReport = async function() {
             const symbol = currentDetailSymbol || document.getElementById('debug-symbol').innerText;
@@ -829,20 +830,41 @@
             loadingDiv.style.display = 'flex';
             
             try {
-                loadingText.innerText = '抓取絕對即時股價中...';
-                let yfSymbol = symbol;
-                if (currentDetailMarket === 'TW') yfSymbol += '.TW';
-                else if (currentDetailMarket === 'JP') yfSymbol += '.T';
+                loadingText.innerText = '抓取絕對即時股價中 (自動偵測市場)...';
                 
-                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${yfSymbol}`)}`;
-                const resData = await fetch(proxyUrl);
-                const yahooData = await resData.json();
-                if (!yahooData.chart || !yahooData.chart.result || yahooData.chart.result === null) {
-                    throw new Error(`無法從 Yahoo 取得 ${yfSymbol} 的股價，請確認代號。`);
+                // 🌟 新增：獨立抓取股價的輔助小工具
+                async function getYahooPrice(s) {
+                    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${s}`)}`;
+                    const res = await fetch(proxyUrl);
+                    const data = await res.json();
+                    if (data.chart && data.chart.result && data.chart.result !== null) {
+                        return data.chart.result[0].meta.regularMarketPrice;
+                    }
+                    return null;
                 }
-                const realPrice = yahooData.chart.result[0].meta.regularMarketPrice;
 
-                // 🌟 動態判斷市場，避免 AI 找錯國家
+                let realPrice = null;
+                let yfSymbol = symbol;
+
+                // 🌟 新增：上市櫃雙重打擊自動切換機制
+                if (currentDetailMarket === 'TW') {
+                    realPrice = await getYahooPrice(`${symbol}.TW`); // 先猜上市
+                    if (realPrice !== null) {
+                        yfSymbol = `${symbol}.TW`;
+                    } else {
+                        realPrice = await getYahooPrice(`${symbol}.TWO`); // 猜錯換上櫃
+                        if (realPrice !== null) {
+                            yfSymbol = `${symbol}.TWO`;
+                        } else {
+                            throw new Error(`無法從 Yahoo 取得台股 ${symbol} (上市或上櫃) 的股價，請確認代號是否正確。`);
+                        }
+                    }
+                } else {
+                    if (currentDetailMarket === 'JP') yfSymbol += '.T';
+                    realPrice = await getYahooPrice(yfSymbol);
+                    if (realPrice === null) throw new Error(`無法從 Yahoo 取得 ${yfSymbol} 的股價，請確認代號。`);
+                }
+
                 let marketName = "台股";
                 if (currentDetailMarket === 'US') marketName = "美股";
                 else if (currentDetailMarket === 'JP') marketName = "日股";
@@ -881,9 +903,8 @@
                 // ==========================================
                 // 🛡️ 誠實呈現防呆機制：確保物件結構，但不杜撰數字
                 // ==========================================
-                let hasValidMathData = true; // 預設資料充足
+                let hasValidMathData = true;
                 
-                // 確保文字結構不崩潰
                 reportRaw.buffett_tests = reportRaw.buffett_tests || {};
                 const safeTest = { value: "--", status: "資料不足" };
                 reportRaw.buffett_tests.profit = reportRaw.buffett_tests.profit || safeTest;
@@ -903,11 +924,10 @@
                 reportRaw.risk.flags = Array.isArray(reportRaw.risk.flags) ? reportRaw.risk.flags : ["AI 未能取得特定風險數據"];
                 reportRaw.risk.scenarios = Array.isArray(reportRaw.risk.scenarios) ? reportRaw.risk.scenarios : [];
 
-                // 檢查計算所需的關鍵數字是否存在
                 if (isNaN(Number(reportRaw.nav)) || isNaN(Number(reportRaw.reinvestment_rate))) hasValidMathData = false;
                 
                 if (!reportRaw.history_5y || !Array.isArray(reportRaw.history_5y) || reportRaw.history_5y.length === 0) {
-                    reportRaw.history_5y = [{ "year": "--", "eps": "--", "div": "--", "roe": "--" }]; // 塞入佔位符，讓畫面顯示 --
+                    reportRaw.history_5y = [{ "year": "--", "eps": "--", "div": "--", "roe": "--" }];
                     hasValidMathData = false;
                 } else {
                     reportRaw.history_5y.forEach(y => {
