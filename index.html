@@ -1,8 +1,8 @@
 <!-- 
-  [VER] v3.1 (2024-06-30)
+  [VER] v3.2 (2026-02-21)
   [DESC] 
     1. 加入 AI 漏填防呆機制，並修正跨國市場提示詞 (Prompt) 判斷 Bug
-    2. Bug Fixed
+    2. 導入「誠實呈現模式」，動態判斷跨國市場，若 AI 漏給財報則標示無資料並暫停估值，絕不杜撰數據
 
 
 -->
@@ -814,8 +814,8 @@
         
 
         // ==========================================
-        // [版本號：V4.0] 
-        // [改版說明：加入 AI 漏填防呆機制，並修正跨國市場提示詞 (Prompt) 判斷 Bug]
+        // [版本號：V4.1] 
+        // [改版說明：導入「誠實呈現模式」，動態判斷跨國市場，若 AI 漏給財報則標示無資料並暫停估值，絕不杜撰數據]
         // ==========================================
         window.generateAndSaveReport = async function() {
             const symbol = currentDetailSymbol || document.getElementById('debug-symbol').innerText;
@@ -842,7 +842,7 @@
                 }
                 const realPrice = yahooData.chart.result[0].meta.regularMarketPrice;
 
-                // 🌟 新增修正：動態判斷市場，避免 AI 找錯國家
+                // 🌟 動態判斷市場，避免 AI 找錯國家
                 let marketName = "台股";
                 if (currentDetailMarket === 'US') marketName = "美股";
                 else if (currentDetailMarket === 'JP') marketName = "日股";
@@ -868,12 +868,8 @@
                 });
                 
                 const aiResJson = await aiRes.json();
-                if (!aiResJson.success) {
-                    throw new Error(aiResJson.message || "伺服器發生未知錯誤，請稍後再試。");
-                }
-                if (!aiResJson.data || !aiResJson.data.candidates || !aiResJson.data.candidates[0]) {
-                    throw new Error("AI 伺服器忙線未回傳有效內容，請稍後再試。");
-                }
+                if (!aiResJson.success) throw new Error(aiResJson.message || "伺服器發生未知錯誤，請稍後再試。");
+                if (!aiResJson.data || !aiResJson.data.candidates || !aiResJson.data.candidates[0]) throw new Error("AI 伺服器忙線未回傳有效內容，請稍後再試。");
                 
                 let rawText = aiResJson.data.candidates[0].content.parts[0].text;
                 let jsonMatch = rawText.match(/\{[\s\S]*\}/);
@@ -883,25 +879,13 @@
                 const reportRaw = JSON.parse(jsonStr);
 
                 // ==========================================
-                // 🛡️ 終極防呆機制：補齊 AI 漏掉的數據，讓系統永不崩潰
+                // 🛡️ 誠實呈現防呆機制：確保物件結構，但不杜撰數字
                 // ==========================================
-                reportRaw.nav = Number(reportRaw.nav) || (realPrice / 1.5); // 如果缺淨值，給予保守估值
-                reportRaw.reinvestment_rate = Number(reportRaw.reinvestment_rate) || 50; 
-                reportRaw.gdp_yoy = Number(reportRaw.gdp_yoy) || 2.0;
+                let hasValidMathData = true; // 預設資料充足
                 
-                // 確保歷史數據存在且有值
-                if (!reportRaw.history_5y || !Array.isArray(reportRaw.history_5y) || reportRaw.history_5y.length === 0) {
-                    reportRaw.history_5y = [{ "year": "預設", "eps": realPrice * 0.05, "div": realPrice * 0.02, "roe": 8.0 }];
-                }
-                reportRaw.history_5y.forEach(y => {
-                    y.eps = Number(y.eps) || (realPrice * 0.05); // 找不到 EPS 就抓股價 5%
-                    y.div = Number(y.div) || (realPrice * 0.02);
-                    y.roe = Number(y.roe) || 5.0; // 找不到 ROE 就給保守的 5%
-                });
-
-                // 確保文字區塊結構存在
+                // 確保文字結構不崩潰
                 reportRaw.buffett_tests = reportRaw.buffett_tests || {};
-                const safeTest = { value: "AI查無資料", status: "未測試" };
+                const safeTest = { value: "--", status: "資料不足" };
                 reportRaw.buffett_tests.profit = reportRaw.buffett_tests.profit || safeTest;
                 reportRaw.buffett_tests.cashflow = reportRaw.buffett_tests.cashflow || safeTest;
                 reportRaw.buffett_tests.dividend = reportRaw.buffett_tests.dividend || safeTest;
@@ -909,72 +893,90 @@
                 reportRaw.buffett_tests.chips = reportRaw.buffett_tests.chips || safeTest;
 
                 reportRaw.market = reportRaw.market || {};
-                reportRaw.market.policy = reportRaw.market.policy || "無資料";
-                reportRaw.market.fx = reportRaw.market.fx || "無資料";
-                reportRaw.market.sentiment = reportRaw.market.sentiment || "無資料";
-                reportRaw.market.analysts = reportRaw.market.analysts || "無資料";
+                reportRaw.market.policy = reportRaw.market.policy || "--";
+                reportRaw.market.fx = reportRaw.market.fx || "--";
+                reportRaw.market.sentiment = reportRaw.market.sentiment || "--";
+                reportRaw.market.analysts = reportRaw.market.analysts || "--";
                 reportRaw.market.news = Array.isArray(reportRaw.market.news) && reportRaw.market.news.length > 0 ? reportRaw.market.news : ["尚無重大新聞"];
 
                 reportRaw.risk = reportRaw.risk || {};
-                reportRaw.risk.confidence_score = Number(reportRaw.risk.confidence_score) || 50;
-                reportRaw.risk.flags = Array.isArray(reportRaw.risk.flags) && reportRaw.risk.flags.length > 0 ? reportRaw.risk.flags : ["AI 無法取得足夠風險數據"];
-                reportRaw.risk.scenarios = Array.isArray(reportRaw.risk.scenarios) && reportRaw.risk.scenarios.length === 3 ? reportRaw.risk.scenarios : [
-                    {"type": "牛市", "prob": 33, "desc": "缺乏數據"}, {"type": "標準", "prob": 34, "desc": "缺乏數據"}, {"type": "熊市", "prob": 33, "desc": "缺乏數據"}
-                ];
-                // ==========================================
+                reportRaw.risk.flags = Array.isArray(reportRaw.risk.flags) ? reportRaw.risk.flags : ["AI 未能取得特定風險數據"];
+                reportRaw.risk.scenarios = Array.isArray(reportRaw.risk.scenarios) ? reportRaw.risk.scenarios : [];
 
-                loadingText.innerText = '本機執行 DDM 折現模型運算中...';
-                let sumEps = 0, sumDiv = 0, sumRoe = 0;
-                reportRaw.history_5y.forEach(y => { sumEps += Number(y.eps); sumDiv += Number(y.div); sumRoe += Number(y.roe); });
-                const avgRoe = sumRoe / reportRaw.history_5y.length / 100;
+                // 檢查計算所需的關鍵數字是否存在
+                if (isNaN(Number(reportRaw.nav)) || isNaN(Number(reportRaw.reinvestment_rate))) hasValidMathData = false;
                 
-                // 避免 sumEps 為 0 導致除以零錯誤
-                const avgPayout = sumEps > 0 ? (sumDiv / sumEps) : 0.5;
-                let expPayout = (avgPayout + (1 - (Number(reportRaw.reinvestment_rate) / 100))) / 2;
-                if (expPayout < 0) expPayout = 0.1; // 給個保守底線
-
-                const roe_A = Math.min((Number(reportRaw.history_5y[0].roe) / 100), avgRoe) || 0.05; 
-                const roe_B = avgRoe || 0.05;
-
-                function calcDDM(nav, roe, payout, costPrice) {
-                    if (nav <= 0 || roe <= 0) return { cheap: 0, exp: 0, irr: 0, fail: true };
-                    let currentNav = nav; let cf = []; let eps8 = 0;
-                    for(let i=1; i<=8; i++) {
-                        let eps = currentNav * roe; let div = eps * payout;
-                        currentNav = currentNav + eps - div; cf.push(div);
-                        if(i===8) eps8 = eps;
-                    }
-                    cf[7] += (eps8 * 12); 
-                    let cheap = 0, exp = 0;
-                    for(let i=0; i<8; i++) { cheap += cf[i] / Math.pow(1.15, i+1); exp += cf[i]; }
-                    let min = -0.99, max = 2.0, guess = 0.1;
-                    for(let iter=0; iter<30; iter++) {
-                        let npv = -costPrice;
-                        for(let i=0; i<8; i++) npv += cf[i] / Math.pow(1+guess, i+1);
-                        if (npv > 0) min = guess; else max = guess;
-                        guess = (min + max) / 2;
-                    }
-                    return { cheap: Math.round(cheap), exp: Math.round(exp), irr: (guess * 100).toFixed(1), fail: false };
+                if (!reportRaw.history_5y || !Array.isArray(reportRaw.history_5y) || reportRaw.history_5y.length === 0) {
+                    reportRaw.history_5y = [{ "year": "--", "eps": "--", "div": "--", "roe": "--" }]; // 塞入佔位符，讓畫面顯示 --
+                    hasValidMathData = false;
+                } else {
+                    reportRaw.history_5y.forEach(y => {
+                        if (isNaN(Number(y.eps)) || isNaN(Number(y.div)) || isNaN(Number(y.roe))) {
+                            hasValidMathData = false;
+                        }
+                    });
                 }
 
-                const valA = calcDDM(Number(reportRaw.nav), roe_A, expPayout, realPrice);
-                const valB = calcDDM(Number(reportRaw.nav), roe_B, expPayout, realPrice);
+                // ==========================================
+                // 📈 DDM 模型運算 (若資料不足則誠實跳過)
+                // ==========================================
+                loadingText.innerText = '本機執行 DDM 折現模型運算中...';
+                
+                let valA = { cheap: 0, exp: 0, irr: 0, fail: true };
+                let valB = { cheap: 0, exp: 0, irr: 0, fail: true };
+                let avgCheap = 0, avgExp = 0, avgIrr = "0.0";
+                let rating = "N/A", signal = "資料不足", strategy = "因 AI 無法取得此公司足夠且有效的五年期財務數據（可能為冷門股或新上市公司），為確保嚴謹度，系統已自動暫停 DDM 折現模型估值。請參考上方文字分析，或自行謹慎評估。";
 
-                let avgCheap = Math.round((valA.cheap + valB.cheap) / 2);
-                let avgExp = Math.round((valA.exp + valB.exp) / 2);
-                let avgIrr = ((Number(valA.irr) + Number(valB.irr)) / 2).toFixed(1);
-                
-                let rating = "HOLD", signal = "觀望", strategy = "";
-                let isGdpLow = Number(reportRaw.gdp_yoy) < 2.0;
-                
-                if (realPrice < avgCheap && avgCheap > 0) {
-                    rating = "BUY"; signal = "價值浮現"; 
-                    strategy = isGdpLow ? "目前股價低於淑價，且總經GDP處於低檔，為絕佳長線買點，建議積極佈局。" : "股價低於淑價，建議分批買進建立部位。";
-                } else if (realPrice > avgExp && avgExp > 0) {
-                    rating = "SELL"; signal = "估值偏高";
-                    strategy = "目前股價已超越昂貴價，建議適度獲利了結或降低持股比重。";
-                } else {
-                    strategy = "股價處於合理區間（或缺乏足夠數據），建議持有觀望，等待更好的安全邊際。";
+                if (hasValidMathData) {
+                    let sumEps = 0, sumDiv = 0, sumRoe = 0;
+                    reportRaw.history_5y.forEach(y => { sumEps += Number(y.eps); sumDiv += Number(y.div); sumRoe += Number(y.roe); });
+                    const avgRoe = sumRoe / reportRaw.history_5y.length / 100;
+                    const avgPayout = sumEps > 0 ? (sumDiv / sumEps) : 0.5;
+                    let expPayout = (avgPayout + (1 - (Number(reportRaw.reinvestment_rate) / 100))) / 2;
+                    if (expPayout < 0) expPayout = 0.1;
+
+                    const roe_A = Math.min((Number(reportRaw.history_5y[0].roe) / 100), avgRoe) || 0.05; 
+                    const roe_B = avgRoe || 0.05;
+
+                    function calcDDM(nav, roe, payout, costPrice) {
+                        if (nav <= 0 || roe <= 0) return { cheap: 0, exp: 0, irr: 0, fail: true };
+                        let currentNav = nav; let cf = []; let eps8 = 0;
+                        for(let i=1; i<=8; i++) {
+                            let eps = currentNav * roe; let div = eps * payout;
+                            currentNav = currentNav + eps - div; cf.push(div);
+                            if(i===8) eps8 = eps;
+                        }
+                        cf[7] += (eps8 * 12); 
+                        let cheap = 0, exp = 0;
+                        for(let i=0; i<8; i++) { cheap += cf[i] / Math.pow(1.15, i+1); exp += cf[i]; }
+                        let min = -0.99, max = 2.0, guess = 0.1;
+                        for(let iter=0; iter<30; iter++) {
+                            let npv = -costPrice;
+                            for(let i=0; i<8; i++) npv += cf[i] / Math.pow(1+guess, i+1);
+                            if (npv > 0) min = guess; else max = guess;
+                            guess = (min + max) / 2;
+                        }
+                        return { cheap: Math.round(cheap), exp: Math.round(exp), irr: (guess * 100).toFixed(1), fail: false };
+                    }
+
+                    valA = calcDDM(Number(reportRaw.nav), roe_A, expPayout, realPrice);
+                    valB = calcDDM(Number(reportRaw.nav), roe_B, expPayout, realPrice);
+
+                    avgCheap = Math.round((valA.cheap + valB.cheap) / 2);
+                    avgExp = Math.round((valA.exp + valB.exp) / 2);
+                    avgIrr = ((Number(valA.irr) + Number(valB.irr)) / 2).toFixed(1);
+                    
+                    let isGdpLow = Number(reportRaw.gdp_yoy) < 2.0;
+                    if (realPrice < avgCheap && avgCheap > 0) {
+                        rating = "BUY"; signal = "價值浮現"; 
+                        strategy = isGdpLow ? "目前股價低於淑價，且總經GDP處於低檔，為絕佳長線買點，建議積極佈局。" : "股價低於淑價，建議分批買進建立部位。";
+                    } else if (realPrice > avgExp && avgExp > 0) {
+                        rating = "SELL"; signal = "估值偏高";
+                        strategy = "目前股價已超越昂貴價，建議適度獲利了結或降低持股比重。";
+                    } else {
+                        rating = "HOLD"; signal = "觀望";
+                        strategy = "股價處於合理區間，建議持有觀望，等待更好的安全邊際。";
+                    }
                 }
 
                 const finalReport = {
