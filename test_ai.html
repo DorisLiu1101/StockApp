@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Gemini API 測試沙盒</title>
+</head>
+<body style="background-color: #1A1C1E; color: white; font-family: sans-serif; padding: 20px;">
+    
+    <h2>🧠 Gemini 大腦連線測試</h2>
+    <button onclick="testGeminiAPI()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
+        🚀 點擊測試呼叫 Gemini
+    </button>
+    <p>請按下按鈕後，打開瀏覽器的「開發者工具 (按 F12)」，查看 Console 標籤頁的結果。</p>
+
+    <script>
+
+// 🔑 步驟 1：貼上你的 API Key
+const API_KEY = 'AIzaSyDIRFSGw4qt0jYcplgBWFywc_nwXNwdK6I'; 
+
+async function testGeminiAPI() {
+    console.log("⏳ 正在啟動 Gemini 2.5 Flash 聯網大腦...");
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+
+    const requestBody = {
+        "contents": [{
+            // 📍 強化 Prompt：嚴格命令它只能輸出 JSON，不要 Markdown
+            "parts": [{"text": "請去搜尋今天台積電(2330)的最新財經新聞與股價概況。請嚴格輸出純 JSON 格式，必須包含：'date' (今天的日期), 'price_status' (你查到的股價狀況描述), 'latest_news' (你查到的一條真實新聞標題)。請直接輸出大括號 {} 包裹的內容，絕對不要使用 ```json 標記或任何廢話。"}]
+        }],
+        // 🛡️ 保留：強制聯網搜尋 (確保資訊是今天最新的)
+        "tools": [
+            {
+                "googleSearch": {}
+            }
+        ],
+        "generationConfig": {
+            // 📍 移除：把 "responseMimeType": "application/json" 拿掉，避免衝突
+            "temperature": 0.0 // 創意度歸零，確保嚴謹
+        }
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error("❌ 伺服器錯誤：", data.error.message);
+            return;
+        }
+        
+        // 取得 AI 回傳的原始文字
+        let aiResultString = data.candidates[0].content.parts[0].text;
+        
+        // 🧹 清洗過濾器：把 AI 可能不小心加上的 Markdown 標記 (```json 和 ```) 移除
+        aiResultString = aiResultString.replace(/```json/gi, '').replace(/```/g, '').trim();
+        
+        // 將乾淨的字串轉換為 JavaScript 物件
+        const aiResultObject = JSON.parse(aiResultString); 
+
+        console.log("✅ 引擎點火成功！聯網查證完畢。這是 AI 剛剛上網查到的真實數據：");
+        console.log("📅 查證日期：" + aiResultObject.date);
+        console.log("💰 股價現況：" + aiResultObject.price_status);
+        console.log("📰 最新新聞：" + aiResultObject.latest_news);
+
+    } catch (error) {
+        console.error("❌ 發生錯誤 (可能是 JSON 解析失敗)：", error);
+    }
+}
+
+testGeminiAPI();
+
+// ==========================================
+// 📊 硬數據模組：抓取 Yahoo Finance 股價
+// ==========================================
+async function fetchStockPrice(stockCode) {
+    console.log(`\n⏳ 正在呼叫代理外送員 (Proxy) 獲取 ${stockCode} 的絕對真實股價...`);
+
+    // 📍 步驟 1：Yahoo Finance 的原始網址 (台股代號後面必須加 .TW)
+    const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${stockCode}.TW`;
+
+    // 📍 步驟 2：使用免費的 CORS 代理伺服器 (corsproxy.io) 繞過警衛
+    // 我們把 Yahoo 的網址「包裝」在代理伺服器的網址後面
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+
+    try {
+        // 發送網路請求 (Fetch API)
+        const response = await fetch(proxyUrl);
+        const data = await response.json();
+
+        // 📍 步驟 3：像拆俄羅斯娃娃一樣，從 Yahoo 複雜的 JSON 包裹中取出我們要的數字
+        const result = data.chart.result[0];
+        const currentPrice = result.meta.regularMarketPrice;     // 目前即時股價
+        const previousClose = result.meta.chartPreviousClose;    // 昨收價
+
+        // 📍 步驟 4：數學計算 (計算漲跌幅)
+        const change = (currentPrice - previousClose).toFixed(2); // 漲跌金額 (取小數點後兩位)
+        const changePercent = ((change / previousClose) * 100).toFixed(2); // 漲跌百分比
+
+        console.log(`✅ 成功取得硬數據！`);
+        console.log(`💰 ${stockCode} 目前股價: $${currentPrice}`);
+        console.log(`📈 今日漲跌: ${change} (${changePercent}%)`);
+
+        // 將數據打包回傳，準備未來給 AI 和 HTML 使用
+        return { 
+            price: currentPrice, 
+            change: change, 
+            percent: changePercent 
+        };
+
+    } catch (error) {
+        console.error("❌ 抓取股價失敗 (可能是股票代號錯誤或代理伺服器忙碌)：", error);
+    }
+}
+
+// 執行測試指令 (你可以把 2330 換成其他台股代號試試看！)
+fetchStockPrice('2330');
+
+
+    </script>
+</body>
+</html>
