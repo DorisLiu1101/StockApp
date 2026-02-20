@@ -1,8 +1,9 @@
 <!-- 
-  [VER] v2.17.1 (2024-06-30)
+  [VER] v2.17.2 (2024-06-30)
   [DESC] 
     1. 個股詳情頁面新增「分析報告」按鈕
     2. 分析報告生成
+    3. Bug Fixed
 
 
 -->
@@ -1096,19 +1097,7 @@
                 loadingDiv.style.display = 'none';
             }
         }
-            if (!userScriptUrl) return window.showAlert("請先於設定中貼上 Script URL", "系統提示");
-            document.getElementById('report-loading').classList.remove('hidden');
-            const frame = document.getElementById('report-frame'); frame.style.height = '0px';
-            try {
-                const response = await fetch(userScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'getReport', data: { symbol: currentDetailSymbol } }) });
-                const result = await response.json();
-                if (result.success && result.found) {
-                    frame.srcdoc = result.html;
-                    frame.onload = function() { try { const h = this.contentWindow.document.body.scrollHeight; this.style.height = (h + 50) + 'px'; } catch(e) { this.style.height = '600px'; } };
-                    document.getElementById('report-content').classList.remove('hidden');
-                } else { window.showAlert(`找不到相關檔案。`, "找不到報告", true); }
-            } catch (e) { window.showAlert("伺服器連線錯誤：" + e.message); } finally { document.getElementById('report-loading').classList.add('hidden'); }
-                
+
         function setTxType(t) { txType = t; window.resetTxStatus(); const bB=document.getElementById('btn-tx-buy'), bS=document.getElementById('btn-tx-sell'); if(t==='buy'){ bB.className="tx-btn tx-btn-buy-active flex-1"; bS.className="tx-btn tx-btn-inactive flex-1"; }else{ bB.className="tx-btn tx-btn-inactive flex-1"; bS.className="tx-btn tx-btn-sell-active flex-1"; } }
         function resetTxStatus() { const sD=document.getElementById('tx-status'), sB=document.getElementById('btn-tx-submit'); if(sD) sD.innerHTML=""; if(sB){ sB.disabled=false; sB.innerText="確認新增"; sB.classList.remove('opacity-50','cursor-not-allowed'); } }
         
