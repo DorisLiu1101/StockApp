@@ -1,5 +1,5 @@
 <!-- 
-  [VER] v2.17.5 (2024-06-30)
+  [VER] v2.18 (2024-06-30)
   [DESC] 
     1. 分析報告API Key 安全分離版
     2. Bug Fixed
@@ -814,20 +814,10 @@
         
 
         // ==========================================
-        // 🚀 AI 報告雙腦引擎 (API Key 安全分離版)
+        // 🚀 AI 報告雙腦引擎 (V7 後端代理 + 終極防轉圈版)
         // ==========================================
 
         window.generateAndSaveReport = async function() {
-            // --- 🛡️ API Key 安全防護：從本機讀取，若無則跳出詢問 ---
-            let GEMINI_API_KEY = localStorage.getItem('user_gemini_key');
-            if (!GEMINI_API_KEY) {
-                GEMINI_API_KEY = prompt("🔐 系統安全提示：\\n請輸入您的 Gemini API Key。\\n(此金鑰只會安全儲存於您目前的瀏覽器/手機本機中，絕對不會上傳至任何公開伺服器)");
-                if (!GEMINI_API_KEY || GEMINI_API_KEY.trim() === "") {
-                    return window.showAlert('必須設定 API Key 才能啟動 AI 雙腦引擎！', '系統提示');
-                }
-                localStorage.setItem('user_gemini_key', GEMINI_API_KEY.trim());
-            }
-
             const symbol = currentDetailSymbol || document.getElementById('debug-symbol').innerText;
             if (!symbol || symbol === '--') return window.showAlert('請先選擇一檔股票！');
             if (!userScriptUrl) return window.showAlert('請先至設定頁面綁定 Google Apps Script 網址！');
@@ -852,58 +842,33 @@
                 }
                 const realPrice = yahooData.chart.result[0].meta.regularMarketPrice;
 
-                loadingText.innerText = 'AI 聯網深度爬梳財報與新聞中... (約需 10 秒)';
+                loadingText.innerText = '呼叫後端 AI 進行聯網分析中... (約需 10 秒)';
                 const prompt = `
                     角色：巴菲特價值投資分析師。
                     任務：分析台股 ${symbol}。目前真實股價為 ${realPrice} 元。
                     請聯網搜尋最新財報、近5年股利與EPS、新聞、與最新 GDP 成長率。
                     必須嚴格只輸出純 JSON 格式！絕對禁止任何開場白（例如"我將以..."）、結語或 Markdown 標記，請直接以大括號 { 開頭：
                     {
-                        "company_name": "公司名稱",
-                        "biz_intro": "核心業務簡介(15字內)",
-                        "nav": 最新一季每股淨值(數字),
-                        "reinvestment_rate": 盈再率(數字,如 85 代表 85%),
-                        "gdp_yoy": 最新實質GDP年增率(數字,如 1.5),
+                        "company_name": "公司名稱", "biz_intro": "核心業務簡介(15字內)", "nav": 最新一季每股淨值(數字),
+                        "reinvestment_rate": 盈再率(數字,如 85 代表 85%), "gdp_yoy": 最新實質GDP年增率(數字,如 1.5),
                         "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0}],
-                        "buffett_tests": {
-                            "profit": {"value": "28.5%", "status": "通過 或 失敗"},
-                            "cashflow": {"value": "85%", "status": "通過 或 失敗"},
-                            "dividend": {"value": "42%", "status": "通過 或 失敗"},
-                            "scale": {"value": "符合標準", "status": "通過 或 失敗"},
-                            "chips": {"value": "穩定", "status": "通過 或 失敗"}
-                        },
-                        "market": {
-                            "policy": "政策風險說明...",
-                            "fx": "匯率影響說明...",
-                            "sentiment": "市場情緒...",
-                            "news": ["新聞1", "新聞2"],
-                            "analysts": "分析師觀點..."
-                        },
-                        "risk": {
-                            "confidence_score": 75,
-                            "flags": ["警示..."],
-                            "scenarios": [
-                                {"type": "牛市 (Bull)", "prob": 20, "desc": "說明..."},
-                                {"type": "標準 (Base)", "prob": 50, "desc": "說明..."},
-                                {"type": "熊市 (Bear)", "prob": 30, "desc": "說明..."}
-                            ]
-                        }
+                        "buffett_tests": { "profit": {"value": "28.5%", "status": "通過 或 失敗"}, "cashflow": {"value": "85%", "status": "通過 或 失敗"}, "dividend": {"value": "42%", "status": "通過 或 失敗"}, "scale": {"value": "符合標準", "status": "通過 或 失敗"}, "chips": {"value": "穩定", "status": "通過 或 失敗"} },
+                        "market": { "policy": "政策風險說明...", "fx": "匯率影響說明...", "sentiment": "市場情緒...", "news": ["新聞1", "新聞2"], "analysts": "分析師觀點..." },
+                        "risk": { "confidence_score": 75, "flags": ["警示..."], "scenarios": [ {"type": "牛市 (Bull)", "prob": 20, "desc": "說明..."}, {"type": "標準 (Base)", "prob": 50, "desc": "說明..."}, {"type": "熊市 (Bear)", "prob": 30, "desc": "說明..."} ] }
                     }
                 `;
                 
-                const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        "contents": [{"parts": [{"text": prompt}]}],
-                        "tools": [{"googleSearch": {}}],
-                        "generationConfig": {"temperature": 0.0}
-                    })
+                // 👉 這裡改成呼叫 GAS 去問 Gemini，徹底解決前端金鑰外洩問題
+                const aiRes = await fetch(userScriptUrl, {
+                    method: 'POST', body: JSON.stringify({ action: 'askGemini', data: { prompt: prompt } })
                 });
                 
-                const aiData = await aiRes.json();
-                if (!aiData.candidates || !aiData.candidates[0]) throw new Error("AI 伺服器忙線中，請稍後再試。");
+                const aiResJson = await aiRes.json();
+                if (!aiResJson.success || !aiResJson.data.candidates || !aiResJson.data.candidates[0]) {
+                    throw new Error("AI 伺服器忙線或 GAS 金鑰設定錯誤，請稍後再試。");
+                }
                 
-                let rawText = aiData.candidates[0].content.parts[0].text;
+                let rawText = aiResJson.data.candidates[0].content.parts[0].text;
                 let jsonMatch = rawText.match(/\{[\s\S]*\}/);
                 if (!jsonMatch) throw new Error("AI 未回傳有效格式，請再點擊一次。");
                 
@@ -974,7 +939,7 @@
                 
                 const saveResult = await saveRes.json();
                 if(saveResult.success) {
-                    window.loadReport(); // 存檔成功，直接觸發讀取渲染
+                    window.loadReport(); 
                 } else {
                     throw new Error(saveResult.message);
                 }
@@ -1007,114 +972,111 @@
                 if (result.success && result.found) {
                     let data;
                     try {
-                        // 🛡️ 攔截舊版 HTML 檔案
                         data = JSON.parse(result.html);
                     } catch (parseError) {
-                        console.error("抓到舊版報告:", parseError);
                         window.showAlert(`雲端存有舊版的 HTML 報告，請直接點擊旁邊的「✨ 產生最新報告」來覆蓋它！`, "系統提示");
                         loadingDiv.style.display = 'none';
                         return;
                     }
 
-                    // 🛡️ 解決無限轉圈：先綁定 onload，再指定 src
-                    frame.onload = function() {
-                        try {
-                            const doc = frame.contentWindow.document;
-                            const setTxt = (id, txt) => { if(doc.getElementById(id)) doc.getElementById(id).innerHTML = txt; };
-                            
-                            setTxt('var-report-date', data.date);
-                            setTxt('var-stock-title', `${data.symbol} ${data.ai.company_name}`);
-                            setTxt('var-biz-intro', data.ai.biz_intro);
-                            setTxt('var-current-price', "$" + data.realPrice);
-                            setTxt('var-price-date', "Date: " + data.date);
-                            
-                            setTxt('var-rating-text', data.decision.rating);
-                            if(data.decision.rating === "BUY") doc.getElementById('var-rating-text').style.color = "#4ADE80";
-                            if(data.decision.rating === "SELL") doc.getElementById('var-rating-text').style.color = "#F87171";
-                            setTxt('var-rating-signal', "訊號：" + data.decision.signal);
-                            
-                            setTxt('var-confidence-score', data.ai.risk.confidence_score);
-                            if(doc.getElementById('var-gauge-fill')) doc.getElementById('var-gauge-fill').style.transform = `rotate(${(data.ai.risk.confidence_score/100)*180}deg)`;
-                            
-                            setTxt('var-irr-avg', data.math.avgIrr + "%");
-                            setTxt('var-irr-range', `(區間：${data.math.valA.irr}% ~ ${data.math.valB.irr}%)`);
-                            setTxt('var-cheap-avg', "$" + data.math.avgCheap);
-                            setTxt('var-cheap-range', `($${data.math.valA.cheap} ~ $${data.math.valB.cheap})`);
-                            setTxt('var-exp-avg', "$" + data.math.avgExp);
-                            setTxt('var-exp-range', `($${data.math.valA.exp} ~ $${data.math.valB.exp})`);
-                            
-                            let pct = ((data.realPrice - data.math.avgCheap) / (data.math.avgExp - data.math.avgCheap)) * 100;
-                            pct = Math.max(0, Math.min(100, pct));
-                            if(doc.getElementById('var-therm-marker')) doc.getElementById('var-therm-marker').style.left = pct + "%";
+                    // 🛡️ 終極防轉圈解法：直接同步解析 HTML 模板，不依賴 iframe 的 onload 事件
+                    const tplRes = await fetch('StockApp_Report_Form.html?t=' + new Date().getTime());
+                    const tplHtml = await tplRes.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(tplHtml, 'text/html');
 
-                            setTxt('var-op-advice', `操作建議：${data.decision.strategy.includes('買')?'分批佈局':(data.decision.strategy.includes('賣')?'減碼賣出':'觀望持有')}`);
-                            setTxt('var-op-desc', data.decision.strategy);
-                            
-                            setTxt('var-co-dynamic', `<strong>營運與動態：</strong> ${data.ai.market.sentiment}`);
-                            setTxt('var-co-metrics', `<strong>基本指標：</strong> 最新 NAV $${data.ai.nav}, 盈再率 ${data.ai.reinvestment_rate}%`);
-                            
-                            const bt = data.ai.buffett_tests;
-                            setTxt('var-test-summary', `<strong>測試結果摘要：</strong> 系統完成5項壓力測試，詳見下方清單。`);
-                            let testsHtml = `
-                                <tr><td>獲利能力 (ROE>15%)</td><td>${bt.profit.value}</td><td><span class="tag ${bt.profit.status.includes('通')?'tag-buy':'tag-sell'}">${bt.status||bt.profit.status}</span></td></tr>
-                                <tr><td>現金流 (盈再率<80%)</td><td>${bt.cashflow.value}</td><td><span class="tag ${bt.cashflow.status.includes('通')?'tag-buy':'tag-sell'}">${bt.cashflow.status}</span></td></tr>
-                                <tr><td>配息能力 (Payout>40%)</td><td>${bt.dividend.value}</td><td><span class="tag ${bt.dividend.status.includes('通')?'tag-buy':'tag-sell'}">${bt.dividend.status}</span></td></tr>
-                                <tr><td>經營規模</td><td>${bt.scale.value}</td><td><span class="tag ${bt.scale.status.includes('通')?'tag-buy':'tag-sell'}">${bt.scale.status}</span></td></tr>
-                                <tr><td>籌碼安定</td><td>${bt.chips.value}</td><td><span class="tag ${bt.chips.status.includes('通')?'tag-buy':'tag-sell'}">${bt.chips.status}</span></td></tr>
-                            `;
-                            setTxt('var-test-table-body', testsHtml);
-
-                            let finHtml = "";
-                            data.ai.history_5y.forEach(y => {
-                                finHtml += `<tr><td>${y.year}</td><td>$${y.div}</td><td>--</td><td>$${y.eps}</td><td>--</td><td>${y.roe}%</td></tr>`;
-                            });
-                            setTxt('var-fin-table-body', finHtml);
-                            setTxt('var-fin-summary', `<strong>數據摘要：</strong> 近五年獲利紀錄完整，已帶入 DDM 模型運算。`);
-
-                            setTxt('var-val-roe-a', (data.math.valA.irr ? `${data.ai.history_5y[0].roe}% (保守)` : 'N/A'));
-                            setTxt('var-val-roe-b', (data.math.valA.irr ? `Avg (標準)` : 'N/A'));
-                            setTxt('var-val-cheap-a', `$${data.math.valA.cheap}`);
-                            setTxt('var-val-cheap-b', `$${data.math.valB.cheap}`);
-                            setTxt('var-val-exp-a', `$${data.math.valA.exp}`);
-                            setTxt('var-val-exp-b', `$${data.math.valB.exp}`);
-                            setTxt('var-val-irr-a', `${data.math.valA.irr}%`);
-                            setTxt('var-val-irr-b', `${data.math.valB.irr}%`);
-
-                            setTxt('var-mkt-policy', `<strong>政策風險：</strong> ${data.ai.market.policy}`);
-                            setTxt('var-mkt-fx', `<strong>匯率敏感度：</strong> ${data.ai.market.fx}`);
-                            setTxt('var-mkt-sentiment', `<strong>市場情緒：</strong> ${data.ai.market.sentiment}`);
-                            setTxt('var-mkt-analyst', `<strong>分析師觀點：</strong> ${data.ai.market.analysts}`);
-                            
-                            let newsHtml = data.ai.market.news.map(n => `<li>${n}</li>`).join("");
-                            setTxt('var-mkt-news', `<strong>關鍵新聞：</strong><ul style="padding-left: 20px; margin: 5px 0;">${newsHtml}</ul>`);
-
-                            setTxt('var-risk-confidence-list', `<li>AI 信心指數：${data.ai.risk.confidence_score}/100</li>`);
-                            let flagsHtml = data.ai.risk.flags.map(f => `<li>⚠️ ${f}</li>`).join("");
-                            setTxt('var-risk-flags-list', flagsHtml || "<li>無明顯高危險標誌</li>");
-
-                            let sc = data.ai.risk.scenarios;
-                            setTxt('var-matrix-prob-bull', sc[0].prob + "%"); setTxt('var-matrix-desc-bull', sc[0].desc);
-                            setTxt('var-matrix-prob-base', sc[1].prob + "%"); setTxt('var-matrix-desc-base', sc[1].desc);
-                            setTxt('var-matrix-prob-bear', sc[2].prob + "%"); setTxt('var-matrix-desc-bear', sc[2].desc);
-
-                            setTxt('var-conc-price-level', `<strong>價格位階：</strong> 股價 $${data.realPrice} 位於 ${data.realPrice < data.math.avgCheap ? '淑價區間以下' : (data.realPrice > data.math.avgExp ? '貴價區間以上' : '合理區間')}。`);
-                            setTxt('var-conc-gdp-signal', `<strong>GDP 訊號：</strong> 最新公佈為 ${data.ai.gdp_yoy}%。`);
-                            setTxt('var-conc-strategy', data.decision.strategy);
-
-                            loadingDiv.style.display = 'none';
-                            contentDiv.classList.remove('hidden');
-                            
-                            setTimeout(() => { frame.style.height = (doc.body.scrollHeight + 50) + 'px'; }, 500);
-                        } catch(e) {
-                            console.error("Iframe rendering error:", e);
-                            frame.style.height = '600px';
-                            loadingDiv.style.display = 'none';
-                            contentDiv.classList.remove('hidden');
-                        }
-                    };
+                    const setTxt = (id, txt) => { if(doc.getElementById(id)) doc.getElementById(id).innerHTML = txt; };
                     
-                    // 🛡️ 強制更新法：加上時間戳記強制瀏覽器重抓 iframe
-                    frame.src = 'StockApp_Report_Form.html?t=' + new Date().getTime();
+                    // --- 填入數據 ---
+                    setTxt('var-report-date', data.date);
+                    setTxt('var-stock-title', `${data.symbol} ${data.ai.company_name}`);
+                    setTxt('var-biz-intro', data.ai.biz_intro);
+                    setTxt('var-current-price', "$" + data.realPrice);
+                    setTxt('var-price-date', "Date: " + data.date);
+                    
+                    setTxt('var-rating-text', data.decision.rating);
+                    if(data.decision.rating === "BUY") doc.getElementById('var-rating-text').style.color = "#4ADE80";
+                    if(data.decision.rating === "SELL") doc.getElementById('var-rating-text').style.color = "#F87171";
+                    setTxt('var-rating-signal', "訊號：" + data.decision.signal);
+                    
+                    setTxt('var-confidence-score', data.ai.risk.confidence_score);
+                    if(doc.getElementById('var-gauge-fill')) doc.getElementById('var-gauge-fill').style.transform = `rotate(${(data.ai.risk.confidence_score/100)*180}deg)`;
+                    
+                    setTxt('var-irr-avg', data.math.avgIrr + "%");
+                    setTxt('var-irr-range', `(區間：${data.math.valA.irr}% ~ ${data.math.valB.irr}%)`);
+                    setTxt('var-cheap-avg', "$" + data.math.avgCheap);
+                    setTxt('var-cheap-range', `($${data.math.valA.cheap} ~ $${data.math.valB.cheap})`);
+                    setTxt('var-exp-avg', "$" + data.math.avgExp);
+                    setTxt('var-exp-range', `($${data.math.valA.exp} ~ $${data.math.valB.exp})`);
+                    
+                    let pct = ((data.realPrice - data.math.avgCheap) / (data.math.avgExp - data.math.avgCheap)) * 100;
+                    pct = Math.max(0, Math.min(100, pct));
+                    if(doc.getElementById('var-therm-marker')) doc.getElementById('var-therm-marker').style.left = pct + "%";
+
+                    setTxt('var-op-advice', `操作建議：${data.decision.strategy.includes('買')?'分批佈局':(data.decision.strategy.includes('賣')?'減碼賣出':'觀望持有')}`);
+                    setTxt('var-op-desc', data.decision.strategy);
+                    
+                    setTxt('var-co-dynamic', `<strong>營運與動態：</strong> ${data.ai.market.sentiment}`);
+                    setTxt('var-co-metrics', `<strong>基本指標：</strong> 最新 NAV $${data.ai.nav}, 盈再率 ${data.ai.reinvestment_rate}%`);
+                    
+                    const bt = data.ai.buffett_tests;
+                    setTxt('var-test-summary', `<strong>測試結果摘要：</strong> 系統完成5項壓力測試，詳見下方清單。`);
+                    let testsHtml = `
+                        <tr><td>獲利能力 (ROE>15%)</td><td>${bt.profit.value}</td><td><span class="tag ${bt.profit.status.includes('通')?'tag-buy':'tag-sell'}">${bt.status||bt.profit.status}</span></td></tr>
+                        <tr><td>現金流 (盈再率<80%)</td><td>${bt.cashflow.value}</td><td><span class="tag ${bt.cashflow.status.includes('通')?'tag-buy':'tag-sell'}">${bt.cashflow.status}</span></td></tr>
+                        <tr><td>配息能力 (Payout>40%)</td><td>${bt.dividend.value}</td><td><span class="tag ${bt.dividend.status.includes('通')?'tag-buy':'tag-sell'}">${bt.dividend.status}</span></td></tr>
+                        <tr><td>經營規模</td><td>${bt.scale.value}</td><td><span class="tag ${bt.scale.status.includes('通')?'tag-buy':'tag-sell'}">${bt.scale.status}</span></td></tr>
+                        <tr><td>籌碼安定</td><td>${bt.chips.value}</td><td><span class="tag ${bt.chips.status.includes('通')?'tag-buy':'tag-sell'}">${bt.chips.status}</span></td></tr>
+                    `;
+                    setTxt('var-test-table-body', testsHtml);
+
+                    let finHtml = "";
+                    data.ai.history_5y.forEach(y => {
+                        finHtml += `<tr><td>${y.year}</td><td>$${y.div}</td><td>--</td><td>$${y.eps}</td><td>--</td><td>${y.roe}%</td></tr>`;
+                    });
+                    setTxt('var-fin-table-body', finHtml);
+                    setTxt('var-fin-summary', `<strong>數據摘要：</strong> 近五年獲利紀錄完整，已帶入 DDM 模型運算。`);
+
+                    setTxt('var-val-roe-a', (data.math.valA.irr ? `${data.ai.history_5y[0].roe}% (保守)` : 'N/A'));
+                    setTxt('var-val-roe-b', (data.math.valA.irr ? `Avg (標準)` : 'N/A'));
+                    setTxt('var-val-cheap-a', `$${data.math.valA.cheap}`);
+                    setTxt('var-val-cheap-b', `$${data.math.valB.cheap}`);
+                    setTxt('var-val-exp-a', `$${data.math.valA.exp}`);
+                    setTxt('var-val-exp-b', `$${data.math.valB.exp}`);
+                    setTxt('var-val-irr-a', `${data.math.valA.irr}%`);
+                    setTxt('var-val-irr-b', `${data.math.valB.irr}%`);
+
+                    setTxt('var-mkt-policy', `<strong>政策風險：</strong> ${data.ai.market.policy}`);
+                    setTxt('var-mkt-fx', `<strong>匯率敏感度：</strong> ${data.ai.market.fx}`);
+                    setTxt('var-mkt-sentiment', `<strong>市場情緒：</strong> ${data.ai.market.sentiment}`);
+                    setTxt('var-mkt-analyst', `<strong>分析師觀點：</strong> ${data.ai.market.analysts}`);
+                    
+                    let newsHtml = data.ai.market.news.map(n => `<li>${n}</li>`).join("");
+                    setTxt('var-mkt-news', `<strong>關鍵新聞：</strong><ul style="padding-left: 20px; margin: 5px 0;">${newsHtml}</ul>`);
+
+                    setTxt('var-risk-confidence-list', `<li>AI 信心指數：${data.ai.risk.confidence_score}/100</li>`);
+                    let flagsHtml = data.ai.risk.flags.map(f => `<li>⚠️ ${f}</li>`).join("");
+                    setTxt('var-risk-flags-list', flagsHtml || "<li>無明顯高危險標誌</li>");
+
+                    let sc = data.ai.risk.scenarios;
+                    setTxt('var-matrix-prob-bull', sc[0].prob + "%"); setTxt('var-matrix-desc-bull', sc[0].desc);
+                    setTxt('var-matrix-prob-base', sc[1].prob + "%"); setTxt('var-matrix-desc-base', sc[1].desc);
+                    setTxt('var-matrix-prob-bear', sc[2].prob + "%"); setTxt('var-matrix-desc-bear', sc[2].desc);
+
+                    setTxt('var-conc-price-level', `<strong>價格位階：</strong> 股價 $${data.realPrice} 位於 ${data.realPrice < data.math.avgCheap ? '淑價區間以下' : (data.realPrice > data.math.avgExp ? '貴價區間以上' : '合理區間')}。`);
+                    setTxt('var-conc-gdp-signal', `<strong>GDP 訊號：</strong> 最新公佈為 ${data.ai.gdp_yoy}%。`);
+                    setTxt('var-conc-strategy', data.decision.strategy);
+
+                    // --- 終極絕招：將處理完的 HTML 完整字串直接塞進 iframe ---
+                    frame.srcdoc = doc.documentElement.outerHTML;
+
+                    // 既然是同步處理完，直接關閉載入動畫！
+                    loadingDiv.style.display = 'none';
+                    contentDiv.classList.remove('hidden');
+                    
+                    setTimeout(() => { 
+                        try { frame.style.height = (frame.contentWindow.document.body.scrollHeight + 50) + 'px'; } catch(e) { frame.style.height = '800px'; }
+                    }, 500);
 
                 } else {
                     window.showAlert(`找不到雲端報告，請點擊「產生最新報告」。`, "系統提示");
@@ -1126,6 +1088,7 @@
                 loadingDiv.style.display = 'none';
             }
         };
+
 
         function setTxType(t) { txType = t; window.resetTxStatus(); const bB=document.getElementById('btn-tx-buy'), bS=document.getElementById('btn-tx-sell'); if(t==='buy'){ bB.className="tx-btn tx-btn-buy-active flex-1"; bS.className="tx-btn tx-btn-inactive flex-1"; }else{ bB.className="tx-btn tx-btn-inactive flex-1"; bS.className="tx-btn tx-btn-sell-active flex-1"; } }
         function resetTxStatus() { const sD=document.getElementById('tx-status'), sB=document.getElementById('btn-tx-submit'); if(sD) sD.innerHTML=""; if(sB){ sB.disabled=false; sB.innerText="確認新增"; sB.classList.remove('opacity-50','cursor-not-allowed'); } }
