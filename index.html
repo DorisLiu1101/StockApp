@@ -1,5 +1,5 @@
 <!-- 
-  [VER] v2.18 (2024-06-30)
+  [VER] v3.0 (2024-06-30)
   [DESC] 
     1. 分析報告API Key 安全分離版
     2. Bug Fixed
@@ -864,8 +864,13 @@
                 });
                 
                 const aiResJson = await aiRes.json();
-                if (!aiResJson.success || !aiResJson.data.candidates || !aiResJson.data.candidates[0]) {
-                    throw new Error("AI 伺服器忙線或 GAS 金鑰設定錯誤，請稍後再試。");
+                // 1. 攔截後端回傳的錯誤（如金鑰無效、額度不足）
+                if (!aiResJson.success) {
+                throw new Error(aiResJson.message || "伺服器發生未知錯誤，請稍後再試。");
+                }
+                // 2. 確保 AI 資料結構正確
+                if (!aiResJson.data || !aiResJson.data.candidates || !aiResJson.data.candidates[0]) {
+                throw new Error("AI 伺服器忙線未回傳有效內容，請稍後再試。");
                 }
                 
                 let rawText = aiResJson.data.candidates[0].content.parts[0].text;
