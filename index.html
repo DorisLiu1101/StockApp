@@ -898,6 +898,13 @@
                 });
                 
                 const aiData = await aiRes.json();
+                
+                // 防呆保護網：檢查 AI 是否正常回傳
+                if (!aiData.candidates || !aiData.candidates[0]) {
+                    console.error("AI Response:", aiData);
+                    throw new Error("AI 伺服器忙線或無法解析該公司資料，請稍後再試。");
+                }
+                
                 let jsonStr = aiData.candidates[0].content.parts[0].text.replace(/```json/gi, '').replace(/```/g, '').trim();
                 const reportRaw = JSON.parse(jsonStr);
 
