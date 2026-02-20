@@ -1,10 +1,7 @@
 <!-- 
-  [VER] v2.16.6
+  [VER] v2.17
   [DESC] 
-    1. Google 登入機制由「彈出視窗」改為更適合行動端的「頁面跳轉」，並補上錯誤提示防護網]
-    2. 修復未寫入closeHelp導致的無法關閉說明視窗問題
-    3. 修復頭像載入錯誤導致的菜單無法顯示問題
-    4. 修改公司名稱，廢除瀏覽器預設彈窗，改為行內編輯框
+    1. 個股詳情頁面新增「分析報告」按鈕
 
 
 -->
@@ -292,8 +289,35 @@
                     <div class="flex flex-col items-center flex-shrink-0"><span class="text-label-grey mb-2 text-red-500 font-bold">貴價</span><span id="val-pricey" class="text-xl font-mono font-bold text-red-500 leading-none">--</span></div>
                 </div>
             </div>
-            
-            <div class="mb-12"><div class="flex items-center gap-3 mb-4"><button onclick="window.loadReport()" class="px-4 py-2 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black transition-all text-[#D4AF37] text-[12px] font-bold tracking-widest rounded border border-[#D4AF37]/30 flex items-center gap-2 shadow-lg focus:outline-none"><span class="material-icons text-base">cloud_search</span> 搜尋雲端報告</button><div class="flex items-center text-[12px] text-gray-500 font-mono"><span class="mr-2">目標:</span><span id="debug-symbol" class="text-[#D4AF37] font-bold">--</span></div></div><div id="report-section" class="rounded-xl overflow-hidden relative min-h-[0px]"><div id="report-loading" class="hidden flex-col items-center py-10"><span class="material-icons animate-spin text-[#D4AF37] mb-3 text-4xl">sync</span><p class="text-[13px] text-gray-500 tracking-[0.3em] font-bold">SEARCHING...</p></div><div id="report-content" class="w-full hidden bg-white"><iframe id="report-frame" class="w-full border-none block" scrolling="no"></iframe></div></div></div>
+            <div class="mb-12">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+        <button onclick="window.loadReport()" class="px-4 py-2 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black transition-all text-[#D4AF37] text-[12px] font-bold tracking-widest rounded border border-[#D4AF37]/30 flex items-center gap-2 shadow-lg focus:outline-none">
+            <span class="material-icons text-base">cloud_search</span> 讀取雲端報告
+        </button>
+        
+        <button onclick="window.generateAndSaveReport()" class="px-4 py-2 bg-[#D4AF37] hover:bg-[#FFE082] text-black transition-all text-[12px] font-bold tracking-widest rounded border border-[#D4AF37] flex items-center gap-2 shadow-[0_0_15px_rgba(212,175,55,0.3)] focus:outline-none">
+            <span class="material-icons text-base">auto_awesome</span> 產生最新報告
+        </button>
+        
+        <div class="flex items-center text-[12px] text-gray-500 font-mono ml-auto">
+            <span class="mr-2">目標:</span><span id="debug-symbol" class="text-[#D4AF37] font-bold">--</span>
+        </div>
+    </div>
+
+    <div id="report-section" class="rounded-xl overflow-hidden relative min-h-[0px]">
+        <div id="report-loading" class="hidden flex-col items-center py-10">
+            <span class="material-icons animate-spin text-[#D4AF37] mb-3 text-4xl">sync</span>
+            <p id="report-loading-text" class="text-[13px] text-gray-500 tracking-[0.3em] font-bold">PROCESSING...</p>
+        </div>
+        <div id="report-content" class="w-full hidden bg-white">
+            <iframe id="report-frame" class="w-full border-none block" scrolling="no"></iframe>
+        </div>
+    </div>
+</div>
+
+
+
+
         </div>
     </div>
 
