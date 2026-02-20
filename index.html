@@ -1,9 +1,8 @@
 <!-- 
-  [VER] v2.17.2 (2024-06-30)
+  [VER] v2.17.3 (2024-06-30)
   [DESC] 
-    1. 個股詳情頁面新增「分析報告」按鈕
-    2. 分析報告生成
-    3. Bug Fixed
+    1. 分市場抓取即時股價功能
+    2. Bug Fixed
 
 
 -->
@@ -832,11 +831,21 @@
             try {
                 // --- 🧠 左腦：抓取絕對精確現價 ---
                 loadingText.innerText = '抓取絕對即時股價中...';
-                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.TW`)}`;
+                
+                // 動態判斷 Yahoo Finance 的市場後綴 (.TW 或 .T)
+                let yfSymbol = symbol;
+                if (currentDetailMarket === 'TW') yfSymbol += '.TW';
+                else if (currentDetailMarket === 'JP') yfSymbol += '.T';
+                
+                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${yfSymbol}`)}`;
                 const resData = await fetch(proxyUrl);
                 const yahooData = await resData.json();
+                
+                // 防呆保護網：如果 Yahoo 找不到該股票
+                if (!yahooData.chart || !yahooData.chart.result || yahooData.chart.result === null) {
+                    throw new Error(`無法從 Yahoo Finance 取得 ${yfSymbol} 的股價，請確認代號與市場是否正確。`);
+                }
                 const realPrice = yahooData.chart.result[0].meta.regularMarketPrice;
-
                 // --- 🧠 右腦：呼叫 Gemini 聯網獲取歷史數據與質化分析 ---
                 loadingText.innerText = 'AI 聯網深度爬梳財報與新聞中... (約需 10 秒)';
                 const prompt = `
