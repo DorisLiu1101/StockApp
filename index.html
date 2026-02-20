@@ -1,7 +1,7 @@
 <!-- 
-  [VER] v2.17.3 (2024-06-30)
+  [VER] v2.17.5 (2024-06-30)
   [DESC] 
-    1. 分市場抓取即時股價功能
+    1. 分析報告API Key 安全分離版
     2. Bug Fixed
 
 
@@ -812,12 +812,22 @@
         }
         function closeStockDetail() { document.getElementById('detail-modal').classList.remove('open'); document.getElementById('report-frame').srcdoc = ""; }
         
+
         // ==========================================
-        // 🚀 AI 報告雙腦引擎 (V6 終極版：精準 DDM 折現運算 + 聯網分析)
+        // 🚀 AI 報告雙腦引擎 (API Key 安全分離版)
         // ==========================================
-        const GEMINI_API_KEY = 'AIzaSyDIRFSGw4qt0jYcplgBWFywc_nwXNwdK6I'; 
 
         window.generateAndSaveReport = async function() {
+            // --- 🛡️ API Key 安全防護：從本機讀取，若無則跳出詢問 ---
+            let GEMINI_API_KEY = localStorage.getItem('user_gemini_key');
+            if (!GEMINI_API_KEY) {
+                GEMINI_API_KEY = prompt("🔐 系統安全提示：\\n請輸入您的 Gemini API Key。\\n(此金鑰只會安全儲存於您目前的瀏覽器/手機本機中，絕對不會上傳至任何公開伺服器)");
+                if (!GEMINI_API_KEY || GEMINI_API_KEY.trim() === "") {
+                    return window.showAlert('必須設定 API Key 才能啟動 AI 雙腦引擎！', '系統提示');
+                }
+                localStorage.setItem('user_gemini_key', GEMINI_API_KEY.trim());
+            }
+
             const symbol = currentDetailSymbol || document.getElementById('debug-symbol').innerText;
             if (!symbol || symbol === '--') return window.showAlert('請先選擇一檔股票！');
             if (!userScriptUrl) return window.showAlert('請先至設定頁面綁定 Google Apps Script 網址！');
@@ -829,10 +839,7 @@
             loadingDiv.style.display = 'flex';
             
             try {
-                // --- 🧠 左腦：抓取絕對精確現價 ---
                 loadingText.innerText = '抓取絕對即時股價中...';
-                
-                // 動態判斷 Yahoo Finance 的市場後綴 (.TW 或 .T)
                 let yfSymbol = symbol;
                 if (currentDetailMarket === 'TW') yfSymbol += '.TW';
                 else if (currentDetailMarket === 'JP') yfSymbol += '.T';
@@ -840,28 +847,24 @@
                 const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${yfSymbol}`)}`;
                 const resData = await fetch(proxyUrl);
                 const yahooData = await resData.json();
-                
-                // 防呆保護網：如果 Yahoo 找不到該股票
                 if (!yahooData.chart || !yahooData.chart.result || yahooData.chart.result === null) {
-                    throw new Error(`無法從 Yahoo Finance 取得 ${yfSymbol} 的股價，請確認代號與市場是否正確。`);
+                    throw new Error(`無法從 Yahoo 取得 ${yfSymbol} 的股價，請確認代號。`);
                 }
                 const realPrice = yahooData.chart.result[0].meta.regularMarketPrice;
-                // --- 🧠 右腦：呼叫 Gemini 聯網獲取歷史數據與質化分析 ---
+
                 loadingText.innerText = 'AI 聯網深度爬梳財報與新聞中... (約需 10 秒)';
                 const prompt = `
                     角色：巴菲特價值投資分析師。
                     任務：分析台股 ${symbol}。目前真實股價為 ${realPrice} 元。
                     請聯網搜尋最新財報、近5年股利與EPS、新聞、與最新 GDP 成長率。
-                    必須嚴格只輸出純 JSON 格式（絕對不可包含 \`\`\`json 標記或任何其他文字）：
+                    必須嚴格只輸出純 JSON 格式！絕對禁止任何開場白（例如"我將以..."）、結語或 Markdown 標記，請直接以大括號 { 開頭：
                     {
                         "company_name": "公司名稱",
                         "biz_intro": "核心業務簡介(15字內)",
                         "nav": 最新一季每股淨值(數字),
                         "reinvestment_rate": 盈再率(數字,如 85 代表 85%),
                         "gdp_yoy": 最新實質GDP年增率(數字,如 1.5),
-                        "history_5y": [
-                            {"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0}
-                        ],
+                        "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0}],
                         "buffett_tests": {
                             "profit": {"value": "28.5%", "status": "通過 或 失敗"},
                             "cashflow": {"value": "85%", "status": "通過 或 失敗"},
@@ -872,13 +875,13 @@
                         "market": {
                             "policy": "政策風險說明...",
                             "fx": "匯率影響說明...",
-                            "sentiment": "市場情緒說明...",
-                            "news": ["新聞標題1", "新聞標題2"],
-                            "analysts": "分析師目標價與共識觀點..."
+                            "sentiment": "市場情緒...",
+                            "news": ["新聞1", "新聞2"],
+                            "analysts": "分析師觀點..."
                         },
                         "risk": {
                             "confidence_score": 75,
-                            "flags": ["盈再率過高等警示..."],
+                            "flags": ["警示..."],
                             "scenarios": [
                                 {"type": "牛市 (Bull)", "prob": 20, "desc": "說明..."},
                                 {"type": "標準 (Base)", "prob": 50, "desc": "說明..."},
@@ -898,19 +901,16 @@
                 });
                 
                 const aiData = await aiRes.json();
+                if (!aiData.candidates || !aiData.candidates[0]) throw new Error("AI 伺服器忙線中，請稍後再試。");
                 
-                // 防呆保護網：檢查 AI 是否正常回傳
-                if (!aiData.candidates || !aiData.candidates[0]) {
-                    console.error("AI Response:", aiData);
-                    throw new Error("AI 伺服器忙線或無法解析該公司資料，請稍後再試。");
-                }
+                let rawText = aiData.candidates[0].content.parts[0].text;
+                let jsonMatch = rawText.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) throw new Error("AI 未回傳有效格式，請再點擊一次。");
                 
-                let jsonStr = aiData.candidates[0].content.parts[0].text.replace(/```json/gi, '').replace(/```/g, '').trim();
+                let jsonStr = jsonMatch[0].replace(/```json/gi, '').replace(/```/g, '').trim();
                 const reportRaw = JSON.parse(jsonStr);
 
-                // --- ⚙️ 左腦 (JS) 接手：執行嚴謹的 DDM 8 年折現運算 ---
                 loadingText.innerText = '本機執行 DDM 折現模型運算中...';
-                
                 let sumEps = 0, sumDiv = 0, sumRoe = 0;
                 reportRaw.history_5y.forEach(y => { sumEps += Number(y.eps); sumDiv += Number(y.div); sumRoe += Number(y.roe); });
                 const avgRoe = sumRoe / reportRaw.history_5y.length / 100;
@@ -974,7 +974,7 @@
                 
                 const saveResult = await saveRes.json();
                 if(saveResult.success) {
-                    loadReport(); // 存檔成功，直接觸發讀取渲染
+                    window.loadReport(); // 存檔成功，直接觸發讀取渲染
                 } else {
                     throw new Error(saveResult.message);
                 }
@@ -986,7 +986,7 @@
             }
         };
 
-        async function loadReport() {
+        window.loadReport = async function() {
             const symbol = currentDetailSymbol || document.getElementById('debug-symbol').innerText;
             if (!symbol || symbol === '--') return;
             if (!userScriptUrl) return window.showAlert("請先於設定中貼上 Script URL", "系統提示");
@@ -1005,9 +1005,18 @@
                 const result = await res.json();
 
                 if (result.success && result.found) {
-                    const data = JSON.parse(result.html);
-                    frame.src = 'StockApp_Report_Form.html';
-                    
+                    let data;
+                    try {
+                        // 🛡️ 攔截舊版 HTML 檔案
+                        data = JSON.parse(result.html);
+                    } catch (parseError) {
+                        console.error("抓到舊版報告:", parseError);
+                        window.showAlert(`雲端存有舊版的 HTML 報告，請直接點擊旁邊的「✨ 產生最新報告」來覆蓋它！`, "系統提示");
+                        loadingDiv.style.display = 'none';
+                        return;
+                    }
+
+                    // 🛡️ 解決無限轉圈：先綁定 onload，再指定 src
                     frame.onload = function() {
                         try {
                             const doc = frame.contentWindow.document;
@@ -1103,6 +1112,10 @@
                             contentDiv.classList.remove('hidden');
                         }
                     };
+                    
+                    // 🛡️ 強制更新法：加上時間戳記強制瀏覽器重抓 iframe
+                    frame.src = 'StockApp_Report_Form.html?t=' + new Date().getTime();
+
                 } else {
                     window.showAlert(`找不到雲端報告，請點擊「產生最新報告」。`, "系統提示");
                     loadingDiv.style.display = 'none';
@@ -1112,7 +1125,7 @@
                 window.showAlert('讀取失敗：' + error.message);
                 loadingDiv.style.display = 'none';
             }
-        }
+        };
 
         function setTxType(t) { txType = t; window.resetTxStatus(); const bB=document.getElementById('btn-tx-buy'), bS=document.getElementById('btn-tx-sell'); if(t==='buy'){ bB.className="tx-btn tx-btn-buy-active flex-1"; bS.className="tx-btn tx-btn-inactive flex-1"; }else{ bB.className="tx-btn tx-btn-inactive flex-1"; bS.className="tx-btn tx-btn-sell-active flex-1"; } }
         function resetTxStatus() { const sD=document.getElementById('tx-status'), sB=document.getElementById('btn-tx-submit'); if(sD) sD.innerHTML=""; if(sB){ sB.disabled=false; sB.innerText="確認新增"; sB.classList.remove('opacity-50','cursor-not-allowed'); } }
