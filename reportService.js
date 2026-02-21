@@ -1,10 +1,10 @@
 /**
- * [VER] v2.3.1
+ * [VER] v2.4
  * [[DESC]
  *  1. 淘汰 DDM 折現模型，導入「固定倍數+歷史倍數」雙軌混合 PER 本益比估值模型]
  *  2. 讓 AI 直接抓取最新的 EPS 與 歷史本益比區間，並在前端進行估值計算與評等決策
  *  3. 更新報告模板，將原本的 DDM 相關欄位改為 PE 相關欄位，並新增當前 PE 與 歷史 PE 區間的顯示
- *  4. 讀取時優先套用排序後的字串，若為舊版則動態比對
+ *  4. 殖利率部分改為直接顯示 AI 抓取的近五年平均殖利率，並在摘要中提示用戶參考
  */
 
 // ==========================================
@@ -75,7 +75,8 @@ window.generateAndSaveReport = async function() {
                 "company_name": "公司名稱", "biz_intro": "核心業務簡介(15字內)", "nav": 最新一季每股淨值(數字),
                 "reinvestment_rate": 盈再率(數字,如 85 代表 85%), "gdp_yoy": 最新實質GDP年增率(數字,如 1.5),
                 "eps_ttm": 近四季總EPS(數字,如 15.5), "pe_hist_low": 近三年歷史最低本益比(數字,如 10.5), "pe_hist_high": 近三年歷史最高本益比(數字,如 25.0),
-                "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0}],
+                "avg_yield_5y": 近五年平均現金殖利率(數字,如 5.2),
+                "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0, "yield": 5.2, "payout": 50.0}],
                 "buffett_tests": { "profit": {"value": "28.5%", "status": "通過 或 失敗"}, "cashflow": {"value": "85%", "status": "通過 或 失敗"}, "dividend": {"value": "42%", "status": "通過 或 失敗"}, "scale": {"value": "符合標準", "status": "通過 或 失敗"}, "chips": {"value": "穩定", "status": "通過 或 失敗"} },
                 "market": { "policy": "政策風險說明...", "fx": "匯率影響說明...", "sentiment": "市場情緒...", "news": ["新聞1", "新聞2"], "analysts": "分析師觀點..." },
                 "risk": { "confidence_score": 75, "flags": ["警示..."], "scenarios": [ {"type": "牛市 (Bull)", "prob": 20, "desc": "說明..."}, {"type": "標準 (Base)", "prob": 50, "desc": "說明..."}, {"type": "熊市 (Bear)", "prob": 30, "desc": "說明..."} ] }
@@ -308,10 +309,16 @@ window.loadReport = async function() {
 
             let finHtml = "";
             data.ai.history_5y.forEach(y => {
-                finHtml += `<tr><td>${y.year}</td><td>$${y.div}</td><td>--</td><td>$${y.eps}</td><td>--</td><td>${y.roe}%</td></tr>`;
+                // 直接讀取 AI 回傳的數值，若無則顯示 --
+                let yld = y.yield ? y.yield + "%" : "--";
+                let payout = y.payout ? y.payout + "%" : "--";
+                finHtml += `<tr><td>${y.year}</td><td>$${y.div}</td><td style="color:#D4AF37;">${yld}</td><td>$${y.eps}</td><td style="color:#4ADE80;">${payout}</td><td>${y.roe}%</td></tr>`;
             });
             setTxt('var-fin-table-body', finHtml);
-            setTxt('var-fin-summary', `<strong>數據摘要：</strong> 近五年獲利紀錄已帶入，估價採用近四季 EPS (${data.ai.eps_ttm}) 為基準計算。`);
+            
+            // 讀取 AI 抓取的五年平均殖利率
+            let avgYieldStr = data.ai.avg_yield_5y ? data.ai.avg_yield_5y + "%" : "--";
+            setTxt('var-fin-summary', `<strong>數據摘要：</strong> 近五年獲利紀錄已帶入，估價採用近四季 EPS (${data.ai.eps_ttm}) 為基準計算。<br><span style="color:#D4AF37; font-size: 13px; display:inline-block; margin-top:6px;">💡 AI 聯網查證之平均殖利率：${avgYieldStr}</span>`);
 
             // [修改重點] 估價分析表格渲染 PE 變數
             setTxt('var-val-pe-a', `12x ~ 30x`);
