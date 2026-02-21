@@ -1,9 +1,10 @@
 /**
- * [VER] v2.2
+ * [VER] v2.3
  * [[DESC]
  *  1. 淘汰 DDM 折現模型，導入「固定倍數+歷史倍數」雙軌混合 PER 本益比估值模型]
  *  2. 讓 AI 直接抓取最新的 EPS 與 歷史本益比區間，並在前端進行估值計算與評等決策
  *  3. 更新報告模板，將原本的 DDM 相關欄位改為 PE 相關欄位，並新增當前 PE 與 歷史 PE 區間的顯示
+ *  4. 讀取時優先套用排序後的字串，若為舊版則動態比對
  */
 
 // ==========================================
@@ -171,15 +172,35 @@ window.generateAndSaveReport = async function() {
             }
         }
 
-        const finalReport = {
-            symbol: symbol, realPrice: realPrice, date: new Date().toISOString().slice(0, 10).replace(/-/g, "/"),
-            ai: reportRaw, math: { valA, valB, avgCheap, avgExp, currentPE }, decision: { rating, signal, strategy }
-        };
+                // ==========================================
+                // 區間強制排序 (確保由小到大)，寫入專屬的 range 字串
+                // ==========================================
+                let cheapLow = Math.min(valA.cheap, valB.cheap);
+                let cheapHigh = Math.max(valA.cheap, valB.cheap);
+                let expLow = Math.min(valA.exp, valB.exp);
+                let expHigh = Math.max(valA.exp, valB.exp);
+                let peLowStr = valB.fail ? "--" : Math.min(valB.pe_cheap, valB.pe_exp);
+                let peHighStr = valB.fail ? "--" : Math.max(valB.pe_cheap, valB.pe_exp);
 
-        loadingText.innerText = '儲存精確報告至雲端...';
-        const saveRes = await fetch(userScriptUrl, {
-            method: 'POST', body: JSON.stringify({ action: 'saveReport', data: { symbol: symbol, content: JSON.stringify(finalReport) } })
-        });
+                const finalReport = {
+                    symbol: symbol, realPrice: realPrice, date: new Date().toISOString().slice(0, 10).replace(/-/g, "/"),
+                    ai: reportRaw, 
+                    math: { 
+                        valA, valB, avgCheap, avgExp, currentPE,
+                        range: {
+                            cheap: `($${cheapLow} ~ $${cheapHigh})`,
+                            exp: `($${expLow} ~ $${expHigh})`,
+                            pe: `(歷史：${peLowStr}x ~ ${peHighStr}x)`
+                        }
+                    }, 
+                    decision: { rating, signal, strategy }
+                };
+
+                loadingText.innerText = '寫入日期與儲存報告...';
+                const saveRes = await fetch(userScriptUrl, {
+                    // [修改重點] 額外傳遞 market 屬性給後端
+                    method: 'POST', body: JSON.stringify({ action: 'saveReport', data: { symbol: symbol, market: currentDetailMarket, content: JSON.stringify(finalReport) } })
+                });
         
         const saveResult = await saveRes.json();
         if(saveResult.success) {
@@ -251,12 +272,13 @@ window.loadReport = async function() {
             if(doc.getElementById('var-gauge-fill')) doc.getElementById('var-gauge-fill').style.transform = `rotate(${(data.ai.risk.confidence_score/100)*180}deg)`;
             
             // [修改重點] 將原本渲染 DDM 的元素改為渲染 PE
-            setTxt('var-current-pe', data.math.currentPE + "倍");
-            setTxt('var-pe-range', `(歷史：${data.math.valB.pe_cheap} ~ ${data.math.valB.pe_exp}倍)`);
-            setTxt('var-cheap-avg', "$" + data.math.avgCheap);
-            setTxt('var-cheap-range', `($${data.math.valA.cheap} ~ $${data.math.valB.cheap})`);
-            setTxt('var-exp-avg', "$" + data.math.avgExp);
-            setTxt('var-exp-range', `($${data.math.valA.exp} ~ $${data.math.valB.exp})`);
+            // [修改重點] 讀取時優先套用排序後的字串，若為舊版則動態比對
+                    setTxt('var-current-pe', data.math.currentPE + "倍");
+                    setTxt('var-pe-range', data.math.range ? data.math.range.pe : `(歷史：${data.math.valB.pe_cheap}x ~ ${data.math.valB.pe_exp}x)`);
+                    setTxt('var-cheap-avg', "$" + data.math.avgCheap);
+                    setTxt('var-cheap-range', data.math.range ? data.math.range.cheap : `($${Math.min(data.math.valA.cheap, data.math.valB.cheap)} ~ $${Math.max(data.math.valA.cheap, data.math.valB.cheap)})`);
+                    setTxt('var-exp-avg', "$" + data.math.avgExp);
+                    setTxt('var-exp-range', data.math.range ? data.math.range.exp : `($${Math.min(data.math.valA.exp, data.math.valB.exp)} ~ $${Math.max(data.math.valA.exp, data.math.valB.exp)})`);
             
             let pct = ((data.realPrice - data.math.avgCheap) / (data.math.avgExp - data.math.avgCheap)) * 100;
             pct = Math.max(0, Math.min(100, pct));
