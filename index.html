@@ -1,10 +1,10 @@
 <!-- 
-  [VER] v3.3 (2026-02-21)
+  [VER] v3.4 (2026-02-21)
   [DESC] 
     1. 加入 AI 漏填防呆機制，並修正跨國市場提示詞 (Prompt) 判斷 Bug
     2. 導入「誠實呈現模式」，動態判斷跨國市場，若 AI 漏給財報則標示無資料並暫停估值，絕不杜撰數據
     3. 新增台股上市(.TW)與上櫃(.TWO)自動偵測切換機制，徹底解決上櫃股票報錯問題
-
+    4. 前端模組化拆分，剝離分析報告相關邏輯至 reportService.js
 
 -->
 <!DOCTYPE html>
@@ -14,7 +14,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>維股利</title>
     
-    <!-- PWA Settings -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,6 +25,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     
+    <script src="reportService.js"></script>
+
     <style>
         /* Base Styles & Reset */
         body { font-family: 'Inter', 'Noto Sans TC', sans-serif; background-color: #000000; color: #F5F5F5; padding-bottom: 80px; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
@@ -102,7 +103,6 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
     <header class="bg-[#050505] p-4 sticky top-0 z-50 border-b border-[#333] pt-[max(env(safe-area-inset-top),36px)]">
         <div class="flex justify-between items-center max-w-7xl mx-auto w-full">
             <div class="flex items-center gap-2">
@@ -141,9 +141,7 @@
         </div>
     </header>
 
-    <!-- Main Content -->
     <main class="w-full max-w-md md:max-w-7xl mx-auto p-4 space-y-6 min-h-screen">
-        <!-- Home Section -->
         <section id="page-home" class="active space-y-6 md:space-y-0 md:grid md:grid-cols-2 md:gap-6 lg:gap-8">
             <div class="app-card p-6 relative overflow-hidden">
                 <div class="absolute -right-6 -top-6 opacity-10"><span class="material-icons text-9xl text-gold">account_balance</span></div>
@@ -189,7 +187,6 @@
             </div>
         </section>
 
-        <!-- List Section -->
         <section id="page-list" class="hidden space-y-2">
             <div class="sticky top-0 bg-[#000] pt-1 pb-3 z-10 space-y-3 shadow-lg -mx-4 px-4 md:mx-0 md:px-0 md:static md:bg-transparent md:shadow-none">
                 <div class="relative">
@@ -225,7 +222,6 @@
             <div id="stock-list-container" class="md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 pb-24"></div>
         </section>
 
-        <!-- Pick Stock Section -->
         <section id="page-pick" class="hidden min-h-[70vh] flex flex-col items-center justify-center text-center p-8">
              <div class="w-24 h-24 rounded-full bg-[#121212] border-2 border-dashed border-[#333] flex items-center justify-center mb-6 animate-pulse">
                 <span class="material-icons text-5xl text-gray-700">manage_search</span>
@@ -237,7 +233,6 @@
         </section>
     </main>
 
-    <!-- Detail Modal -->
     <div id="detail-modal" class="modal-fullscreen fixed inset-0 z-[55] bg-[#000] flex flex-col">
         <div class="flex-1 overflow-y-auto p-5 pb-10 hide-scrollbar">
             <div class="relative mb-6 pt-4">
@@ -323,7 +318,6 @@
         </div>
     </div>
 
-    <!-- Settings Modal -->
     <div id="settings-modal" class="modal fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
         <div class="app-card w-full max-w-sm p-6 space-y-5">
             <div class="flex justify-between items-center mb-1"><h3 class="text-gold font-bold tracking-widest text-lg">SETTINGS</h3><button onclick="window.openHelp()" class="text-gray-500 hover:text-gold transition focus:outline-none"><span class="material-icons">help_outline</span></button></div>
@@ -334,7 +328,6 @@
         </div>
     </div>
 
-    <!-- Transaction Modal (Compact) -->
     <div id="transaction-modal" class="modal fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
         <div class="app-card w-full max-w-sm flex flex-col max-h-[90vh]">
             <div class="bg-[#111] p-4 flex justify-between items-center border-b border-[#333]">
@@ -394,7 +387,6 @@
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        
         import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     
         let firebaseConfig = { apiKey: "AIzaSyCG3akQbcQvm1khoNyJ0S5xmwNftruo2D8", authDomain: "investment-dashboard-741c3.firebaseapp.com", projectId: "investment-dashboard-741c3", storageBucket: "investment-dashboard-741c3.firebasestorage.app", messagingSenderId: "542046198044", appId: "1:542046198044:web:e3949cae05a0c8a14cc2d9" };
@@ -405,6 +397,15 @@
         let currentDetailSymbol = "", currentDetailMarket = "";
         let currentFilter = 'ALL', txType = 'buy', currentChartFilter = 'ALL';
         let currentSort = { field: 'gain', order: 'desc' };
+
+        // ==========================================
+        // [新增] 建立狀態橋樑，讓外部的 reportService.js 能夠隨時取得最新狀態
+        // ==========================================
+        window.appState = {
+            get userScriptUrl() { return userScriptUrl; },
+            get currentDetailSymbol() { return currentDetailSymbol; },
+            get currentDetailMarket() { return currentDetailMarket; }
+        };
         
         const REPORT_FOLDER_URL = "https://drive.google.com/drive/folders/1GdtSyWHYhwZ8JnugPGzgBhIRwXKScIZR";
         
@@ -483,16 +484,12 @@
                 
                 const photo = user.photoURL;
                 if(photo && avatarImg) {
-                 // 【關鍵修正 2】如果之前 onerror 觸發過，會留下 display:none，這裡必須強制清除！
                     avatarImg.style.display = '';   
                     avatarImg.src = photo;
                     avatarImg.classList.remove('hidden');
-                    // 注意：這裡絕對不要寫 avatarIcon.classList.add('hidden')
                 } else {
-                    // 沒照片時，隱藏圖片層，讓底下的灰頭像露出來
                     if(avatarImg) avatarImg.classList.add('hidden');
                 }
-                
                 if(menuUserName) menuUserName.innerText = user.displayName || user.email || "User";
             }
         }
@@ -657,51 +654,31 @@
         function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
         function closeTransactionModal() { document.getElementById('transaction-modal').classList.remove('open'); }
         
-        function openHelp() { 
-            alert("建構中");
-        }
+        function openHelp() { alert("建構中"); }
         function closeHelp() {}
        
         function editStockName() {
             if (!currentDetailSymbol || !currentDetailMarket) return;
             const nameEl = document.getElementById('detail-name');
-            // 防止重複點擊產生多個輸入框
             if (nameEl.querySelector('input')) return; 
-            
             const currentName = nameEl.innerText;
-            // 動態將文字替換為「輸入框 + 勾勾 + 叉叉」的精緻 UI
             nameEl.innerHTML = `<div class="flex items-center gap-2"><input type="text" id="inline-name-input" value="${currentName}" class="bg-[#1A1A1A] border border-[#D4AF37] rounded px-2 py-0.5 text-[18px] text-white w-28 focus:outline-none shadow-inner"><button onclick="window.saveInlineName('${currentName}')" class="text-green-500 hover:text-green-400 p-1 flex items-center bg-[#2A2A2A] rounded border border-green-900/50"><span class="material-icons text-sm">check</span></button><button onclick="window.cancelInlineName('${currentName}')" class="text-red-500 hover:text-red-400 p-1 flex items-center bg-[#2A2A2A] rounded border border-red-900/50"><span class="material-icons text-sm">close</span></button></div>`;
         }
 
-        window.cancelInlineName = (oldName) => { 
-            document.getElementById('detail-name').innerText = oldName; 
-        };
+        window.cancelInlineName = (oldName) => { document.getElementById('detail-name').innerText = oldName; };
 
         window.saveInlineName = async (oldName) => {
             const newName = document.getElementById('inline-name-input').value.trim();
             const nameEl = document.getElementById('detail-name');
-            // 如果沒改字或空白，直接恢復原狀
             if (!newName || newName === oldName) { nameEl.innerText = oldName; return; }
             if (!userScriptUrl) { window.showAlert("請先設定 GAS URL"); nameEl.innerText = oldName; return; }
-            
-            // 顯示存檔中的過場動畫
             nameEl.innerHTML = `<span class="text-sm text-gray-400 animate-pulse font-mono tracking-widest">Saving...</span>`;
-            
             try {
                 const res = await fetch(userScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'edit_name', data: { market: currentDetailMarket, symbol: currentDetailSymbol, newName: newName } }) });
                 const json = await res.json();
-                if(json.success) { 
-                    nameEl.innerText = newName; 
-                    await syncSheetData(); 
-                } else { 
-                    throw new Error(json.message); 
-                }
-            } catch(e) { 
-                window.showAlert("更新失敗: " + e.message); 
-                nameEl.innerText = oldName; 
-            }
+                if(json.success) { nameEl.innerText = newName; await syncSheetData(); } else { throw new Error(json.message); }
+            } catch(e) { window.showAlert("更新失敗: " + e.message); nameEl.innerText = oldName; }
         };
-
 
         function switchPage(p) { 
             ['page-home','page-list','page-pick'].forEach(id=>document.getElementById(id).classList.add('hidden')); 
@@ -813,356 +790,6 @@
         }
         function closeStockDetail() { document.getElementById('detail-modal').classList.remove('open'); document.getElementById('report-frame').srcdoc = ""; }
         
-
-        // ==========================================
-        // [版本號：V4.2] 
-        // [改版說明：新增台股上市(.TW)與上櫃(.TWO)自動偵測切換機制，徹底解決上櫃股票報錯問題]
-        // ==========================================
-        window.generateAndSaveReport = async function() {
-            const symbol = currentDetailSymbol || document.getElementById('debug-symbol').innerText;
-            if (!symbol || symbol === '--') return window.showAlert('請先選擇一檔股票！');
-            if (!userScriptUrl) return window.showAlert('請先至設定頁面綁定 Google Apps Script 網址！');
-
-            const loadingDiv = document.getElementById('report-loading');
-            const loadingText = document.getElementById('report-loading-text');
-            document.getElementById('report-content').classList.add('hidden');
-            loadingDiv.classList.remove('hidden');
-            loadingDiv.style.display = 'flex';
-            
-            try {
-                loadingText.innerText = '抓取絕對即時股價中 (自動偵測市場)...';
-                
-                // 🌟 新增：獨立抓取股價的輔助小工具
-                async function getYahooPrice(s) {
-                    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${s}`)}`;
-                    const res = await fetch(proxyUrl);
-                    const data = await res.json();
-                    if (data.chart && data.chart.result && data.chart.result !== null) {
-                        return data.chart.result[0].meta.regularMarketPrice;
-                    }
-                    return null;
-                }
-
-                let realPrice = null;
-                let yfSymbol = symbol;
-
-                // 🌟 新增：上市櫃雙重打擊自動切換機制
-                if (currentDetailMarket === 'TW') {
-                    realPrice = await getYahooPrice(`${symbol}.TW`); // 先猜上市
-                    if (realPrice !== null) {
-                        yfSymbol = `${symbol}.TW`;
-                    } else {
-                        realPrice = await getYahooPrice(`${symbol}.TWO`); // 猜錯換上櫃
-                        if (realPrice !== null) {
-                            yfSymbol = `${symbol}.TWO`;
-                        } else {
-                            throw new Error(`無法從 Yahoo 取得台股 ${symbol} (上市或上櫃) 的股價，請確認代號是否正確。`);
-                        }
-                    }
-                } else {
-                    if (currentDetailMarket === 'JP') yfSymbol += '.T';
-                    realPrice = await getYahooPrice(yfSymbol);
-                    if (realPrice === null) throw new Error(`無法從 Yahoo 取得 ${yfSymbol} 的股價，請確認代號。`);
-                }
-
-                let marketName = "台股";
-                if (currentDetailMarket === 'US') marketName = "美股";
-                else if (currentDetailMarket === 'JP') marketName = "日股";
-
-                loadingText.innerText = '呼叫後端 AI 進行聯網分析中... (約需 10 秒)';
-                const prompt = `
-                    角色：巴菲特價值投資分析師。
-                    任務：分析${marketName} ${symbol}。目前真實股價為 ${realPrice} 元。
-                    請聯網搜尋最新財報、近5年股利與EPS、新聞、與最新 GDP 成長率。
-                    必須嚴格只輸出純 JSON 格式！絕對禁止任何開場白（例如"我將以..."）、結語或 Markdown 標記，請直接以大括號 { 開頭：
-                    {
-                        "company_name": "公司名稱", "biz_intro": "核心業務簡介(15字內)", "nav": 最新一季每股淨值(數字),
-                        "reinvestment_rate": 盈再率(數字,如 85 代表 85%), "gdp_yoy": 最新實質GDP年增率(數字,如 1.5),
-                        "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0}],
-                        "buffett_tests": { "profit": {"value": "28.5%", "status": "通過 或 失敗"}, "cashflow": {"value": "85%", "status": "通過 或 失敗"}, "dividend": {"value": "42%", "status": "通過 或 失敗"}, "scale": {"value": "符合標準", "status": "通過 或 失敗"}, "chips": {"value": "穩定", "status": "通過 或 失敗"} },
-                        "market": { "policy": "政策風險說明...", "fx": "匯率影響說明...", "sentiment": "市場情緒...", "news": ["新聞1", "新聞2"], "analysts": "分析師觀點..." },
-                        "risk": { "confidence_score": 75, "flags": ["警示..."], "scenarios": [ {"type": "牛市 (Bull)", "prob": 20, "desc": "說明..."}, {"type": "標準 (Base)", "prob": 50, "desc": "說明..."}, {"type": "熊市 (Bear)", "prob": 30, "desc": "說明..."} ] }
-                    }
-                `;
-                
-                const aiRes = await fetch(userScriptUrl, {
-                    method: 'POST', body: JSON.stringify({ action: 'askGemini', data: { prompt: prompt } })
-                });
-                
-                const aiResJson = await aiRes.json();
-                if (!aiResJson.success) throw new Error(aiResJson.message || "伺服器發生未知錯誤，請稍後再試。");
-                if (!aiResJson.data || !aiResJson.data.candidates || !aiResJson.data.candidates[0]) throw new Error("AI 伺服器忙線未回傳有效內容，請稍後再試。");
-                
-                let rawText = aiResJson.data.candidates[0].content.parts[0].text;
-                let jsonMatch = rawText.match(/\{[\s\S]*\}/);
-                if (!jsonMatch) throw new Error("AI 未回傳有效格式，請再點擊一次。");
-                
-                let jsonStr = jsonMatch[0].replace(/```json/gi, '').replace(/```/g, '').trim();
-                const reportRaw = JSON.parse(jsonStr);
-
-                // ==========================================
-                // 🛡️ 誠實呈現防呆機制：確保物件結構，但不杜撰數字
-                // ==========================================
-                let hasValidMathData = true;
-                
-                reportRaw.buffett_tests = reportRaw.buffett_tests || {};
-                const safeTest = { value: "--", status: "資料不足" };
-                reportRaw.buffett_tests.profit = reportRaw.buffett_tests.profit || safeTest;
-                reportRaw.buffett_tests.cashflow = reportRaw.buffett_tests.cashflow || safeTest;
-                reportRaw.buffett_tests.dividend = reportRaw.buffett_tests.dividend || safeTest;
-                reportRaw.buffett_tests.scale = reportRaw.buffett_tests.scale || safeTest;
-                reportRaw.buffett_tests.chips = reportRaw.buffett_tests.chips || safeTest;
-
-                reportRaw.market = reportRaw.market || {};
-                reportRaw.market.policy = reportRaw.market.policy || "--";
-                reportRaw.market.fx = reportRaw.market.fx || "--";
-                reportRaw.market.sentiment = reportRaw.market.sentiment || "--";
-                reportRaw.market.analysts = reportRaw.market.analysts || "--";
-                reportRaw.market.news = Array.isArray(reportRaw.market.news) && reportRaw.market.news.length > 0 ? reportRaw.market.news : ["尚無重大新聞"];
-
-                reportRaw.risk = reportRaw.risk || {};
-                reportRaw.risk.flags = Array.isArray(reportRaw.risk.flags) ? reportRaw.risk.flags : ["AI 未能取得特定風險數據"];
-                reportRaw.risk.scenarios = Array.isArray(reportRaw.risk.scenarios) ? reportRaw.risk.scenarios : [];
-
-                if (isNaN(Number(reportRaw.nav)) || isNaN(Number(reportRaw.reinvestment_rate))) hasValidMathData = false;
-                
-                if (!reportRaw.history_5y || !Array.isArray(reportRaw.history_5y) || reportRaw.history_5y.length === 0) {
-                    reportRaw.history_5y = [{ "year": "--", "eps": "--", "div": "--", "roe": "--" }];
-                    hasValidMathData = false;
-                } else {
-                    reportRaw.history_5y.forEach(y => {
-                        if (isNaN(Number(y.eps)) || isNaN(Number(y.div)) || isNaN(Number(y.roe))) {
-                            hasValidMathData = false;
-                        }
-                    });
-                }
-
-                // ==========================================
-                // 📈 DDM 模型運算 (若資料不足則誠實跳過)
-                // ==========================================
-                loadingText.innerText = '本機執行 DDM 折現模型運算中...';
-                
-                let valA = { cheap: 0, exp: 0, irr: 0, fail: true };
-                let valB = { cheap: 0, exp: 0, irr: 0, fail: true };
-                let avgCheap = 0, avgExp = 0, avgIrr = "0.0";
-                let rating = "N/A", signal = "資料不足", strategy = "因 AI 無法取得此公司足夠且有效的五年期財務數據（可能為冷門股或新上市公司），為確保嚴謹度，系統已自動暫停 DDM 折現模型估值。請參考上方文字分析，或自行謹慎評估。";
-
-                if (hasValidMathData) {
-                    let sumEps = 0, sumDiv = 0, sumRoe = 0;
-                    reportRaw.history_5y.forEach(y => { sumEps += Number(y.eps); sumDiv += Number(y.div); sumRoe += Number(y.roe); });
-                    const avgRoe = sumRoe / reportRaw.history_5y.length / 100;
-                    const avgPayout = sumEps > 0 ? (sumDiv / sumEps) : 0.5;
-                    let expPayout = (avgPayout + (1 - (Number(reportRaw.reinvestment_rate) / 100))) / 2;
-                    if (expPayout < 0) expPayout = 0.1;
-
-                    const roe_A = Math.min((Number(reportRaw.history_5y[0].roe) / 100), avgRoe) || 0.05; 
-                    const roe_B = avgRoe || 0.05;
-
-                    function calcDDM(nav, roe, payout, costPrice) {
-                        if (nav <= 0 || roe <= 0) return { cheap: 0, exp: 0, irr: 0, fail: true };
-                        let currentNav = nav; let cf = []; let eps8 = 0;
-                        for(let i=1; i<=8; i++) {
-                            let eps = currentNav * roe; let div = eps * payout;
-                            currentNav = currentNav + eps - div; cf.push(div);
-                            if(i===8) eps8 = eps;
-                        }
-                        cf[7] += (eps8 * 12); 
-                        let cheap = 0, exp = 0;
-                        for(let i=0; i<8; i++) { cheap += cf[i] / Math.pow(1.15, i+1); exp += cf[i]; }
-                        let min = -0.99, max = 2.0, guess = 0.1;
-                        for(let iter=0; iter<30; iter++) {
-                            let npv = -costPrice;
-                            for(let i=0; i<8; i++) npv += cf[i] / Math.pow(1+guess, i+1);
-                            if (npv > 0) min = guess; else max = guess;
-                            guess = (min + max) / 2;
-                        }
-                        return { cheap: Math.round(cheap), exp: Math.round(exp), irr: (guess * 100).toFixed(1), fail: false };
-                    }
-
-                    valA = calcDDM(Number(reportRaw.nav), roe_A, expPayout, realPrice);
-                    valB = calcDDM(Number(reportRaw.nav), roe_B, expPayout, realPrice);
-
-                    avgCheap = Math.round((valA.cheap + valB.cheap) / 2);
-                    avgExp = Math.round((valA.exp + valB.exp) / 2);
-                    avgIrr = ((Number(valA.irr) + Number(valB.irr)) / 2).toFixed(1);
-                    
-                    let isGdpLow = Number(reportRaw.gdp_yoy) < 2.0;
-                    if (realPrice < avgCheap && avgCheap > 0) {
-                        rating = "BUY"; signal = "價值浮現"; 
-                        strategy = isGdpLow ? "目前股價低於淑價，且總經GDP處於低檔，為絕佳長線買點，建議積極佈局。" : "股價低於淑價，建議分批買進建立部位。";
-                    } else if (realPrice > avgExp && avgExp > 0) {
-                        rating = "SELL"; signal = "估值偏高";
-                        strategy = "目前股價已超越昂貴價，建議適度獲利了結或降低持股比重。";
-                    } else {
-                        rating = "HOLD"; signal = "觀望";
-                        strategy = "股價處於合理區間，建議持有觀望，等待更好的安全邊際。";
-                    }
-                }
-
-                const finalReport = {
-                    symbol: symbol, realPrice: realPrice, date: new Date().toISOString().slice(0, 10).replace(/-/g, "/"),
-                    ai: reportRaw, math: { valA, valB, avgCheap, avgExp, avgIrr }, decision: { rating, signal, strategy }
-                };
-
-                loadingText.innerText = '儲存精確報告至雲端...';
-                const saveRes = await fetch(userScriptUrl, {
-                    method: 'POST', body: JSON.stringify({ action: 'saveReport', data: { symbol: symbol, content: JSON.stringify(finalReport) } })
-                });
-                
-                const saveResult = await saveRes.json();
-                if(saveResult.success) {
-                    window.loadReport(); 
-                } else {
-                    throw new Error(saveResult.message);
-                }
-
-            } catch (error) {
-                console.error(error);
-                window.showAlert('產生報告時發生錯誤：\n' + error.message);
-                loadingDiv.style.display = 'none';
-            }
-        };
-
-
-        window.loadReport = async function() {
-            const symbol = currentDetailSymbol || document.getElementById('debug-symbol').innerText;
-            if (!symbol || symbol === '--') return;
-            if (!userScriptUrl) return window.showAlert("請先於設定中貼上 Script URL", "系統提示");
-            
-            const loadingDiv = document.getElementById('report-loading');
-            const contentDiv = document.getElementById('report-content');
-            const frame = document.getElementById('report-frame');
-
-            loadingDiv.classList.remove('hidden');
-            loadingDiv.style.display = 'flex';
-            contentDiv.classList.add('hidden');
-            document.getElementById('report-loading-text').innerText = '從雲端讀取報告中...';
-
-            try {
-                const res = await fetch(userScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'getReport', data: { symbol: symbol } }) });
-                const result = await res.json();
-
-                if (result.success && result.found) {
-                    let data;
-                    try {
-                        data = JSON.parse(result.html);
-                    } catch (parseError) {
-                        window.showAlert(`雲端存有舊版的 HTML 報告，請直接點擊旁邊的「✨ 產生最新報告」來覆蓋它！`, "系統提示");
-                        loadingDiv.style.display = 'none';
-                        return;
-                    }
-
-                    // 🛡️ 終極防轉圈解法：直接同步解析 HTML 模板，不依賴 iframe 的 onload 事件
-                    const tplRes = await fetch('StockApp_Report_Form.html?t=' + new Date().getTime());
-                    const tplHtml = await tplRes.text();
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(tplHtml, 'text/html');
-
-                    const setTxt = (id, txt) => { if(doc.getElementById(id)) doc.getElementById(id).innerHTML = txt; };
-                    
-                    // --- 填入數據 ---
-                    setTxt('var-report-date', data.date);
-                    setTxt('var-stock-title', `${data.symbol} ${data.ai.company_name}`);
-                    setTxt('var-biz-intro', data.ai.biz_intro);
-                    setTxt('var-current-price', "$" + data.realPrice);
-                    setTxt('var-price-date', "Date: " + data.date);
-                    
-                    setTxt('var-rating-text', data.decision.rating);
-                    if(data.decision.rating === "BUY") doc.getElementById('var-rating-text').style.color = "#4ADE80";
-                    if(data.decision.rating === "SELL") doc.getElementById('var-rating-text').style.color = "#F87171";
-                    setTxt('var-rating-signal', "訊號：" + data.decision.signal);
-                    
-                    setTxt('var-confidence-score', data.ai.risk.confidence_score);
-                    if(doc.getElementById('var-gauge-fill')) doc.getElementById('var-gauge-fill').style.transform = `rotate(${(data.ai.risk.confidence_score/100)*180}deg)`;
-                    
-                    setTxt('var-irr-avg', data.math.avgIrr + "%");
-                    setTxt('var-irr-range', `(區間：${data.math.valA.irr}% ~ ${data.math.valB.irr}%)`);
-                    setTxt('var-cheap-avg', "$" + data.math.avgCheap);
-                    setTxt('var-cheap-range', `($${data.math.valA.cheap} ~ $${data.math.valB.cheap})`);
-                    setTxt('var-exp-avg', "$" + data.math.avgExp);
-                    setTxt('var-exp-range', `($${data.math.valA.exp} ~ $${data.math.valB.exp})`);
-                    
-                    let pct = ((data.realPrice - data.math.avgCheap) / (data.math.avgExp - data.math.avgCheap)) * 100;
-                    pct = Math.max(0, Math.min(100, pct));
-                    if(doc.getElementById('var-therm-marker')) doc.getElementById('var-therm-marker').style.left = pct + "%";
-
-                    setTxt('var-op-advice', `操作建議：${data.decision.strategy.includes('買')?'分批佈局':(data.decision.strategy.includes('賣')?'減碼賣出':'觀望持有')}`);
-                    setTxt('var-op-desc', data.decision.strategy);
-                    
-                    setTxt('var-co-dynamic', `<strong>營運與動態：</strong> ${data.ai.market.sentiment}`);
-                    setTxt('var-co-metrics', `<strong>基本指標：</strong> 最新 NAV $${data.ai.nav}, 盈再率 ${data.ai.reinvestment_rate}%`);
-                    
-                    const bt = data.ai.buffett_tests;
-                    setTxt('var-test-summary', `<strong>測試結果摘要：</strong> 系統完成5項壓力測試，詳見下方清單。`);
-                    let testsHtml = `
-                        <tr><td>獲利能力 (ROE>15%)</td><td>${bt.profit.value}</td><td><span class="tag ${bt.profit.status.includes('通')?'tag-buy':'tag-sell'}">${bt.status||bt.profit.status}</span></td></tr>
-                        <tr><td>現金流 (盈再率<80%)</td><td>${bt.cashflow.value}</td><td><span class="tag ${bt.cashflow.status.includes('通')?'tag-buy':'tag-sell'}">${bt.cashflow.status}</span></td></tr>
-                        <tr><td>配息能力 (Payout>40%)</td><td>${bt.dividend.value}</td><td><span class="tag ${bt.dividend.status.includes('通')?'tag-buy':'tag-sell'}">${bt.dividend.status}</span></td></tr>
-                        <tr><td>經營規模</td><td>${bt.scale.value}</td><td><span class="tag ${bt.scale.status.includes('通')?'tag-buy':'tag-sell'}">${bt.scale.status}</span></td></tr>
-                        <tr><td>籌碼安定</td><td>${bt.chips.value}</td><td><span class="tag ${bt.chips.status.includes('通')?'tag-buy':'tag-sell'}">${bt.chips.status}</span></td></tr>
-                    `;
-                    setTxt('var-test-table-body', testsHtml);
-
-                    let finHtml = "";
-                    data.ai.history_5y.forEach(y => {
-                        finHtml += `<tr><td>${y.year}</td><td>$${y.div}</td><td>--</td><td>$${y.eps}</td><td>--</td><td>${y.roe}%</td></tr>`;
-                    });
-                    setTxt('var-fin-table-body', finHtml);
-                    setTxt('var-fin-summary', `<strong>數據摘要：</strong> 近五年獲利紀錄完整，已帶入 DDM 模型運算。`);
-
-                    setTxt('var-val-roe-a', (data.math.valA.irr ? `${data.ai.history_5y[0].roe}% (保守)` : 'N/A'));
-                    setTxt('var-val-roe-b', (data.math.valA.irr ? `Avg (標準)` : 'N/A'));
-                    setTxt('var-val-cheap-a', `$${data.math.valA.cheap}`);
-                    setTxt('var-val-cheap-b', `$${data.math.valB.cheap}`);
-                    setTxt('var-val-exp-a', `$${data.math.valA.exp}`);
-                    setTxt('var-val-exp-b', `$${data.math.valB.exp}`);
-                    setTxt('var-val-irr-a', `${data.math.valA.irr}%`);
-                    setTxt('var-val-irr-b', `${data.math.valB.irr}%`);
-
-                    setTxt('var-mkt-policy', `<strong>政策風險：</strong> ${data.ai.market.policy}`);
-                    setTxt('var-mkt-fx', `<strong>匯率敏感度：</strong> ${data.ai.market.fx}`);
-                    setTxt('var-mkt-sentiment', `<strong>市場情緒：</strong> ${data.ai.market.sentiment}`);
-                    setTxt('var-mkt-analyst', `<strong>分析師觀點：</strong> ${data.ai.market.analysts}`);
-                    
-                    let newsHtml = data.ai.market.news.map(n => `<li>${n}</li>`).join("");
-                    setTxt('var-mkt-news', `<strong>關鍵新聞：</strong><ul style="padding-left: 20px; margin: 5px 0;">${newsHtml}</ul>`);
-
-                    setTxt('var-risk-confidence-list', `<li>AI 信心指數：${data.ai.risk.confidence_score}/100</li>`);
-                    let flagsHtml = data.ai.risk.flags.map(f => `<li>⚠️ ${f}</li>`).join("");
-                    setTxt('var-risk-flags-list', flagsHtml || "<li>無明顯高危險標誌</li>");
-
-                    let sc = data.ai.risk.scenarios;
-                    setTxt('var-matrix-prob-bull', sc[0].prob + "%"); setTxt('var-matrix-desc-bull', sc[0].desc);
-                    setTxt('var-matrix-prob-base', sc[1].prob + "%"); setTxt('var-matrix-desc-base', sc[1].desc);
-                    setTxt('var-matrix-prob-bear', sc[2].prob + "%"); setTxt('var-matrix-desc-bear', sc[2].desc);
-
-                    setTxt('var-conc-price-level', `<strong>價格位階：</strong> 股價 $${data.realPrice} 位於 ${data.realPrice < data.math.avgCheap ? '淑價區間以下' : (data.realPrice > data.math.avgExp ? '貴價區間以上' : '合理區間')}。`);
-                    setTxt('var-conc-gdp-signal', `<strong>GDP 訊號：</strong> 最新公佈為 ${data.ai.gdp_yoy}%。`);
-                    setTxt('var-conc-strategy', data.decision.strategy);
-
-                    // --- 終極絕招：將處理完的 HTML 完整字串直接塞進 iframe ---
-                    frame.srcdoc = doc.documentElement.outerHTML;
-
-                    // 既然是同步處理完，直接關閉載入動畫！
-                    loadingDiv.style.display = 'none';
-                    contentDiv.classList.remove('hidden');
-                    
-                    setTimeout(() => { 
-                        try { frame.style.height = (frame.contentWindow.document.body.scrollHeight + 50) + 'px'; } catch(e) { frame.style.height = '800px'; }
-                    }, 500);
-
-                } else {
-                    window.showAlert(`找不到雲端報告，請點擊「產生最新報告」。`, "系統提示");
-                    loadingDiv.style.display = 'none';
-                }
-            } catch (error) {
-                console.error(error);
-                window.showAlert('讀取失敗：' + error.message);
-                loadingDiv.style.display = 'none';
-            }
-        };
-
-
         function setTxType(t) { txType = t; window.resetTxStatus(); const bB=document.getElementById('btn-tx-buy'), bS=document.getElementById('btn-tx-sell'); if(t==='buy'){ bB.className="tx-btn tx-btn-buy-active flex-1"; bS.className="tx-btn tx-btn-inactive flex-1"; }else{ bB.className="tx-btn tx-btn-inactive flex-1"; bS.className="tx-btn tx-btn-sell-active flex-1"; } }
         function resetTxStatus() { const sD=document.getElementById('tx-status'), sB=document.getElementById('btn-tx-submit'); if(sD) sD.innerHTML=""; if(sB){ sB.disabled=false; sB.innerText="確認新增"; sB.classList.remove('opacity-50','cursor-not-allowed'); } }
         
@@ -1170,74 +797,33 @@
             const m = document.getElementById('tx-market').value;
             const s = document.getElementById('tx-symbol').value.trim().toUpperCase();
             const nameInput = document.getElementById('tx-name');
-            
-            if(!s) {
-                nameInput.value = '';
-                return;
-            } 
-            
+            if(!s) { nameInput.value = ''; return; } 
             const stock = allPortfolioData.find(i => String(i.symbol).toUpperCase() === s && (i.market === m)); 
-            if(stock) {
-                nameInput.value = stock.name || "";
-                nameInput.setAttribute('data-auto-filled', 'true');
-            } else {
-                if (document.activeElement !== nameInput) {
-                     if (!nameInput.value || nameInput.getAttribute('data-auto-filled') === 'true') {
-                         nameInput.value = '';
-                         nameInput.removeAttribute('data-auto-filled');
-                     }
-                }
-            }
+            if(stock) { nameInput.value = stock.name || ""; nameInput.setAttribute('data-auto-filled', 'true'); } 
+            else { if (document.activeElement !== nameInput) { if (!nameInput.value || nameInput.getAttribute('data-auto-filled') === 'true') { nameInput.value = ''; nameInput.removeAttribute('data-auto-filled'); } } }
         }
         
         function openTransactionModal(m, s) { const mS=document.getElementById('tx-market'), sI=document.getElementById('tx-symbol'), d=document.getElementById('tx-name-display'); mS.value=m||'TW'; sI.value=s||''; document.getElementById('tx-name').value = ''; window.resetTxStatus(); if(s) window.lookupSymbolName(); mS.disabled=!!s; sI.readOnly=!!s; if(s) sI.classList.add('opacity-60','cursor-not-allowed'); else sI.classList.remove('opacity-60','cursor-not-allowed'); document.getElementById('tx-price').value=''; document.getElementById('tx-qty').value=''; window.setTxType('buy'); document.getElementById('transaction-modal').classList.add('open'); }
 
         try {
-            window.updateUserUI=updateUserUI; window.toggleUserMenu=toggleUserMenu; window.loadUserSettings=loadUserSettings; window.closeSystemModal=closeSystemModal; window.showAlert=showAlert; window.renderChart=renderChart; window.filterStocks=filterStocks; window.renderStockList=renderStockList; window.openStockDetail=openStockDetail; window.closeStockDetail=closeStockDetail; window.loadReport=loadReport; window.syncSheetData=syncSheetData; 
+            window.updateUserUI=updateUserUI; window.toggleUserMenu=toggleUserMenu; window.loadUserSettings=loadUserSettings; window.closeSystemModal=closeSystemModal; window.showAlert=showAlert; window.renderChart=renderChart; window.filterStocks=filterStocks; window.renderStockList=renderStockList; window.openStockDetail=openStockDetail; window.closeStockDetail=closeStockDetail; window.syncSheetData=syncSheetData; 
             window.saveSettings=saveSettings; 
             window.setTxType=setTxType; window.resetTxStatus=resetTxStatus; window.lookupSymbolName=lookupSymbolName; window.openTransactionModal=openTransactionModal; window.saveTransaction=saveTransaction; window.openSettings=openSettings; window.closeSettings=closeSettings; window.closeHelp=closeHelp; window.scrollToTop=scrollToTop; window.switchPage=switchPage; 
             
             window.loginGoogle=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){window.showAlert("無法開啟登入畫面：" + e.message, "系統提示");}};
             window.logout=async()=>{try{await signOut(auth); window.showAlert("已登出", "系統提示");}catch(e){window.showAlert("登出失敗：" + e.message, "系統提示");}};
             
-            window.toggleFilterMenu = toggleFilterMenu;
-            window.setMarketFilter = setMarketFilter;
-            window.toggleSortMenu = toggleSortMenu;
-            window.setSortField = setSortField;
-            window.toggleSortOrder = toggleSortOrder;
-            window.closeTransactionModal = closeTransactionModal;
-            window.setChartFilter = setChartFilter;
-            window.updateHomeChart = updateHomeChart;
-            window.openHelp = openHelp;
-            window.editStockName = editStockName;
-        } catch(e) {
-            console.error("Binding Error:", e);
-        }
+            window.toggleFilterMenu = toggleFilterMenu; window.setMarketFilter = setMarketFilter; window.toggleSortMenu = toggleSortMenu; window.setSortField = setSortField; window.toggleSortOrder = toggleSortOrder; window.closeTransactionModal = closeTransactionModal; window.setChartFilter = setChartFilter; window.updateHomeChart = updateHomeChart; window.openHelp = openHelp; window.editStockName = editStockName;
+        } catch(e) { console.error("Binding Error:", e); }
 
         async function initApp() {
             try {
                 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
                 auth = getAuth(app); db = getFirestore(app);
-                
-                try {
-                    await setPersistence(auth, browserLocalPersistence);
-                } catch (error) {
-                    console.error("Persistence Error:", error);
-                }
-
+                try { await setPersistence(auth, browserLocalPersistence); } catch (error) { console.error("Persistence Error:", error); }
                 onAuthStateChanged(auth, async (user) => { 
-                    if(user) { 
-                        currentUser = user; 
-                        updateUserUI(user); 
-                        loadUserSettings(user.uid); 
-                        startDataListener(user.uid); 
-                    } else {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                             await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                             await signInAnonymously(auth);
-                        }
-                    } 
+                    if(user) { currentUser = user; updateUserUI(user); loadUserSettings(user.uid); startDataListener(user.uid); } 
+                    else { if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { await signInWithCustomToken(auth, __initial_auth_token); } else { await signInAnonymously(auth); } } 
                 });
             } catch (err) { console.error("Init Error", err); }
         }
