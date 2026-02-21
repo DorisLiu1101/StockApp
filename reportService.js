@@ -1,5 +1,5 @@
 /**
- * [VER] v2.1
+ * [VER] v2.2
  * [[DESC]
  *  1. 淘汰 DDM 折現模型，導入「固定倍數+歷史倍數」雙軌混合 PER 本益比估值模型]
  *  2. 讓 AI 直接抓取最新的 EPS 與 歷史本益比區間，並在前端進行估值計算與評等決策
@@ -143,7 +143,7 @@ window.generateAndSaveReport = async function() {
                 currentPE = (realPrice / eps).toFixed(1);
                 
                 // 方案 A：固定倍數
-                valA = { cheap: Math.round(eps * 12), exp: Math.round(eps * 20), pe_cheap: 12, pe_exp: 20, fail: false };
+                valA = { cheap: Math.round(eps * 12), exp: Math.round(eps * 30), pe_cheap: 12, pe_exp: 20, fail: false };
                 
                 // 方案 B：歷史動態倍數
                 valB = { cheap: Math.round(eps * peLow), exp: Math.round(eps * peHigh), pe_cheap: peLow, pe_exp: peHigh, fail: false };
@@ -287,7 +287,7 @@ window.loadReport = async function() {
             setTxt('var-fin-summary', `<strong>數據摘要：</strong> 近五年獲利紀錄已帶入，估價採用近四季 EPS (${data.ai.eps_ttm}) 為基準計算。`);
 
             // [修改重點] 估價分析表格渲染 PE 變數
-            setTxt('var-val-pe-a', `12x ~ 20x`);
+            setTxt('var-val-pe-a', `12x ~ 30x`);
             setTxt('var-val-pe-b', (data.math.valB.fail ? 'N/A' : `${data.math.valB.pe_cheap}x ~ ${data.math.valB.pe_exp}x`));
             setTxt('var-val-cheap-a', `$${data.math.valA.cheap}`);
             setTxt('var-val-cheap-b', `$${data.math.valB.cheap}`);
