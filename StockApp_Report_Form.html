@@ -1,7 +1,8 @@
 <!-- 
-  [VER] v2.0 (2026-02-21)
+  [VER] v2.1 (2026-02-21)
   [DESC] 
     1. 保留獨立報告的玻璃擬物感，並修復邊距與底色
+    2. 更新估值模型表格
     
 -->
 <!DOCTYPE html>
@@ -9,16 +10,15 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>維股利投資分析報告 - 智能動態版</title>
+    <title>維股利投資分析報告</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
     <style type="text/css">
-        /* --- 1. 設計師調色盤 --- */
         :root {
-            --bg-body: #000000; /* 改為純黑，與主程式無縫接軌 */
-            --glass-bg: rgba(30, 30, 30, 0.4); /* 調暗玻璃背景，貼近主程式的 #121212 */
-            --glass-border: #404040; /* 統一邊框顏色 */
-            --color-primary: #D4AF37; /* 統一為維股利金 */
+            --bg-body: #000000; 
+            --glass-bg: rgba(30, 30, 30, 0.4); 
+            --glass-border: #404040; 
+            --color-primary: #D4AF37; 
             --color-text: #F5F5F5; 
             --color-muted: #9CA3AF; 
             --color-up: #4ADE80;   
@@ -36,19 +36,15 @@
 
         body {
             background-color: var(--bg-body);
-            /* 移除原本的紫綠漸層背景 */
             color: var(--color-text); font-family: 'Inter', 'Noto Sans TC', sans-serif;
-            margin: 0; 
-            padding: 0; /* 歸零 padding，交由外層主程式控制邊距 */
+            margin: 0; padding: 0; 
             font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased;
         }
 
-        /* 嚴格字體限制 */
         small, footer, .tag, .text-sm { font-size: 11pt !important; opacity: 0.9; }
         a { color: var(--color-primary); text-decoration: none; border-bottom: 1px dotted transparent; }
         a:hover { text-decoration: none; border-bottom-color: var(--color-primary); opacity: 0.8; }
 
-        /* 移除 max-width 限制，讓 iframe 自動填滿寬度 */
         .container { width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: var(--spacing); }
         .card { background: var(--glass-bg); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-radius: var(--radius); padding: 15px; box-shadow: var(--shadow-card); border: 1px solid var(--glass-border); }
 
@@ -58,10 +54,7 @@
         .report-section h2::before { display: none; }
 
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        @media (max-width: 768px) { 
-            .grid-3 { grid-template-columns: 1fr; } 
-            body { padding: 0; } /* 確保手機版也不要有 padding */
-        }
+        @media (max-width: 768px) { .grid-3 { grid-template-columns: 1fr; } body { padding: 0; } }
 
         h1, h2, h3 { margin: 0 0 12px 0; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
         h1 { font-size: 1.6rem; color: #fff; }
@@ -118,7 +111,6 @@
         .tag { padding: 3px 8px; border-radius: 4px; font-weight: 600; display: inline-block; letter-spacing: 0.5px; font-size: 10pt !important; }
         .tag-buy { background: rgba(34, 197, 94, 0.15); color: #4ADE80; border: 1px solid rgba(34, 197, 94, 0.3); }
         .tag-sell { background: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-        .tag-hold { background: rgba(234, 179, 8, 0.15); color: #FACC15; border: 1px solid rgba(234, 179, 8, 0.3); }
 
         .summary-highlight { font-size: 1rem; font-weight: 400; line-height: 1.6; color: #fff; padding: 12px; border-left: 3px solid var(--color-primary); background: rgba(255, 255, 255, 0.03); margin-bottom: 16px; border-radius: 0; }
         .alert-box { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #FCA5A5; padding: 10px; border-radius: 4px; margin-bottom: 16px; display: flex; gap: 10px; align-items: flex-start; }
@@ -172,14 +164,14 @@
         </div>
 
         <div class="card" style="text-align: center;">
-            <h3 style="margin-bottom: 5px;">預期報酬</h3>
-            <span class="big-number" id="var-irr-avg">--%</span>
-            <small class="value-range" id="var-irr-range" style="justify-content: center;">(區間：--% ~ --%)</small>
+            <h3 style="margin-bottom: 5px;">當前本益比</h3>
+            <span class="big-number" id="var-current-pe">--倍</span>
+            <small class="value-range" id="var-pe-range" style="justify-content: center;">(動態區間：-- ~ --)</small>
         </div>
     </div>
 
     <div class="card">
-        <div class="text-left"><h3>估值儀表板</h3></div>
+        <div class="text-left"><h3>估值儀表板 (平均值)</h3></div>
         <div class="valuation-row">
             <div class="value-block">
                 <small>淑價 (Cheap)</small>
@@ -231,8 +223,7 @@
 
         <div class="text-left"><h3>B. 數據表格 (近 5 年)</h3></div>
         <div class="summary-highlight" id="var-fin-summary">
-            <strong>數據摘要：</strong> 運算中...<br />
-            <strong>平均殖利率：</strong> <span id="var-fin-yield">運算中...</span>
+            <strong>數據摘要：</strong> 運算中...
         </div>
         <details>
             <summary>點擊展開詳細財務數據 (近5年)</summary>
@@ -244,40 +235,26 @@
                 </table>
             </div>
         </details>
-
-        <div class="text-left"><h3 id="var-health-title">C. 體質總評：[---]</h3></div>
-        <div class="summary-highlight" id="var-health-desc"><strong>體質細節說明：</strong> 運算中...</div>
-        <details>
-            <summary>點擊展開檢核項目數據</summary>
-            <div class="table-container">
-                <table>
-                    <thead><tr><th>檢核項目</th><th>數據</th><th>評價</th></tr></thead>
-                    <tbody id="var-health-table-body">
-                        </tbody>
-                </table>
-            </div>
-        </details>
     </div>
 
     <div class="report-section">
-        <h2>2. 估價分析 (8年股息折現模型)</h2>
+        <h2>2. 估價分析 (雙軌本益比 PER 模型)</h2>
         <div class="alert-box" id="var-val-alert" style="display:none;"></div>
         <details>
             <summary>點擊查看估價模型詳細參數與情境</summary>
             <div class="table-container">
                 <table>
                     <thead>
-                        <tr><th>比較項目</th><th>情境 A (保守版 - 防禦)</th><th>情境 B (標準版 - 循環)</th></tr>
+                        <tr><th>比較項目</th><th>情境 A (絕對倍數)</th><th>情境 B (歷史動態)</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td><strong>設定參數 (ROE)</strong></td><td id="var-val-roe-a">--%</td><td id="var-val-roe-b">--%</td></tr>
+                        <tr><td><strong>採用參數 (PE)</strong></td><td id="var-val-pe-a">--倍</td><td id="var-val-pe-b">--倍</td></tr>
                         <tr><td><strong>淑價 (Cheap)</strong></td><td id="var-val-cheap-a">$--</td><td id="var-val-cheap-b">$--</td></tr>
                         <tr><td><strong>貴價 (Expensive)</strong></td><td id="var-val-exp-a">$--</td><td id="var-val-exp-b">$--</td></tr>
-                        <tr><td><strong>預期報酬率 (IRR)</strong></td><td id="var-val-irr-a">--%</td><td id="var-val-irr-b">--%</td></tr>
                     </tbody>
                 </table>
             </div>
-            <p style="margin-top: 10px; font-size: 11pt; color: var(--color-muted);">(註：若情境 A 之 IRR 為負值或極低，代表目前股價在保守假設下缺乏安全邊際)</p>
+            <p style="margin-top: 10px; font-size: 11pt; color: var(--color-muted);">(註：情境A採用固定12/20倍；情境B採用AI抓取之近三年歷史最低與最高本益比進行估算。系統最終取兩者平均值作為主要決策依據。)</p>
         </details>
     </div>
 
@@ -329,13 +306,12 @@
         </ul>
         <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-top: 15px;">
             <div class="text-left"><h3>💡 最終策略建議</h3></div>
-            <p><em>"好公司 = 穩定的ROE + ROE 大於 15% + 盈再率 小於 80% + 配息率 大於 40% + 常利 大於 USD 75M + 產品不會變"</em></p>
             <p id="var-conc-strategy">最終投資建議載入中...</p>
         </div>
     </div>
 
     <footer style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; color: var(--color-muted);">
-        <p id="var-footer-sources"><strong>數據資料來源：</strong> 聯網查證中...</p>
+        <p id="var-footer-sources"><strong>數據資料來源：</strong> AI 聯網動態抓取</p>
         <p style="font-size: 11pt; margin-top: 10px;"><em>本報告為混合 AI 動態查證與本地程式嚴謹運算生成，數據僅供參考，投資請審慎評估。</em></p>
     </footer>
 </div>
