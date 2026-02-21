@@ -1,10 +1,11 @@
 <!-- 
-  [VER] v3.4.1 (2026-02-21)
+  [VER] v3.4.2 (2026-02-21)
   [DESC] 
     1. 加入 AI 漏填防呆機制，並修正跨國市場提示詞 (Prompt) 判斷 Bug
     2. 導入「誠實呈現模式」，動態判斷跨國市場，若 AI 漏給財報則標示無資料並暫停估值，絕不杜撰數據
     3. 新增台股上市(.TW)與上櫃(.TWO)自動偵測切換機制，徹底解決上櫃股票報錯問題
     4. 前端模組化拆分，剝離分析報告相關邏輯至 reportService.js
+    5. 微調個股詳情頁面布局，增強資訊層次感與可讀性
 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -286,19 +287,21 @@
                 </div>
             </div>
             <div class="mb-12">
-    <div class="flex flex-wrap items-center gap-3 mb-4">
-        <button onclick="window.loadReport()" class="px-4 py-2 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black transition-all text-[#D4AF37] text-[12px] font-bold tracking-widest rounded border border-[#D4AF37]/30 flex items-center gap-2 shadow-lg focus:outline-none">
-            <span class="material-icons text-base">cloud_search</span> 讀取雲端報告
-        </button>
+
+            <div class="flex flex-wrap justify-between items-center gap-y-3 mb-4 w-full">
+        <div class="flex items-center gap-3">
+            <button onclick="window.loadReport()" class="px-4 py-2 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black transition-all text-[#D4AF37] text-[12px] font-bold tracking-widest rounded border border-[#D4AF37]/30 flex items-center gap-2 shadow-lg focus:outline-none">
+                <span class="material-icons text-base">cloud_search</span> 讀取報告
+            </button>
+            <div class="flex items-center text-[12px] text-gray-500 font-mono">
+                <span class="mr-1">目標:</span><span id="debug-symbol" class="text-[#D4AF37] font-bold">--</span>
+            </div>
+        </div>
         
         <button onclick="window.generateAndSaveReport()" class="px-4 py-2 bg-[#D4AF37] hover:bg-[#FFE082] text-black transition-all text-[12px] font-bold tracking-widest rounded border border-[#D4AF37] flex items-center gap-2 shadow-[0_0_15px_rgba(212,175,55,0.3)] focus:outline-none">
-            <span class="material-icons text-base">auto_awesome</span> 產生最新報告
+            <span class="material-icons text-base">auto_awesome</span> 更新報告
         </button>
-        
-        <div class="flex items-center text-[12px] text-gray-500 font-mono ml-auto">
-            <span class="mr-2">目標:</span><span id="debug-symbol" class="text-[#D4AF37] font-bold">--</span>
-        </div>
-    </div>
+    </div>    
 
     <div id="report-section" class="rounded-xl overflow-hidden relative min-h-[0px]">
         <div id="report-loading" class="hidden flex-col items-center py-10">
