@@ -1,5 +1,5 @@
 /**
- * [VER] v2.3
+ * [VER] v2.3.1
  * [[DESC]
  *  1. 淘汰 DDM 折現模型，導入「固定倍數+歷史倍數」雙軌混合 PER 本益比估值模型]
  *  2. 讓 AI 直接抓取最新的 EPS 與 歷史本益比區間，並在前端進行估值計算與評等決策
@@ -202,12 +202,14 @@ window.generateAndSaveReport = async function() {
                     method: 'POST', body: JSON.stringify({ action: 'saveReport', data: { symbol: symbol, market: currentDetailMarket, content: JSON.stringify(finalReport) } })
                 });
         
-        const saveResult = await saveRes.json();
-        if(saveResult.success) {
-            window.loadReport(); 
-        } else {
-            throw new Error(saveResult.message);
-        }
+                const saveResult = await saveRes.json();
+                if(saveResult.success) {
+                    window.loadReport(); 
+                    // [新增] 觸發背景同步，讓寫入 Google Sheets 的最新日期更新到手機快取中
+                    if(window.syncSheetData) window.syncSheetData();
+                } else {
+                    throw new Error(saveResult.message);
+                }
 
     } catch (error) {
         console.error(error);
@@ -255,9 +257,12 @@ window.loadReport = async function() {
             const parser = new DOMParser();
             const doc = parser.parseFromString(tplHtml, 'text/html');
 
-            const setTxt = (id, txt) => { if(doc.getElementById(id)) doc.getElementById(id).innerHTML = txt; };
-            
+            const setTxt = (id, txt) => { if(doc.getElementById(id)) doc.getElementById(id).innerHTML = txt; };     
+            // --- 填入數據 ---
             setTxt('var-report-date', data.date);
+            // [新增] 同步更新主畫面左下角的報告日期標籤
+            if(document.getElementById('detail-report-date')) document.getElementById('detail-report-date').innerText = data.date;
+                    
             setTxt('var-stock-title', `${data.symbol} ${data.ai.company_name}`);
             setTxt('var-biz-intro', data.ai.biz_intro);
             setTxt('var-current-price', "$" + data.realPrice);
