@@ -1,14 +1,13 @@
 /**
- * [VER] v1.0
- * [改版說明：將產出分析報告與讀取的邏輯剝離為獨立檔案，準備導入 PER 估值]
+ * [版本號：V2.0]
+ * [改版說明：淘汰 DDM 折現模型，導入「固定倍數+歷史倍數」雙軌混合 PER 本益比估值模型]
  * ---
  */
 
 // ==========================================
-// 1. 產生並儲存報告 (從主程式抽離)
+// 1. 產生並儲存報告
 // ==========================================
 window.generateAndSaveReport = async function() {
-    // 透過橋樑取得主程式的變數
     const currentDetailSymbol = window.appState.currentDetailSymbol;
     const currentDetailMarket = window.appState.currentDetailMarket;
     const userScriptUrl = window.appState.userScriptUrl;
@@ -62,6 +61,8 @@ window.generateAndSaveReport = async function() {
         else if (currentDetailMarket === 'JP') marketName = "日股";
 
         loadingText.innerText = '呼叫後端 AI 進行聯網分析中... (約需 10 秒)';
+        
+        // [修改重點] 讓 AI 去抓取 EPS 與 歷史本益比區間
         const prompt = `
             角色：巴菲特價值投資分析師。
             任務：分析${marketName} ${symbol}。目前真實股價為 ${realPrice} 元。
@@ -70,6 +71,7 @@ window.generateAndSaveReport = async function() {
             {
                 "company_name": "公司名稱", "biz_intro": "核心業務簡介(15字內)", "nav": 最新一季每股淨值(數字),
                 "reinvestment_rate": 盈再率(數字,如 85 代表 85%), "gdp_yoy": 最新實質GDP年增率(數字,如 1.5),
+                "eps_ttm": 近四季總EPS(數字,如 15.5), "pe_hist_low": 近三年歷史最低本益比(數字,如 10.5), "pe_hist_high": 近三年歷史最高本益比(數字,如 25.0),
                 "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0}],
                 "buffett_tests": { "profit": {"value": "28.5%", "status": "通過 或 失敗"}, "cashflow": {"value": "85%", "status": "通過 或 失敗"}, "dividend": {"value": "42%", "status": "通過 或 失敗"}, "scale": {"value": "符合標準", "status": "通過 或 失敗"}, "chips": {"value": "穩定", "status": "通過 或 失敗"} },
                 "market": { "policy": "政策風險說明...", "fx": "匯率影響說明...", "sentiment": "市場情緒...", "news": ["新聞1", "新聞2"], "analysts": "分析師觀點..." },
@@ -113,81 +115,63 @@ window.generateAndSaveReport = async function() {
         reportRaw.risk.flags = Array.isArray(reportRaw.risk.flags) ? reportRaw.risk.flags : ["AI 未能取得特定風險數據"];
         reportRaw.risk.scenarios = Array.isArray(reportRaw.risk.scenarios) ? reportRaw.risk.scenarios : [];
 
-        if (isNaN(Number(reportRaw.nav)) || isNaN(Number(reportRaw.reinvestment_rate))) hasValidMathData = false;
+        // 驗證新增的 EPS 與 PE 欄位
+        if (isNaN(Number(reportRaw.eps_ttm)) || isNaN(Number(reportRaw.pe_hist_low)) || isNaN(Number(reportRaw.pe_hist_high))) {
+            hasValidMathData = false;
+        }
         
         if (!reportRaw.history_5y || !Array.isArray(reportRaw.history_5y) || reportRaw.history_5y.length === 0) {
             reportRaw.history_5y = [{ "year": "--", "eps": "--", "div": "--", "roe": "--" }];
-            hasValidMathData = false;
-        } else {
-            reportRaw.history_5y.forEach(y => {
-                if (isNaN(Number(y.eps)) || isNaN(Number(y.div)) || isNaN(Number(y.roe))) {
-                    hasValidMathData = false;
-                }
-            });
         }
 
-        loadingText.innerText = '本機執行 DDM 折現模型運算中...';
+        loadingText.innerText = '本機執行 PER 雙軌本益比運算中...';
         
-        let valA = { cheap: 0, exp: 0, irr: 0, fail: true };
-        let valB = { cheap: 0, exp: 0, irr: 0, fail: true };
-        let avgCheap = 0, avgExp = 0, avgIrr = "0.0";
-        let rating = "N/A", signal = "資料不足", strategy = "因 AI 無法取得此公司足夠且有效的五年期財務數據（可能為冷門股或新上市公司），為確保嚴謹度，系統已自動暫停 DDM 折現模型估值。請參考上方文字分析，或自行謹慎評估。";
+        // [修改重點] 取代原本的 DDM，實作方案 A 與方案 B 的雙軌 PER
+        let valA = { cheap: 0, exp: 0, pe_cheap: 12, pe_exp: 20, fail: true };
+        let valB = { cheap: 0, exp: 0, pe_cheap: 0, pe_exp: 0, fail: true };
+        let avgCheap = 0, avgExp = 0, currentPE = "N/A";
+        let rating = "N/A", signal = "資料不足", strategy = "因 AI 無法取得足夠且有效的財務數據，估值運算已暫停。";
 
         if (hasValidMathData) {
-            let sumEps = 0, sumDiv = 0, sumRoe = 0;
-            reportRaw.history_5y.forEach(y => { sumEps += Number(y.eps); sumDiv += Number(y.div); sumRoe += Number(y.roe); });
-            const avgRoe = sumRoe / reportRaw.history_5y.length / 100;
-            const avgPayout = sumEps > 0 ? (sumDiv / sumEps) : 0.5;
-            let expPayout = (avgPayout + (1 - (Number(reportRaw.reinvestment_rate) / 100))) / 2;
-            if (expPayout < 0) expPayout = 0.1;
+            const eps = Number(reportRaw.eps_ttm);
+            const peLow = Number(reportRaw.pe_hist_low);
+            const peHigh = Number(reportRaw.pe_hist_high);
 
-            const roe_A = Math.min((Number(reportRaw.history_5y[0].roe) / 100), avgRoe) || 0.05; 
-            const roe_B = avgRoe || 0.05;
+            if (eps > 0) {
+                currentPE = (realPrice / eps).toFixed(1);
+                
+                // 方案 A：固定倍數
+                valA = { cheap: Math.round(eps * 12), exp: Math.round(eps * 20), pe_cheap: 12, pe_exp: 20, fail: false };
+                
+                // 方案 B：歷史動態倍數
+                valB = { cheap: Math.round(eps * peLow), exp: Math.round(eps * peHigh), pe_cheap: peLow, pe_exp: peHigh, fail: false };
 
-            function calcDDM(nav, roe, payout, costPrice) {
-                if (nav <= 0 || roe <= 0) return { cheap: 0, exp: 0, irr: 0, fail: true };
-                let currentNav = nav; let cf = []; let eps8 = 0;
-                for(let i=1; i<=8; i++) {
-                    let eps = currentNav * roe; let div = eps * payout;
-                    currentNav = currentNav + eps - div; cf.push(div);
-                    if(i===8) eps8 = eps;
+                // 綜合平均
+                avgCheap = Math.round((valA.cheap + valB.cheap) / 2);
+                avgExp = Math.round((valA.exp + valB.exp) / 2);
+                
+                let isGdpLow = Number(reportRaw.gdp_yoy) < 2.0;
+
+                // 決策邏輯
+                if (realPrice < avgCheap && avgCheap > 0) {
+                    rating = "BUY"; signal = "價值浮現"; 
+                    strategy = isGdpLow ? "目前股價低於平均淑價，且總經GDP處於低檔，為絕佳長線買點，建議積極佈局。" : "股價低於平均淑價，具備安全邊際，建議分批買進建立部位。";
+                } else if (realPrice > avgExp && avgExp > 0) {
+                    rating = "SELL"; signal = "估值偏高";
+                    strategy = "目前股價已超越平均昂貴價，本益比處於相對高檔，建議適度獲利了結或降低持股比重。";
+                } else {
+                    rating = "HOLD"; signal = "觀望";
+                    strategy = "股價處於合理區間，建議持有觀望，等待更好的安全邊際。";
                 }
-                cf[7] += (eps8 * 12); 
-                let cheap = 0, exp = 0;
-                for(let i=0; i<8; i++) { cheap += cf[i] / Math.pow(1.15, i+1); exp += cf[i]; }
-                let min = -0.99, max = 2.0, guess = 0.1;
-                for(let iter=0; iter<30; iter++) {
-                    let npv = -costPrice;
-                    for(let i=0; i<8; i++) npv += cf[i] / Math.pow(1+guess, i+1);
-                    if (npv > 0) min = guess; else max = guess;
-                    guess = (min + max) / 2;
-                }
-                return { cheap: Math.round(cheap), exp: Math.round(exp), irr: (guess * 100).toFixed(1), fail: false };
-            }
-
-            valA = calcDDM(Number(reportRaw.nav), roe_A, expPayout, realPrice);
-            valB = calcDDM(Number(reportRaw.nav), roe_B, expPayout, realPrice);
-
-            avgCheap = Math.round((valA.cheap + valB.cheap) / 2);
-            avgExp = Math.round((valA.exp + valB.exp) / 2);
-            avgIrr = ((Number(valA.irr) + Number(valB.irr)) / 2).toFixed(1);
-            
-            let isGdpLow = Number(reportRaw.gdp_yoy) < 2.0;
-            if (realPrice < avgCheap && avgCheap > 0) {
-                rating = "BUY"; signal = "價值浮現"; 
-                strategy = isGdpLow ? "目前股價低於淑價，且總經GDP處於低檔，為絕佳長線買點，建議積極佈局。" : "股價低於淑價，建議分批買進建立部位。";
-            } else if (realPrice > avgExp && avgExp > 0) {
-                rating = "SELL"; signal = "估值偏高";
-                strategy = "目前股價已超越昂貴價，建議適度獲利了結或降低持股比重。";
             } else {
-                rating = "HOLD"; signal = "觀望";
-                strategy = "股價處於合理區間，建議持有觀望，等待更好的安全邊際。";
+                rating = "N/A"; signal = "虧損中";
+                strategy = "公司近四季 EPS 為負值或無獲利，無法使用本益比模型進行有效估價，建議謹慎評估。";
             }
         }
 
         const finalReport = {
             symbol: symbol, realPrice: realPrice, date: new Date().toISOString().slice(0, 10).replace(/-/g, "/"),
-            ai: reportRaw, math: { valA, valB, avgCheap, avgExp, avgIrr }, decision: { rating, signal, strategy }
+            ai: reportRaw, math: { valA, valB, avgCheap, avgExp, currentPE }, decision: { rating, signal, strategy }
         };
 
         loadingText.innerText = '儲存精確報告至雲端...';
@@ -210,10 +194,9 @@ window.generateAndSaveReport = async function() {
 };
 
 // ==========================================
-// 2. 讀取並渲染報告 (從主程式抽離)
+// 2. 讀取並渲染報告
 // ==========================================
 window.loadReport = async function() {
-    // 透過橋樑取得主程式的變數
     const currentDetailSymbol = window.appState.currentDetailSymbol;
     const userScriptUrl = window.appState.userScriptUrl;
 
@@ -239,7 +222,7 @@ window.loadReport = async function() {
             try {
                 data = JSON.parse(result.html);
             } catch (parseError) {
-                window.showAlert(`雲端存有舊版的 HTML 報告，請直接點擊旁邊的「✨ 產生最新報告」來覆蓋它！`, "系統提示");
+                window.showAlert(`雲端存有舊版的 HTML 報告，請直接點擊旁邊的「更新報告」來覆蓋它！`, "系統提示");
                 loadingDiv.style.display = 'none';
                 return;
             }
@@ -265,8 +248,9 @@ window.loadReport = async function() {
             setTxt('var-confidence-score', data.ai.risk.confidence_score);
             if(doc.getElementById('var-gauge-fill')) doc.getElementById('var-gauge-fill').style.transform = `rotate(${(data.ai.risk.confidence_score/100)*180}deg)`;
             
-            setTxt('var-irr-avg', data.math.avgIrr + "%");
-            setTxt('var-irr-range', `(區間：${data.math.valA.irr}% ~ ${data.math.valB.irr}%)`);
+            // [修改重點] 將原本渲染 DDM 的元素改為渲染 PE
+            setTxt('var-current-pe', data.math.currentPE + "倍");
+            setTxt('var-pe-range', `(歷史：${data.math.valB.pe_cheap} ~ ${data.math.valB.pe_exp}倍)`);
             setTxt('var-cheap-avg', "$" + data.math.avgCheap);
             setTxt('var-cheap-range', `($${data.math.valA.cheap} ~ $${data.math.valB.cheap})`);
             setTxt('var-exp-avg', "$" + data.math.avgExp);
@@ -280,7 +264,7 @@ window.loadReport = async function() {
             setTxt('var-op-desc', data.decision.strategy);
             
             setTxt('var-co-dynamic', `<strong>營運與動態：</strong> ${data.ai.market.sentiment}`);
-            setTxt('var-co-metrics', `<strong>基本指標：</strong> 最新 NAV $${data.ai.nav}, 盈再率 ${data.ai.reinvestment_rate}%`);
+            setTxt('var-co-metrics', `<strong>基本指標：</strong> 最新 NAV $${data.ai.nav}, 近四季EPS $${data.ai.eps_ttm}`);
             
             const bt = data.ai.buffett_tests;
             setTxt('var-test-summary', `<strong>測試結果摘要：</strong> 系統完成5項壓力測試，詳見下方清單。`);
@@ -298,16 +282,15 @@ window.loadReport = async function() {
                 finHtml += `<tr><td>${y.year}</td><td>$${y.div}</td><td>--</td><td>$${y.eps}</td><td>--</td><td>${y.roe}%</td></tr>`;
             });
             setTxt('var-fin-table-body', finHtml);
-            setTxt('var-fin-summary', `<strong>數據摘要：</strong> 近五年獲利紀錄完整，已帶入 DDM 模型運算。`);
+            setTxt('var-fin-summary', `<strong>數據摘要：</strong> 近五年獲利紀錄已帶入，估價採用近四季 EPS (${data.ai.eps_ttm}) 為基準計算。`);
 
-            setTxt('var-val-roe-a', (data.math.valA.irr ? `${data.ai.history_5y[0].roe}% (保守)` : 'N/A'));
-            setTxt('var-val-roe-b', (data.math.valA.irr ? `Avg (標準)` : 'N/A'));
+            // [修改重點] 估價分析表格渲染 PE 變數
+            setTxt('var-val-pe-a', `12x ~ 20x`);
+            setTxt('var-val-pe-b', (data.math.valB.fail ? 'N/A' : `${data.math.valB.pe_cheap}x ~ ${data.math.valB.pe_exp}x`));
             setTxt('var-val-cheap-a', `$${data.math.valA.cheap}`);
             setTxt('var-val-cheap-b', `$${data.math.valB.cheap}`);
             setTxt('var-val-exp-a', `$${data.math.valA.exp}`);
             setTxt('var-val-exp-b', `$${data.math.valB.exp}`);
-            setTxt('var-val-irr-a', `${data.math.valA.irr}%`);
-            setTxt('var-val-irr-b', `${data.math.valB.irr}%`);
 
             setTxt('var-mkt-policy', `<strong>政策風險：</strong> ${data.ai.market.policy}`);
             setTxt('var-mkt-fx', `<strong>匯率敏感度：</strong> ${data.ai.market.fx}`);
@@ -340,7 +323,7 @@ window.loadReport = async function() {
             }, 500);
 
         } else {
-            window.showAlert(`找不到雲端報告，請點擊「產生最新報告」。`, "系統提示");
+            window.showAlert(`找不到雲端報告，請點擊「更新報告」。`, "系統提示");
             loadingDiv.style.display = 'none';
         }
     } catch (error) {
