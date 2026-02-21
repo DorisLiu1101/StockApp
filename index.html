@@ -1,11 +1,10 @@
 <!-- 
-  [VER] v3.4 (2026-02-21)
+  [VER] v3.4.1 (2026-02-21)
   [DESC] 
     1. 加入 AI 漏填防呆機制，並修正跨國市場提示詞 (Prompt) 判斷 Bug
     2. 導入「誠實呈現模式」，動態判斷跨國市場，若 AI 漏給財報則標示無資料並暫停估值，絕不杜撰數據
     3. 新增台股上市(.TW)與上櫃(.TWO)自動偵測切換機制，徹底解決上櫃股票報錯問題
     4. 前端模組化拆分，剝離分析報告相關邏輯至 reportService.js
-
 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -306,7 +305,7 @@
             <span class="material-icons animate-spin text-[#D4AF37] mb-3 text-4xl">sync</span>
             <p id="report-loading-text" class="text-[13px] text-gray-500 tracking-[0.3em] font-bold">PROCESSING...</p>
         </div>
-        <div id="report-content" class="w-full hidden bg-white">
+        <div id="report-content" class="w-full hidden bg-transparent">    
             <iframe id="report-frame" class="w-full border-none block" scrolling="no"></iframe>
         </div>
     </div>
