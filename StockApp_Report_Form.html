@@ -1,5 +1,5 @@
 <!-- 
-  [VER] v3.1 [DATE] 2024-06-20
+  [VER] v3.2 [DATE] 2024-06-20
   [DESC] 
     1. 全面改用本益比（PE）模型取代股利折現模型（DDM）
     2. 在報告中新增了「體質總評」的維度，結合盈再率、ROE 趨勢與本益比位階等多項財務指標，給予股票一個綜合的強健/普通/警示評級。
@@ -184,12 +184,9 @@
             <div style="flex: 1; margin: 0 10px; text-align: center;">
                 <small style="margin-bottom: 5px; display:block;">目前位置</small>
                 <div class="thermometer-bar">
-                    <div class="thermometer-marker" id="var-therm-marker" style="left: 0%;">&nbsp;</div>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--color-muted); margin-top: 6px; padding: 0 2px; font-weight: bold;">
-                    <span style="color: #4ADE80;">淑</span>
-                    <span style="color: #FACC15;">合理</span>
-                    <span style="color: #F87171;">貴</span>
+                    <div class="thermometer-marker" id="var-therm-marker" style="left: 0%;">
+                        <div id="var-therm-badge" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background-color: #166534; color: #fff; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">--</div>
+                    </div>
                 </div>
             </div>
             <div class="value-block">

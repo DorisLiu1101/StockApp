@@ -1,7 +1,7 @@
 /**
- * [VER] v3.1 [DATE] 2024-06-20
+ * [VER] v3.2 [DATE] 2024-06-20
  * [[DESC]
- *  1. 全面改用本益比（PE）模型取代股利折現模型（DDM），估值基準從股利改為 EPS，並且同時提供固定倍數法與歷史動態倍數法兩種方案的估值區間，讓使用者能夠更靈活地評估股票的合理價位。 
+ *  1. GDP指標改為「GDP年增率」，並調整AI提示詞與前端呈現方式以符合此變更 
  *  2. 在報告中新增了「體質總評」的維度，結合盈再率、ROE 趨勢與本益比位階等多項財務指標，給予股票一個綜合的強健/普通/警示評級。 
  *  3. 優化市場情緒的呈現方式，根據情緒標籤自動套用不同的顏色與樣式  
   */
@@ -289,9 +289,23 @@ window.loadReport = async function() {
                     setTxt('var-exp-avg', "$" + data.math.avgExp);
                     setTxt('var-exp-range', data.math.range ? data.math.range.exp : `($${Math.min(data.math.valA.exp, data.math.valB.exp)} ~ $${Math.max(data.math.valA.exp, data.math.valB.exp)})`);
             
-            let pct = ((data.realPrice - data.math.avgCheap) / (data.math.avgExp - data.math.avgCheap)) * 100;
-            pct = Math.max(0, Math.min(100, pct));
+            // 動態計算指針位置與動態標籤內容
+            let pct = 0; let badgeText = "合理"; let badgeBg = "#FACC15"; let badgeColor = "#000";
+            if (data.realPrice <= data.math.avgCheap) {
+                pct = 0; badgeText = "淑"; badgeBg = "#166534"; badgeColor = "#FFF";
+            } else if (data.realPrice >= data.math.avgExp) {
+                pct = 100; badgeText = "貴"; badgeBg = "#991B1B"; badgeColor = "#FFF";
+            } else {
+                pct = ((data.realPrice - data.math.avgCheap) / (data.math.avgExp - data.math.avgCheap)) * 100;
+                pct = Math.max(0, Math.min(100, pct));
+            }
             if(doc.getElementById('var-therm-marker')) doc.getElementById('var-therm-marker').style.left = pct + "%";
+            let badge = doc.getElementById('var-therm-badge');
+            if(badge) {
+                badge.innerText = badgeText;
+                badge.style.backgroundColor = badgeBg;
+                badge.style.color = badgeColor;
+            }
 
             setTxt('var-op-advice', `操作建議：${data.decision.strategy.includes('買')?'分批佈局':(data.decision.strategy.includes('賣')?'減碼賣出':'觀望持有')}`);
             setTxt('var-op-desc', data.decision.strategy);
@@ -382,7 +396,19 @@ window.loadReport = async function() {
             setTxt('var-matrix-prob-bear', sc[2].prob + "%"); setTxt('var-matrix-desc-bear', sc[2].desc);
 
             setTxt('var-conc-price-level', `<strong>價格位階：</strong> 股價 $${data.realPrice} 位於 ${data.realPrice < data.math.avgCheap ? '淑價區間以下' : (data.realPrice > data.math.avgExp ? '貴價區間以上' : '合理區間')}。`);
-            setTxt('var-conc-gdp-signal', `<strong>GDP 訊號：</strong> 最新公佈為 ${data.ai.gdp_yoy}%。`);
+            // 套用巴菲特班講稿之 GDP 進出場與基期邏輯
+            let gdpVal = Number(data.ai.gdp_yoy);
+            let gdpText = `最新公佈為 ${data.ai.gdp_yoy}%。`;
+            if (!isNaN(gdpVal)) {
+                if (gdpVal <= 2.0) {
+                    gdpText += ` 目前處於相對低檔。依據巴菲特操作邏輯，大盤低點常與 GDP 落底同步（買在「不再更壞」時）。若去年基期偏高，此時極可能為絕佳波段買點。`;
+                } else if (gdpVal >= 4.0) {
+                    gdpText += ` 目前處於相對高檔。若去年基期偏低，易形成高點轉折，建議留意減碼時機（如獲利了結保留 1/3 現金以備未來低檔回補）。`;
+                } else {
+                    gdpText += ` 建議利用「基期比較」預判轉折。觀察去年同期，若基期高則今年易見低點（進場訊號）；若基期低則需留意高點減碼風險。`;
+                }
+            }
+            setTxt('var-conc-gdp-signal', `<strong>GDP 訊號：</strong> ${gdpText}`);
             setTxt('var-conc-strategy', data.decision.strategy);
 
             frame.srcdoc = doc.documentElement.outerHTML;
