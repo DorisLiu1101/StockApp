@@ -1,5 +1,5 @@
 <!-- 
-  [VER] v3.2 [DATE] 2024-06-20
+  [VER] v3.3 [DATE] 2024-06-20
   [DESC] 
     1. 全面改用本益比（PE）模型取代股利折現模型（DDM）
     2. 在報告中新增了「體質總評」的維度，結合盈再率、ROE 趨勢與本益比位階等多項財務指標，給予股票一個綜合的強健/普通/警示評級。
@@ -50,9 +50,9 @@
 
         .report-section { padding: 25px 5px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: transparent; }
         .report-section:last-child { border-bottom: none; }
-        /* 美化 H2 標題與漸層線條 */
-        .report-section h2 { margin-top: 0; font-size: 1.3rem; color: #fff; display: flex; align-items: center; margin-bottom: 20px; border-left: none; padding-left: 0; letter-spacing: 1px; }
-        .report-section h2::before { content: ''; display: inline-block; width: 5px; height: 18px; background: linear-gradient(180deg, #FFE082 0%, #D4AF37 100%); margin-right: 12px; border-radius: 4px; box-shadow: 0 0 8px rgba(212,175,55,0.4); }
+        /* 美化 H2 標題：改為 ICON 佈局 */
+        .report-section h2 { margin-top: 0; font-size: 1.3rem; color: #fff; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-left: none; padding-left: 0; letter-spacing: 1px; }
+        .report-section h2::before { display: none; }
         /* H3 區塊間隔線 */
         .section-divider { border: 0; height: 1px; background: rgba(255,255,255,0.08); margin: 25px 0; }
 
@@ -211,7 +211,7 @@
     </div>
 
     <div class="report-section">
-        <h2>1. 基本面檢視 (Fundamentals)</h2>
+        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem;">analytics</span> 1. 基本面檢視</h2>
         
         <div class="text-left"><h3>A. 巴菲特五維壓力測試</h3></div>
         <div class="summary-highlight" id="var-test-summary"><strong>測試結果摘要：</strong> 運算中...</div>
@@ -258,7 +258,7 @@
     </div>
 
     <div class="report-section">
-        <h2>2. 估價分析 (雙軌本益比 PER 模型)</h2>
+        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem;">price_check</span> 2. 估價分析</h2>
         <div class="alert-box" id="var-val-alert" style="display:none;"></div>
         <details>
             <summary>點擊查看估價模型詳細參數與情境</summary>
@@ -279,7 +279,7 @@
     </div>
 
     <div class="report-section">
-        <h2>3. 市場資訊分析</h2>
+        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem;">radar</span> 3. 市場資訊分析</h2>
         
         <div class="text-left"><h3>總體宏觀</h3></div>
         <ul>
@@ -323,7 +323,7 @@
     </div>
 
     <div class="card" style="border-left: 5px solid var(--color-primary);">
-        <h2>4. 分析師關鍵點評</h2>
+        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem;">insights</span> 4. 分析師關鍵點評</h2>
         <ul>
             <li id="var-conc-price-level"><strong>價格位階：</strong> 運算中...</li>
             <li id="var-conc-gdp-signal"><strong>GDP 訊號：</strong> 運算中...</li>
