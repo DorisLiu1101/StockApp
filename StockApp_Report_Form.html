@@ -1,8 +1,8 @@
 <!-- 
-  [VER] v3.0.0 [DATE] 2024-06-20
+  [VER] v3.1 [DATE] 2024-06-20
   [DESC] 
-    1. 全面改用本益比（PE）模型取代股利折現模型（DDM），估值基準從股利改為 EPS，並且同時提供固定倍數法與歷史動態倍數法兩種方案的估值區間，讓使用者能夠更靈活地評估股票的合理價位。 
-    2. 在報告中新增了「體質總評」的維度，結合盈再率、ROE 趨勢與本益比位階等多項財務指標，給予股票一個綜合的強健/普通/警示評級，並且提供詳細的說明與數據表格，幫助使用者更全面地理解公司的財務健康狀況。  
+    1. 全面改用本益比（PE）模型取代股利折現模型（DDM）
+    2. 在報告中新增了「體質總評」的維度，結合盈再率、ROE 趨勢與本益比位階等多項財務指標，給予股票一個綜合的強健/普通/警示評級。
     
 -->
 <!DOCTYPE html>
@@ -50,8 +50,11 @@
 
         .report-section { padding: 25px 5px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: transparent; }
         .report-section:last-child { border-bottom: none; }
-        .report-section h2 { margin-top: 0; font-size: 1.2rem; color: var(--color-primary); border-left: 3px solid var(--color-primary); padding-left: 10px; margin-bottom: 15px; }
-        .report-section h2::before { display: none; }
+        /* 美化 H2 標題與漸層線條 */
+        .report-section h2 { margin-top: 0; font-size: 1.3rem; color: #fff; display: flex; align-items: center; margin-bottom: 20px; border-left: none; padding-left: 0; letter-spacing: 1px; }
+        .report-section h2::before { content: ''; display: inline-block; width: 5px; height: 18px; background: linear-gradient(180deg, #FFE082 0%, #D4AF37 100%); margin-right: 12px; border-radius: 4px; box-shadow: 0 0 8px rgba(212,175,55,0.4); }
+        /* H3 區塊間隔線 */
+        .section-divider { border: 0; height: 1px; background: rgba(255,255,255,0.08); margin: 25px 0; }
 
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         @media (max-width: 768px) { .grid-3 { grid-template-columns: 1fr; } body { padding: 0; } }
@@ -171,7 +174,7 @@
     </div>
 
     <div class="card">
-        <div class="text-left"><h3>估值儀表板 (平均值)</h3></div>
+        <div class="text-left"><h3>估值儀表板 (PE均值)</h3></div>
         <div class="valuation-row">
             <div class="value-block">
                 <small>淑價 (Cheap)</small>
@@ -182,6 +185,11 @@
                 <small style="margin-bottom: 5px; display:block;">目前位置</small>
                 <div class="thermometer-bar">
                     <div class="thermometer-marker" id="var-therm-marker" style="left: 0%;">&nbsp;</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--color-muted); margin-top: 6px; padding: 0 2px; font-weight: bold;">
+                    <span style="color: #4ADE80;">淑</span>
+                    <span style="color: #FACC15;">合理</span>
+                    <span style="color: #F87171;">貴</span>
                 </div>
             </div>
             <div class="value-block">
@@ -282,12 +290,16 @@
             <li id="var-mkt-fx"><strong>匯率敏感度：</strong> 聯網查證中...</li>
         </ul>
 
+        <hr class="section-divider">
+
         <div class="text-left"><h3>市場情緒</h3></div>
+        <div id="var-mkt-sentiment" style="margin-bottom: 15px;"><strong>市場情緒：</strong> 聯網查證中...</div>
         <ul>
-            <li id="var-mkt-sentiment"><strong>市場總體情緒：</strong> 聯網查證中...</li>
             <li id="var-mkt-news"><strong>關鍵新聞：</strong> 聯網查證中...</li>
             <li id="var-mkt-analyst"><strong>分析師觀點：</strong> 聯網查證中...</li>
         </ul>
+
+        <hr class="section-divider">
 
         <div class="text-left"><h3>風險警示</h3></div>
         <h4>1. 信心指數拆解</h4>
@@ -319,9 +331,12 @@
             <li id="var-conc-price-level"><strong>價格位階：</strong> 運算中...</li>
             <li id="var-conc-gdp-signal"><strong>GDP 訊號：</strong> 運算中...</li>
         </ul>
-        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-top: 15px;">
+        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-top: 20px;">
             <div class="text-left"><h3>💡 最終策略建議</h3></div>
-            <p id="var-conc-strategy">最終投資建議載入中...</p>
+            <p style="color:var(--color-primary); font-size:12px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px dashed rgba(212,175,55,0.3);">
+                <em>"好公司 = 穩定的ROE + ROE 大於 15% + 盈再率 小於 80% + 配息率 大於 40% + 常利 大於 USD 75M + 產品不會變"</em>
+            </p>
+            <p id="var-conc-strategy" style="font-size: 14px;">最終投資建議載入中...</p>
         </div>
     </div>
 
