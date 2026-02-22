@@ -1,6 +1,7 @@
 /**
- * [VER] v1.0.0 [2026-02-22]
+ * [VER] v1.1 [2026-02-22]
  * [DESC] 撿股(收藏)頁面專用邏輯模組：包含新增寫入共用資料庫、篩選、排序與單行卡片渲染
+ *   1. 新增 addFavorite()：從介面取得使用者輸入的股號與市場，呼叫 GAS API 寫入共用資料庫
  */
 
 window.pickService = (function() {
@@ -130,10 +131,19 @@ window.pickService = (function() {
         }
     }
 
-    // 暴露對外方法
+    // --- 新增：接收從首頁傳來的資料並渲染 ---
+    function setFavoritesData(data) {
+        if (data && Array.isArray(data)) {
+            favoritesData = data;
+            applyFilterAndSort(); // 資料更新後重新渲染卡片
+        }
+    }
+
+    // 暴露對外方法 (請將 return 區塊替換為以下內容)
     return {
         addFavorite,
         toggleFilter, setMarketFilter,
-        toggleSort, setSortField, toggleSortOrder
+        toggleSort, setSortField, toggleSortOrder,
+        setFavoritesData // <-- 記得把這個新方法暴露出去
     };
 })();
