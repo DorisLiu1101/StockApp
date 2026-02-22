@@ -1,6 +1,7 @@
 /**
- * [VER] v3.2 [DATE] 2024-06-20
+ * [VER] v3.21 [DATE] 2024-06-20
  * [[DESC]
+ *  [Bug 修復] 強化 AI 回傳格式的防呆檢查，避免 reading '0' 錯誤
  *  1. GDP指標改為「GDP年增率」，並調整AI提示詞與前端呈現方式以符合此變更 
  *  2. 在報告中新增了「體質總評」的維度，結合盈再率、ROE 趨勢與本益比位階等多項財務指標，給予股票一個綜合的強健/普通/警示評級。 
  *  3. 優化市場情緒的呈現方式，根據情緒標籤自動套用不同的顏色與樣式  
@@ -92,9 +93,15 @@ window.generateAndSaveReport = async function() {
         
         const aiResJson = await aiRes.json();
         if (!aiResJson.success) throw new Error(aiResJson.message || "伺服器發生未知錯誤，請稍後再試。");
-        if (!aiResJson.data || !aiResJson.data.candidates || !aiResJson.data.candidates[0]) throw new Error("AI 伺服器忙線未回傳有效內容，請稍後再試。");
         
-        let rawText = aiResJson.data.candidates[0].content.parts[0].text;
+        // [Bug 修復] 強化 AI 回傳格式的防呆檢查，避免 reading '0' 錯誤
+        const candidate = aiResJson.data?.candidates?.[0];
+        if (!candidate || !candidate.content || !candidate.content.parts || !candidate.content.parts[0]) {
+            console.error("AI 異常回傳或遭安全機制攔截:", aiResJson.data);
+            throw new Error("AI 未能產出有效報告 (可能遇到系統超載或觸發安全審查)，請稍後再試一次。");
+        }
+        
+        let rawText = candidate.content.parts[0].text;
         let jsonMatch = rawText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("AI 未回傳有效格式，請再點擊一次。");
         
