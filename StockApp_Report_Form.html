@@ -1,8 +1,8 @@
 <!-- 
-  [VER] v2.3 (2026-02-21)
+  [VER] v3.0.0 [DATE] 2024-06-20
   [DESC] 
-    1. 保留獨立報告的玻璃擬物感，並修復邊距與底色
-    2. 更新估值模型表格
+    1. 全面改用本益比（PE）模型取代股利折現模型（DDM），估值基準從股利改為 EPS，並且同時提供固定倍數法與歷史動態倍數法兩種方案的估值區間，讓使用者能夠更靈活地評估股票的合理價位。 
+    2. 在報告中新增了「體質總評」的維度，結合盈再率、ROE 趨勢與本益比位階等多項財務指標，給予股票一個綜合的強健/普通/警示評級，並且提供詳細的說明與數據表格，幫助使用者更全面地理解公司的財務健康狀況。  
     
 -->
 <!DOCTYPE html>
@@ -232,6 +232,21 @@
                     <thead><tr><th>年度</th><th>現金股利</th><th>殖利率</th><th>EPS</th><th>配息率</th><th>ROE</th></tr></thead>
                     <tbody id="var-fin-table-body">
                         </tbody>
+                </table>
+            </div>
+        </details>
+
+        <div class="text-left"><h3 style="display: flex; align-items: center; gap: 10px; margin-top: 25px;">C. 體質總評 <span id="var-health-tag"></span></h3></div>
+        <div class="summary-highlight" style="border-left: 3px solid var(--color-primary);">
+            <span id="var-health-desc"><strong>體質說明：</strong> 運算中...</span>
+        </div>
+        <details>
+            <summary>點擊展開詳細檢核數據</summary>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>檢核項目</th><th>數據</th><th>評價</th></tr></thead>
+                    <tbody id="var-health-table-body">
+                    </tbody>
                 </table>
             </div>
         </details>

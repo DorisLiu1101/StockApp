@@ -1,11 +1,10 @@
 /**
- * [VER] v2.5
+ * [VER] v3.0.0 [DATE] 2024-06-20
  * [[DESC]
- *  1. 淘汰 DDM 折現模型，導入「固定倍數+歷史倍數」雙軌混合 PER 本益比估值模型]
- *  2. 讓 AI 直接抓取最新的 EPS 與 歷史本益比區間，並在前端進行估值計算與評等決策
- *  3. 更新報告模板，將原本的 DDM 相關欄位改為 PE 相關欄位，並新增當前 PE 與 歷史 PE 區間的顯示
- *  4. 殖利率部分改為直接顯示 AI 抓取的近五年平均殖利率，並在摘要中提示用戶參考
- */
+ *  1. 全面改用本益比（PE）模型取代股利折現模型（DDM），估值基準從股利改為 EPS，並且同時提供固定倍數法與歷史動態倍數法兩種方案的估值區間，讓使用者能夠更靈活地評估股票的合理價位。 
+ *  2. 在報告中新增了「體質總評」的維度，結合盈再率、ROE 趨勢與本益比位階等多項財務指標，給予股票一個綜合的強健/普通/警示評級，並且提供詳細的說明與數據表格，幫助使用者更全面地理解公司的財務健康狀況。 
+ *    
+  */
 
 // ==========================================
 // 1. 產生並儲存報告
@@ -77,6 +76,9 @@ window.generateAndSaveReport = async function() {
                 "eps_ttm": 近四季總EPS(數字,如 15.5), "pe_hist_low": 近三年歷史最低本益比(數字,如 10.5), "pe_hist_high": 近三年歷史最高本益比(數字,如 25.0),
                 "avg_yield_3y": 近三年平均現金殖利率(數字,如 5.5), "avg_yield_5y": 近五年平均現金殖利率(數字,如 5.2),
                 "div_frequency": "配息頻率(填入: 年配 或 半年配 或 季配 或 月配 或 不固定)",
+                "buffett_summary": "綜合五維測試的摘要說明(30字內，包含亮點與隱憂，如:⚠️ 警示...或✅ 優秀...)",
+                "fin_annotation": "根據近五年財務數據的簡要特徵標註(20字內，如:連續9年配息超過10元...)",
+                "health": { "tag": "強健 或 普通 或 警示", "desc": "體質詳細說明(50字內)", "table": [ {"item": "盈再率", "data": "數字與百分比", "eval": "評價(如:普通 40-80%)"}, {"item": "ROE趨勢", "data": "近5年狀況", "eval": "評價(如:趨勢向上)"}, {"item": "本益比位階", "data": "數字", "eval": "評價(如:歷史高位)"} ] },
                 "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0, "yield": 5.2, "payout": 50.0}],
                 "buffett_tests": { "profit": {"value": "28.5%", "status": "通過 或 失敗"}, "cashflow": {"value": "85%", "status": "通過 或 失敗"}, "dividend": {"value": "42%", "status": "通過 或 失敗"}, "scale": {"value": "符合標準", "status": "通過 或 失敗"}, "chips": {"value": "穩定", "status": "通過 或 失敗"} },
                 "market": { "policy": "政策風險說明...", "fx": "匯率影響說明...", "sentiment": "市場情緒...", "news": ["新聞1", "新聞2"], "analysts": "分析師觀點..." },
@@ -297,8 +299,11 @@ window.loadReport = async function() {
             setTxt('var-co-dynamic', `<strong>營運與動態：</strong> ${data.ai.market.sentiment}`);
             setTxt('var-co-metrics', `<strong>基本指標：</strong> 最新 NAV $${data.ai.nav}, 近四季EPS $${data.ai.eps_ttm}`);
             
+            // A. 壓力測試摘要
             const bt = data.ai.buffett_tests;
-            setTxt('var-test-summary', `<strong>測試結果摘要：</strong> 系統完成5項壓力測試，詳見下方清單。`);
+            let buffettSum = data.ai.buffett_summary || '系統完成5項壓力測試，詳見下方清單。';
+            setTxt('var-test-summary', `<strong>測試結果總結：</strong> ${buffettSum}`);
+            
             let testsHtml = `
                 <tr><td>獲利能力 (ROE>15%)</td><td>${bt.profit.value}</td><td><span class="tag ${bt.profit.status.includes('通')?'tag-buy':'tag-sell'}">${bt.status||bt.profit.status}</span></td></tr>
                 <tr><td>現金流 (盈再率<80%)</td><td>${bt.cashflow.value}</td><td><span class="tag ${bt.cashflow.status.includes('通')?'tag-buy':'tag-sell'}">${bt.cashflow.status}</span></td></tr>
@@ -308,21 +313,40 @@ window.loadReport = async function() {
             `;
             setTxt('var-test-table-body', testsHtml);
 
+            // B. 五年數據表格與摘要
             let finHtml = "";
             data.ai.history_5y.forEach(y => {
-                // 直接讀取 AI 回傳的數值，若無則顯示 --
                 let yld = y.yield ? y.yield + "%" : "--";
                 let payout = y.payout ? y.payout + "%" : "--";
                 finHtml += `<tr><td>${y.year}</td><td>$${y.div}</td><td style="color:#D4AF37;">${yld}</td><td>$${y.eps}</td><td style="color:#4ADE80;">${payout}</td><td>${y.roe}%</td></tr>`;
             });
             setTxt('var-fin-table-body', finHtml);
             
-            // 讀取 AI 抓取的平均殖利率與配息頻率
             let yield3y = data.ai.avg_yield_3y ? data.ai.avg_yield_3y + "%" : "--";
             let yield5y = data.ai.avg_yield_5y ? data.ai.avg_yield_5y + "%" : "--";
             let divFreq = data.ai.div_frequency || "未明";
+            let finAnn = data.ai.fin_annotation || "長期配息紀錄已帶入。";
             
-            setTxt('var-fin-summary', `<strong>數據摘要：</strong><br>1. 估價基準：採用近四季 EPS ($${data.ai.eps_ttm}) 計算。<br>2. 配息政策：該股近期主要為「${divFreq}」。<br><span style="color:#D4AF37; font-size: 13px; display:inline-block; margin-top:6px;">💡 AI 聯網查證之平均殖利率：近三年 ${yield3y} / 近五年 ${yield5y}</span>`);
+            setTxt('var-fin-summary', `<strong>數據摘要：</strong><br>1. 估價基準：採用近四季 EPS ($${data.ai.eps_ttm}) 計算。<br>2. 配息政策：該股近期主要為「${divFreq}」。<br><span style="color:#E5E7EB; font-size: 13px; display:inline-block; margin-top:4px;"><strong>標註說明：</strong>${finAnn}</span><br><span style="color:#D4AF37; font-size: 13px; display:inline-block; margin-top:6px;">💡 AI 聯網查證之平均殖利率：近三年 ${yield3y} / 近五年 ${yield5y}</span>`);
+
+            // C. 體質總評
+            let h = data.ai.health || {};
+            let tagColor = h.tag === '強健' ? 'tag-buy' : (h.tag === '警示' ? 'tag-sell' : 'tag-hold');
+            setTxt('var-health-tag', `<span class="tag ${tagColor}">${h.tag || '未評估'}</span>`);
+            setTxt('var-health-desc', `<strong>體質說明：</strong> ${h.desc || '暫無詳細體質說明。'}`);
+
+            let hTable = "";
+            if (Array.isArray(h.table)) {
+                h.table.forEach(r => {
+                    let evalColor = "";
+                    if (r.eval.includes('向上') || r.eval.includes('強') || r.eval.includes('低位') || r.eval.includes('良好')) evalColor = 'color:#4ADE80; background:rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3);';
+                    else if (r.eval.includes('高位') || r.eval.includes('弱') || r.eval.includes('警示') || r.eval.includes('下滑')) evalColor = 'color:#F87171; background:rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3);';
+                    else evalColor = 'color:#FACC15; background:rgba(234,179,8,0.15); border: 1px solid rgba(234,179,8,0.3);';
+                    
+                    hTable += `<tr><td><strong>${r.item}</strong></td><td>${r.data}</td><td><span style="padding:3px 8px; border-radius:4px; font-size:10pt; font-weight:600; display:inline-block; ${evalColor}">${r.eval}</span></td></tr>`;
+                });
+            } else { hTable = `<tr><td colspan="3">無詳細檢核數據</td></tr>`; }
+            setTxt('var-health-table-body', hTable);
             // [修改重點] 估價分析表格渲染 PE 變數
             setTxt('var-val-pe-a', `12x ~ 30x`);
             setTxt('var-val-pe-b', (data.math.valB.fail ? 'N/A' : `${data.math.valB.pe_cheap}x ~ ${data.math.valB.pe_exp}x`));
