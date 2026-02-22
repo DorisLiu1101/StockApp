@@ -1,7 +1,8 @@
 <!-- 
-  [VER] v4.0 (2026-02-21)
+  [VER] v4.1 (2026-02-21)
   [DESC] 撿股功能上線，新增觀察名單頁面
     1. 新增 pickService.js 負責撿股邏輯，包含加入觀察名單、過濾和排序功能
+    2. 新增觀察名單頁面，提供使用者管理和查看已加入觀察名單的股票
 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -596,6 +597,12 @@
                         window.filterStocks();
                         window.updateHomeChart('ALL'); 
                     }
+                    
+                    // ======== [新增] 接收共用資料庫的收藏清單 ========
+                    if (window.pickService && d.favorites) {
+                        window.pickService.setFavoritesData(d.favorites);
+                    }
+                    // =================================================
                 }
             }, (err) => console.error("Firestore Listen Error", err));
         }
