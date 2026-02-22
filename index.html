@@ -1,11 +1,7 @@
 <!-- 
-  [VER] v3.4.5 (2026-02-21)
-  [DESC] 
-    1. 加入 AI 漏填防呆機制，並修正跨國市場提示詞 (Prompt) 判斷 Bug
-    2. 導入「誠實呈現模式」，動態判斷跨國市場，若 AI 漏給財報則標示無資料並暫停估值，絕不杜撰數據
-    3. 新增台股上市(.TW)與上櫃(.TWO)自動偵測切換機制，徹底解決上櫃股票報錯問題
-    4. 前端模組化拆分，剝離分析報告相關邏輯至 reportService.js
-    5. 微調個股詳情頁面布局，增強資訊層次感與可讀性
+  [VER] v4.0 (2026-02-21)
+  [DESC] 撿股功能上線，新增觀察名單頁面
+    1. 新增 pickService.js 負責撿股邏輯，包含加入觀察名單、過濾和排序功能
 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -26,6 +22,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     
     <script src="reportService.js"></script>
+    <script src="pickService.js"></script>
 
     <style>
         /* Base Styles & Reset */
@@ -222,14 +219,58 @@
             <div id="stock-list-container" class="md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 pb-24"></div>
         </section>
 
-        <section id="page-pick" class="hidden min-h-[70vh] flex flex-col items-center justify-center text-center p-8">
-             <div class="w-24 h-24 rounded-full bg-[#121212] border-2 border-dashed border-[#333] flex items-center justify-center mb-6 animate-pulse">
-                <span class="material-icons text-5xl text-gray-700">manage_search</span>
-             </div>
-             <h2 class="text-2xl font-bold text-[#D4AF37] tracking-widest mb-3">撿股功能開發中</h2>
-             <p class="text-sm text-gray-500 font-mono leading-relaxed max-w-xs mx-auto">
-                 我們正在建構強大的選股工具<br>敬請期待...
-             </p>
+        <section id="page-pick" class="hidden space-y-4">
+            <div class="app-card p-4 bg-[#111]">
+                <label class="text-[10px] text-gray-400 font-bold tracking-wide mb-2 block uppercase">加入觀察名單</label>
+                <div class="flex gap-2">
+                    <div class="w-[70px] flex-shrink-0">
+                        <select id="pick-market" class="w-full bg-[#050505] border border-[#333] rounded px-1 py-2 text-center text-sm text-white focus:border-gold outline-none h-[42px] font-bold tracking-wider appearance-none">
+                            <option value="TW">TW</option>
+                            <option value="US">US</option>
+                            <option value="JP">JP</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <input type="text" id="pick-symbol" class="w-full bg-[#050505] border border-[#333] rounded px-3 py-2 text-sm text-white focus:border-gold outline-none h-[42px] font-mono placeholder-gray-600 uppercase" placeholder="輸入股號...">
+                    </div>
+                    <button onclick="window.pickService.addFavorite()" class="w-[80px] bg-gold hover:bg-[#FFE082] text-black font-bold rounded text-sm tracking-widest shadow-lg transition active:scale-95 focus:outline-none flex-shrink-0 h-[42px]">
+                        加入
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center relative z-20 px-1">
+                <div class="relative">
+                    <button onclick="window.pickService.toggleFilter()" class="flex items-center gap-1 text-xs bg-[#1A1A1A] border border-[#333] text-gray-300 px-3 py-1.5 rounded hover:border-gold hover:text-gold transition font-medium shadow-sm">
+                        <span class="material-icons text-[14px]">filter_list</span><span id="pick-filter-label">全部</span><span class="material-icons text-[12px] ml-1">arrow_drop_down</span>
+                    </button>
+                    <div id="pick-filter-menu" class="hidden absolute top-full mt-1 left-0 custom-dropdown min-w-[120px]">
+                        <button onclick="window.pickService.setMarketFilter('ALL')" class="custom-dropdown-item py-2">全部市場</button>
+                        <button onclick="window.pickService.setMarketFilter('TW')" class="custom-dropdown-item py-2">🇹🇼 台股</button>
+                        <button onclick="window.pickService.setMarketFilter('US')" class="custom-dropdown-item py-2">🇺🇸 美股</button>
+                        <button onclick="window.pickService.setMarketFilter('JP')" class="custom-dropdown-item py-2">🇯🇵 日股</button>
+                    </div>
+                    <div id="pick-filter-overlay" onclick="window.pickService.toggleFilter()" class="hidden fixed inset-0 z-40"></div>
+                </div>
+                <div class="flex items-center gap-1">
+                    <div class="relative">
+                        <button onclick="window.pickService.toggleSort()" class="flex items-center gap-1 text-xs bg-[#1A1A1A] border border-[#333] text-gray-300 px-3 py-1.5 rounded-l border-r-0 hover:border-gold hover:text-gold transition font-medium shadow-sm">
+                            <span class="material-icons text-[14px]">sort</span><span id="pick-sort-label">股號</span>
+                        </button>
+                        <div id="pick-sort-menu" class="hidden absolute top-full mt-1 right-0 custom-dropdown min-w-[120px]">
+                            <button onclick="window.pickService.setSortField('symbol')" class="custom-dropdown-item py-2">股號</button>
+                            <button onclick="window.pickService.setSortField('expReturn')" class="custom-dropdown-item py-2">預期報酬</button>
+                        </div>
+                        <div id="pick-sort-overlay" onclick="window.pickService.toggleSort()" class="hidden fixed inset-0 z-40"></div>
+                    </div>
+                    <button onclick="window.pickService.toggleSortOrder()" class="flex items-center justify-center text-xs bg-[#1A1A1A] border border-[#333] text-gray-300 px-2 py-1.5 rounded-r hover:border-gold hover:text-gold transition shadow-sm">
+                        <span id="pick-sort-arrow" class="material-icons text-[14px]">arrow_downward</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="pick-list-container" class="space-y-2 pb-24">
+                </div>
         </section>
     </main>
 
