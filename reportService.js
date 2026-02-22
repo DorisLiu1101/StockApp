@@ -1,9 +1,9 @@
 /**
- * [VER] v3.0.0 [DATE] 2024-06-20
+ * [VER] v3.1 [DATE] 2024-06-20
  * [[DESC]
  *  1. 全面改用本益比（PE）模型取代股利折現模型（DDM），估值基準從股利改為 EPS，並且同時提供固定倍數法與歷史動態倍數法兩種方案的估值區間，讓使用者能夠更靈活地評估股票的合理價位。 
- *  2. 在報告中新增了「體質總評」的維度，結合盈再率、ROE 趨勢與本益比位階等多項財務指標，給予股票一個綜合的強健/普通/警示評級，並且提供詳細的說明與數據表格，幫助使用者更全面地理解公司的財務健康狀況。 
- *    
+ *  2. 在報告中新增了「體質總評」的維度，結合盈再率、ROE 趨勢與本益比位階等多項財務指標，給予股票一個綜合的強健/普通/警示評級。 
+ *  3. 優化市場情緒的呈現方式，根據情緒標籤自動套用不同的顏色與樣式  
   */
 
 // ==========================================
@@ -81,7 +81,7 @@ window.generateAndSaveReport = async function() {
                 "health": { "tag": "強健 或 普通 或 警示", "desc": "體質詳細說明(50字內)", "table": [ {"item": "盈再率", "data": "數字與百分比", "eval": "評價(如:普通 40-80%)"}, {"item": "ROE趨勢", "data": "近5年狀況", "eval": "評價(如:趨勢向上)"}, {"item": "本益比位階", "data": "數字", "eval": "評價(如:歷史高位)"} ] },
                 "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0, "yield": 5.2, "payout": 50.0}],
                 "buffett_tests": { "profit": {"value": "28.5%", "status": "通過 或 失敗"}, "cashflow": {"value": "85%", "status": "通過 或 失敗"}, "dividend": {"value": "42%", "status": "通過 或 失敗"}, "scale": {"value": "符合標準", "status": "通過 或 失敗"}, "chips": {"value": "穩定", "status": "通過 或 失敗"} },
-                "market": { "policy": "政策風險說明...", "fx": "匯率影響說明...", "sentiment": "市場情緒...", "news": ["新聞1", "新聞2"], "analysts": "分析師觀點..." },
+                "market": { "policy": "政策風險說明...", "fx": "匯率影響說明...", "sentiment": { "tag": "情緒標籤(如:極度貪婪(Bullish) 或 恐慌(Bearish))", "desc": "市場情緒說明..." }, "news": ["新聞1", "新聞2"], "analysts": "分析師觀點..." },
                 "risk": { "confidence_score": 75, "flags": ["警示..."], "scenarios": [ {"type": "牛市 (Bull)", "prob": 20, "desc": "說明..."}, {"type": "標準 (Base)", "prob": 50, "desc": "說明..."}, {"type": "熊市 (Bear)", "prob": 30, "desc": "說明..."} ] }
             }
         `;
@@ -357,7 +357,16 @@ window.loadReport = async function() {
 
             setTxt('var-mkt-policy', `<strong>政策風險：</strong> ${data.ai.market.policy}`);
             setTxt('var-mkt-fx', `<strong>匯率敏感度：</strong> ${data.ai.market.fx}`);
-            setTxt('var-mkt-sentiment', `<strong>市場情緒：</strong> ${data.ai.market.sentiment}`);
+            // 處理市場情緒標籤與顏色
+            let sentData = data.ai.market.sentiment;
+            let sentHtml = "";
+            if (typeof sentData === 'object' && sentData !== null) {
+                let tagColor = (sentData.tag.includes('貪') || sentData.tag.includes('牛') || sentData.tag.includes('樂')) ? 'background:#FEE2E2; color:#991B1B; border: 1px solid #FCA5A5;' : ((sentData.tag.includes('恐') || sentData.tag.includes('熊') || sentData.tag.includes('悲')) ? 'background:#DCFCE7; color:#166534; border: 1px solid #86EFAC;' : 'background:#F3F4F6; color:#374151; border: 1px solid #D1D5DB;');
+                sentHtml = `<div style="margin-bottom: 8px;"><strong style="font-size: 1.05rem; color:#fff;">市場情緒：</strong> <span style="padding: 2px 10px; border-radius: 6px; font-weight: bold; font-size:12px; margin-left:5px; letter-spacing:0.5px; ${tagColor}">${sentData.tag}</span></div><div style="color:var(--color-muted); line-height: 1.6;">${sentData.desc}</div>`;
+            } else {
+                sentHtml = `<strong>市場情緒：</strong> ${sentData || "--"}`;
+            }
+            setTxt('var-mkt-sentiment', sentHtml);
             setTxt('var-mkt-analyst', `<strong>分析師觀點：</strong> ${data.ai.market.analysts}`);
             
             let newsHtml = data.ai.market.news.map(n => `<li>${n}</li>`).join("");
