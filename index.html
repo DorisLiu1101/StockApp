@@ -1,5 +1,5 @@
 <!-- 
-  [VER] v3.4.4 (2026-02-21)
+  [VER] v3.4.5 (2026-02-21)
   [DESC] 
     1. 加入 AI 漏填防呆機制，並修正跨國市場提示詞 (Prompt) 判斷 Bug
     2. 導入「誠實呈現模式」，動態判斷跨國市場，若 AI 漏給財報則標示無資料並暫停估值，絕不杜撰數據
@@ -291,7 +291,7 @@
         <div class="flex flex-wrap justify-between items-center gap-y-3 mb-4 w-full">
         <div class="flex items-center gap-4">
             <button onclick="window.loadReport()" class="px-4 py-2 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black transition-all text-[#D4AF37] text-[12px] font-bold tracking-widest rounded border border-[#D4AF37]/30 flex items-center gap-2 shadow-lg focus:outline-none">
-                <span class="material-icons text-base">cloud_search</span> 讀取報告
+                <span class="material-icons text-base">search</span> 讀取報告
             </button>
             <div class="text-[12px] text-gray-400 font-mono">
                 報告日期：<span id="detail-report-date" class="text-gray-200">--</span>
@@ -747,7 +747,7 @@
             roiEl.innerText = (isGain ? "+" : "") + stock.gainPct + "%";
             roiEl.className = `text-2xl font-bold tracking-tighter leading-none ${isGain ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
 
-            const prefix = market === 'US' ? 'US$ ' : (market === 'JP' ? 'JP¥ ' : 'NT$ ');
+            const prefix = market === 'US' ? '$ ' : (market === 'JP' ? '¥ ' : '$ ');
             document.getElementById('detail-qty').innerText = fmt(stock.qty);
             document.getElementById('detail-cost').innerText = fmt(stock.cost);
             const costOrg = stock.cost * stock.qty;
