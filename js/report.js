@@ -1,9 +1,8 @@
 /**
- * [VER] v5.0 [2026-02-23]
- * [DESC] AI 聯網報告模組 (支援 Prefix 動態綁定)
+ * [VER] v5.3 [2026-02-23]
+ * [DESC] 移除前端 corsproxy 抓價依賴，轉由 GAS 後端執行 On-Demand 即時抓價與自動建檔。
  */
 window.reportService = (function() {
-    
     async function generateAndSaveReport(prefix = '') {
         const symbol = window.appState.currentDetailSymbol;
         const market = window.appState.currentDetailMarket;
@@ -18,21 +17,19 @@ window.reportService = (function() {
         loadingDiv.classList.remove('hidden'); loadingDiv.style.display = 'flex';
         
         try {
-            loadingText.innerText = '抓取絕對即時股價中...';
-            async function getYahooPrice(s) { const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${s}`)}`); const data = await res.json(); return data.chart?.result?.[0]?.meta?.regularMarketPrice || null; }
-
-            let realPrice = null; let yfSymbol = symbol;
-            if (market === 'TW') { realPrice = await getYahooPrice(`${symbol}.TW`); if (realPrice !== null) { yfSymbol = `${symbol}.TW`; } else { realPrice = await getYahooPrice(`${symbol}.TWO`); if (realPrice === null) throw new Error("無法取得台股報價"); } } 
-            else { if (market === 'JP') yfSymbol += '.T'; realPrice = await getYahooPrice(yfSymbol); if (realPrice === null) throw new Error("無法取得報價"); }
-
             let marketName = market === 'US' ? "美股" : (market === 'JP' ? "日股" : "台股");
-            loadingText.innerText = '呼叫後端 AI 進行聯網分析中...';
+            loadingText.innerText = '呼叫後端進行即時抓價與 AI 聯網分析中...';
             
-            const prompt = `角色：巴菲特價值投資分析師。任務：分析${marketName} ${symbol}。目前真實股價為 ${realPrice} 元。請聯網搜尋最新財報、近5年股利與EPS、新聞、與最新 GDP 成長率。必須嚴格只輸出純 JSON 格式！絕對禁止任何開場白（例如"我將以..."）、結語或 Markdown 標記，請直接以大括號 { 開頭：{"company_name": "公司名稱", "biz_intro": "核心業務簡介(15字內)", "nav": 最新一季每股淨值(數字), "reinvestment_rate": 盈再率(數字), "gdp_yoy": 最新實質GDP年增率(數字), "eps_ttm": 近四季總EPS(數字), "pe_hist_low": 近三年歷史最低本益比(數字), "pe_hist_high": 近三年歷史最高本益比(數字), "avg_yield_3y": 近三年平均現金殖利率(數字), "avg_yield_5y": 近五年平均現金殖利率(數字), "div_frequency": "配息頻率", "buffett_summary": "綜合摘要", "fin_annotation": "財務簡要標註", "health": { "tag": "強健", "desc": "體質詳細說明", "table": [ {"item": "盈再率", "data": "數字與百分比", "eval": "評價"} ] }, "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0, "yield": 5.2, "payout": 50.0}], "buffett_tests": { "profit": {"value": "28.5%", "status": "通過"}, "cashflow": {"value": "85%", "status": "通過"}, "dividend": {"value": "42%", "status": "通過"}, "scale": {"value": "符合標準", "status": "通過"}, "chips": {"value": "穩定", "status": "通過"} }, "market": { "policy": "政策風險說明...", "fx": "匯率影響...", "sentiment": { "tag": "情緒標籤", "desc": "說明" }, "news": ["新聞1", "新聞2"], "analysts": "分析師觀點" }, "risk": { "confidence_score": 75, "flags": ["警示"], "scenarios": [ {"type": "牛市", "prob": 20, "desc": "說明"}, {"type": "標準", "prob": 50, "desc": "說明"}, {"type": "熊市", "prob": 30, "desc": "說明"} ] } }`;
+            // 注意：原本的 ${realPrice} 已經替換為 {{REAL_PRICE}} 佔位符，交給後端自動填入
+            const prompt = `角色：巴菲特價值投資分析師。任務：分析${marketName} ${symbol}。目前真實股價為 {{REAL_PRICE}} 元。請聯網搜尋最新財報、近5年股利與EPS、新聞、與最新 GDP 成長率。必須嚴格只輸出純 JSON 格式！絕對禁止任何開場白（例如"我將以..."）、結語或 Markdown 標記，請直接以大括號 { 開頭：{"company_name": "公司名稱", "biz_intro": "核心業務簡介(15字內)", "nav": 最新一季每股淨值(數字), "reinvestment_rate": 盈再率(數字), "gdp_yoy": 最新實質GDP年增率(數字), "eps_ttm": 近四季總EPS(數字), "pe_hist_low": 近三年歷史最低本益比(數字), "pe_hist_high": 近三年歷史最高本益比(數字), "avg_yield_3y": 近三年平均現金殖利率(數字), "avg_yield_5y": 近五年平均現金殖利率(數字), "div_frequency": "配息頻率", "buffett_summary": "綜合摘要", "fin_annotation": "財務簡要標註", "health": { "tag": "強健", "desc": "體質詳細說明", "table": [ {"item": "盈再率", "data": "數字與百分比", "eval": "評價"} ] }, "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0, "yield": 5.2, "payout": 50.0}], "buffett_tests": { "profit": {"value": "28.5%", "status": "通過"}, "cashflow": {"value": "85%", "status": "通過"}, "dividend": {"value": "42%", "status": "通過"}, "scale": {"value": "符合標準", "status": "通過"}, "chips": {"value": "穩定", "status": "通過"} }, "market": { "policy": "政策風險說明...", "fx": "匯率影響...", "sentiment": { "tag": "情緒標籤", "desc": "說明" }, "news": ["新聞1", "新聞2"], "analysts": "分析師觀點" }, "risk": { "confidence_score": 75, "flags": ["警示"], "scenarios": [ {"type": "牛市", "prob": 20, "desc": "說明"}, {"type": "標準", "prob": 50, "desc": "說明"}, {"type": "熊市", "prob": 30, "desc": "說明"} ] } }`;
             
-            const aiRes = await fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ action: 'askGemini', data: { prompt: prompt } }) });
+            // 新增把 symbol 和 market 傳給後端，讓後端去抓價
+            const aiRes = await fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ action: 'askGemini', data: { prompt: prompt, symbol: symbol, market: market } }) });
             const aiResJson = await aiRes.json();
             if (!aiResJson.success) throw new Error(aiResJson.message || "伺服器發生未知錯誤。");
+            
+            // [新增] 接收從 GAS 後端傳回來的即時價格
+            let realPrice = aiResJson.realPrice || 0;
             
             const rawText = aiResJson.data?.candidates?.[0]?.content?.parts?.[0]?.text;
             if(!rawText) throw new Error("AI 未能產出有效報告");
@@ -44,7 +41,8 @@ window.reportService = (function() {
             let valA = { cheap: 0, exp: 0, pe_cheap: 12, pe_exp: 20, fail: true }, valB = { cheap: 0, exp: 0, pe_cheap: 0, pe_exp: 0, fail: true };
             let avgCheap = 0, avgExp = 0, currentPE = "N/A", rating = "N/A", signal = "資料不足", strategy = "因 AI 無法取得有效數據，估值運算暫停。";
 
-            if (hasValidMathData) {
+            // [修改] 只有當成功抓到價格 (realPrice > 0) 且數學資料有效時，才進行估值運算
+            if (realPrice > 0 && hasValidMathData) {
                 const eps = Number(reportRaw.eps_ttm), peLow = Number(reportRaw.pe_hist_low), peHigh = Number(reportRaw.pe_hist_high);
                 if (eps > 0) {
                     currentPE = (realPrice / eps).toFixed(1);
