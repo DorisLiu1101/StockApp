@@ -1,8 +1,7 @@
 <!-- 
-  [VER] v3.3.1 [DATE] 2024-06-20
+  [VER] v3.4 [DATE] 2026-02-23
   [DESC] 修改圖示 
-    1. 全面改用本益比（PE）模型取代股利折現模型（DDM）
-    2. 在報告中新增了「體質總評」的維度，結合盈再率、ROE 趨勢與本益比位階等多項財務指標，給予股票一個綜合的強健/普通/警示評級。
+    1. UI優化
     
 -->
 <!DOCTYPE html>
@@ -51,10 +50,10 @@
 
         .report-section { padding: 25px 5px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: transparent; }
         .report-section:last-child { border-bottom: none; }
-        /* 美化 H2 標題與質感 ICON 排版 */
+        
         .report-section h2, .card h2 { margin-top: 0; font-size: 1.3rem; color: #fff; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-left: none; padding-left: 0; letter-spacing: 1px; }
-        .report-section h2::before, .card h2::before { display: none; } /* 徹底移除發光色塊 */
-        /* H3 區塊間隔線 */
+        .report-section h2::before, .card h2::before { display: none; } 
+        
         .section-divider { border: 0; height: 1px; background: rgba(255,255,255,0.08); margin: 25px 0; }
 
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -88,7 +87,8 @@
         .gauge-fill { position: absolute; top: 0; left: 0; width: 120px; height: 120px; background: conic-gradient(from 270deg, #b4941f 0%, #D4AF37 50%, #ffe082 75%, transparent 75%); border-radius: 50%; mask: radial-gradient(transparent 53%, black 55%); -webkit-mask: radial-gradient(transparent 53%, black 55%); filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.3)); transition: transform 1s ease-out; }
         .gauge-value-center { position: absolute; bottom: 0; left: 0; width: 100%; text-align: center; font-size: 2rem; font-weight: 800; color: #fff; line-height: 1; z-index: 20; text-shadow: 0 0 10px rgba(0,0,0,0.8); font-family: monospace; }
 
-        .thermometer-bar { height: 10px; background: linear-gradient(90deg, #22C55E 0%, #EAB308 50%, #EF4444 100%); border-radius: 50px; position: relative; margin: 20px 0; }
+        /* [修改重點 1] 儀表板排版與對齊優化 */
+        .thermometer-bar { height: 10px; background: linear-gradient(90deg, #22C55E 0%, #EAB308 50%, #EF4444 100%); border-radius: 50px; position: relative; margin: 30px 0 15px 0; }
         .thermometer-marker { position: absolute; top: -5px; width: 4px; height: 20px; background: #fff; border-radius: 2px; box-shadow: 0 0 4px rgba(0,0,0,0.8); transform: translateX(-50%); transition: left 1s ease-out; }
 
         .valuation-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
@@ -182,14 +182,15 @@
                 <div class="val-cheap" style="font-size: 1.2rem; font-weight: bold;" id="var-cheap-avg">$---</div>
                 <small class="value-range" id="var-cheap-range">($--- ~ $---)</small>
             </div>
-            <div style="flex: 1; margin: 0 10px; text-align: center;">
-                <small style="margin-bottom: 5px; display:block;">目前位置</small>
+            
+            <div style="flex: 1; margin: 0 10px; text-align: center; display: flex; flex-direction: column; justify-content: center;">
                 <div class="thermometer-bar">
                     <div class="thermometer-marker" id="var-therm-marker" style="left: 0%;">
-                        <div id="var-therm-badge" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background-color: #166534; color: #fff; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">--</div>
+                        <div id="var-therm-badge" style="position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; background-color: #166534; color: #fff; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">--</div>
                     </div>
                 </div>
             </div>
+
             <div class="value-block">
                 <small>貴價 (Expensive)</small>
                 <div class="val-expensive" style="font-size: 1.2rem; font-weight: bold;" id="var-exp-avg">$---</div>
@@ -344,6 +345,18 @@
     </footer>
 </div>
 <script>
+    // [修改重點 3] 加入 Details 展開/收合的高度監聽器，自動調整外層 iframe 解決截斷問題
+    document.querySelectorAll('details').forEach(detail => {
+        detail.addEventListener('toggle', () => {
+            // 給予 50ms 緩衝，讓瀏覽器完成 DOM 展開渲染後再抓取正確的高度
+            setTimeout(() => {
+                if (window.frameElement) {
+                    window.frameElement.style.height = (document.body.scrollHeight + 50) + 'px';
+                }
+            }, 50); 
+        });
+    });
+
     function downloadReport() {
         const htmlContent = document.documentElement.outerHTML;
         const blob = new Blob([htmlContent], { type: 'text/html' });
