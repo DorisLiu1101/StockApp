@@ -1,11 +1,8 @@
 /**
- * [VER] v3.21 [DATE] 2024-06-20
- * [[DESC]
- *  [Bug 修復] 強化 AI 回傳格式的防呆檢查，避免 reading '0' 錯誤
- *  1. GDP指標改為「GDP年增率」，並調整AI提示詞與前端呈現方式以符合此變更 
- *  2. 在報告中新增了「體質總評」的維度，結合盈再率、ROE 趨勢與本益比位階等多項財務指標，給予股票一個綜合的強健/普通/警示評級。 
- *  3. 優化市場情緒的呈現方式，根據情緒標籤自動套用不同的顏色與樣式  
-  */
+ * [VER] v3.22 [DATE] 2026-02-23
+ * [DESC] 
+ * 1. [Bug 修復] 修正「營運與動態」欄位讀取到 Object 導致顯示 [object Object] 的問題
+ */
 
 // ==========================================
 // 1. 產生並儲存報告
@@ -65,7 +62,6 @@ window.generateAndSaveReport = async function() {
 
         loadingText.innerText = '呼叫後端 AI 進行聯網分析中... (約需 10 秒)';
         
-        // [修改重點] 讓 AI 去抓取 EPS 與 歷史本益比區間
         const prompt = `
             角色：巴菲特價值投資分析師。
             任務：分析${marketName} ${symbol}。目前真實股價為 ${realPrice} 元。
@@ -94,7 +90,6 @@ window.generateAndSaveReport = async function() {
         const aiResJson = await aiRes.json();
         if (!aiResJson.success) throw new Error(aiResJson.message || "伺服器發生未知錯誤，請稍後再試。");
         
-        // [Bug 修復] 強化 AI 回傳格式的防呆檢查，避免 reading '0' 錯誤
         const candidate = aiResJson.data?.candidates?.[0];
         if (!candidate || !candidate.content || !candidate.content.parts || !candidate.content.parts[0]) {
             console.error("AI 異常回傳或遭安全機制攔截:", aiResJson.data);
@@ -129,7 +124,6 @@ window.generateAndSaveReport = async function() {
         reportRaw.risk.flags = Array.isArray(reportRaw.risk.flags) ? reportRaw.risk.flags : ["AI 未能取得特定風險數據"];
         reportRaw.risk.scenarios = Array.isArray(reportRaw.risk.scenarios) ? reportRaw.risk.scenarios : [];
 
-        // 驗證新增的 EPS 與 PE 欄位
         if (isNaN(Number(reportRaw.eps_ttm)) || isNaN(Number(reportRaw.pe_hist_low)) || isNaN(Number(reportRaw.pe_hist_high))) {
             hasValidMathData = false;
         }
@@ -140,7 +134,6 @@ window.generateAndSaveReport = async function() {
 
         loadingText.innerText = '本機執行 PER 雙軌本益比運算中...';
         
-        // [修改重點] 取代原本的 DDM，實作方案 A 與方案 B 的雙軌 PER
         let valA = { cheap: 0, exp: 0, pe_cheap: 12, pe_exp: 20, fail: true };
         let valB = { cheap: 0, exp: 0, pe_cheap: 0, pe_exp: 0, fail: true };
         let avgCheap = 0, avgExp = 0, currentPE = "N/A";
@@ -154,19 +147,14 @@ window.generateAndSaveReport = async function() {
             if (eps > 0) {
                 currentPE = (realPrice / eps).toFixed(1);
                 
-                // 方案 A：固定倍數
-                valA = { cheap: Math.round(eps * 12), exp: Math.round(eps * 30), pe_cheap: 12, pe_exp: 20, fail: false };
-                
-                // 方案 B：歷史動態倍數
+                valA = { cheap: Math.round(eps * 12), exp: Math.round(eps * 30), pe_cheap: 12, pe_exp: 30, fail: false };
                 valB = { cheap: Math.round(eps * peLow), exp: Math.round(eps * peHigh), pe_cheap: peLow, pe_exp: peHigh, fail: false };
 
-                // 綜合平均
                 avgCheap = Math.round((valA.cheap + valB.cheap) / 2);
                 avgExp = Math.round((valA.exp + valB.exp) / 2);
                 
                 let isGdpLow = Number(reportRaw.gdp_yoy) < 2.0;
 
-                // 決策邏輯
                 if (realPrice < avgCheap && avgCheap > 0) {
                     rating = "BUY"; signal = "價值浮現"; 
                     strategy = isGdpLow ? "目前股價低於平均淑價，且總經GDP處於低檔，為絕佳長線買點，建議積極佈局。" : "股價低於平均淑價，具備安全邊際，建議分批買進建立部位。";
@@ -183,44 +171,39 @@ window.generateAndSaveReport = async function() {
             }
         }
 
-                // ==========================================
-                // 區間強制排序 (確保由小到大)，寫入專屬的 range 字串
-                // ==========================================
-                let cheapLow = Math.min(valA.cheap, valB.cheap);
-                let cheapHigh = Math.max(valA.cheap, valB.cheap);
-                let expLow = Math.min(valA.exp, valB.exp);
-                let expHigh = Math.max(valA.exp, valB.exp);
-                let peLowStr = valB.fail ? "--" : Math.min(valB.pe_cheap, valB.pe_exp);
-                let peHighStr = valB.fail ? "--" : Math.max(valB.pe_cheap, valB.pe_exp);
+        let cheapLow = Math.min(valA.cheap, valB.cheap);
+        let cheapHigh = Math.max(valA.cheap, valB.cheap);
+        let expLow = Math.min(valA.exp, valB.exp);
+        let expHigh = Math.max(valA.exp, valB.exp);
+        let peLowStr = valB.fail ? "--" : Math.min(valB.pe_cheap, valB.pe_exp);
+        let peHighStr = valB.fail ? "--" : Math.max(valB.pe_cheap, valB.pe_exp);
 
-                const finalReport = {
-                    symbol: symbol, realPrice: realPrice, date: new Date().toISOString().slice(0, 10).replace(/-/g, "/"),
-                    ai: reportRaw, 
-                    math: { 
-                        valA, valB, avgCheap, avgExp, currentPE,
-                        range: {
-                            cheap: `($${cheapLow} ~ $${cheapHigh})`,
-                            exp: `($${expLow} ~ $${expHigh})`,
-                            pe: `(歷史：${peLowStr}x ~ ${peHighStr}x)`
-                        }
-                    }, 
-                    decision: { rating, signal, strategy }
-                };
-
-                loadingText.innerText = '寫入日期與儲存報告...';
-                const saveRes = await fetch(userScriptUrl, {
-                    // [修改重點] 額外傳遞 market 屬性給後端
-                    method: 'POST', body: JSON.stringify({ action: 'saveReport', data: { symbol: symbol, market: currentDetailMarket, content: JSON.stringify(finalReport) } })
-                });
-        
-                const saveResult = await saveRes.json();
-                if(saveResult.success) {
-                    window.loadReport(); 
-                    // [新增] 觸發背景同步，讓寫入 Google Sheets 的最新日期更新到手機快取中
-                    if(window.syncSheetData) window.syncSheetData();
-                } else {
-                    throw new Error(saveResult.message);
+        const finalReport = {
+            symbol: symbol, realPrice: realPrice, date: new Date().toISOString().slice(0, 10).replace(/-/g, "/"),
+            ai: reportRaw, 
+            math: { 
+                valA, valB, avgCheap, avgExp, currentPE,
+                range: {
+                    cheap: `($${cheapLow} ~ $${cheapHigh})`,
+                    exp: `($${expLow} ~ $${expHigh})`,
+                    pe: `(歷史：${peLowStr}x ~ ${peHighStr}x)`
                 }
+            }, 
+            decision: { rating, signal, strategy }
+        };
+
+        loadingText.innerText = '寫入日期與儲存報告...';
+        const saveRes = await fetch(userScriptUrl, {
+            method: 'POST', body: JSON.stringify({ action: 'saveReport', data: { symbol: symbol, market: currentDetailMarket, content: JSON.stringify(finalReport) } })
+        });
+
+        const saveResult = await saveRes.json();
+        if(saveResult.success) {
+            window.loadReport(); 
+            if(window.syncSheetData) window.syncSheetData();
+        } else {
+            throw new Error(saveResult.message);
+        }
 
     } catch (error) {
         console.error(error);
@@ -269,9 +252,8 @@ window.loadReport = async function() {
             const doc = parser.parseFromString(tplHtml, 'text/html');
 
             const setTxt = (id, txt) => { if(doc.getElementById(id)) doc.getElementById(id).innerHTML = txt; };     
-            // --- 填入數據 ---
+            
             setTxt('var-report-date', data.date);
-            // [新增] 同步更新主畫面左下角的報告日期標籤
             if(document.getElementById('detail-report-date')) document.getElementById('detail-report-date').innerText = data.date;
                     
             setTxt('var-stock-title', `${data.symbol} ${data.ai.company_name}`);
@@ -287,16 +269,13 @@ window.loadReport = async function() {
             setTxt('var-confidence-score', data.ai.risk.confidence_score);
             if(doc.getElementById('var-gauge-fill')) doc.getElementById('var-gauge-fill').style.transform = `rotate(${(data.ai.risk.confidence_score/100)*180}deg)`;
             
-            // [修改重點] 將原本渲染 DDM 的元素改為渲染 PE
-            // [修改重點] 讀取時優先套用排序後的字串，若為舊版則動態比對
-                    setTxt('var-current-pe', data.math.currentPE + "倍");
-                    setTxt('var-pe-range', data.math.range ? data.math.range.pe : `(歷史：${data.math.valB.pe_cheap}x ~ ${data.math.valB.pe_exp}x)`);
-                    setTxt('var-cheap-avg', "$" + data.math.avgCheap);
-                    setTxt('var-cheap-range', data.math.range ? data.math.range.cheap : `($${Math.min(data.math.valA.cheap, data.math.valB.cheap)} ~ $${Math.max(data.math.valA.cheap, data.math.valB.cheap)})`);
-                    setTxt('var-exp-avg', "$" + data.math.avgExp);
-                    setTxt('var-exp-range', data.math.range ? data.math.range.exp : `($${Math.min(data.math.valA.exp, data.math.valB.exp)} ~ $${Math.max(data.math.valA.exp, data.math.valB.exp)})`);
+            setTxt('var-current-pe', data.math.currentPE + "倍");
+            setTxt('var-pe-range', data.math.range ? data.math.range.pe : `(歷史：${data.math.valB.pe_cheap}x ~ ${data.math.valB.pe_exp}x)`);
+            setTxt('var-cheap-avg', "$" + data.math.avgCheap);
+            setTxt('var-cheap-range', data.math.range ? data.math.range.cheap : `($${Math.min(data.math.valA.cheap, data.math.valB.cheap)} ~ $${Math.max(data.math.valA.cheap, data.math.valB.cheap)})`);
+            setTxt('var-exp-avg', "$" + data.math.avgExp);
+            setTxt('var-exp-range', data.math.range ? data.math.range.exp : `($${Math.min(data.math.valA.exp, data.math.valB.exp)} ~ $${Math.max(data.math.valA.exp, data.math.valB.exp)})`);
             
-            // 動態計算指針位置與動態標籤內容
             let pct = 0; let badgeText = "合理"; let badgeBg = "#FACC15"; let badgeColor = "#000";
             if (data.realPrice <= data.math.avgCheap) {
                 pct = 0; badgeText = "淑"; badgeBg = "#166534"; badgeColor = "#FFF";
@@ -317,10 +296,17 @@ window.loadReport = async function() {
             setTxt('var-op-advice', `操作建議：${data.decision.strategy.includes('買')?'分批佈局':(data.decision.strategy.includes('賣')?'減碼賣出':'觀望持有')}`);
             setTxt('var-op-desc', data.decision.strategy);
             
-            setTxt('var-co-dynamic', `<strong>營運與動態：</strong> ${data.ai.market.sentiment}`);
+            // [Bug 修復] 正確提取 sentiment 的 desc 字串
+            let dynamicText = "";
+            if (typeof data.ai.market.sentiment === 'object' && data.ai.market.sentiment !== null) {
+                dynamicText = data.ai.market.sentiment.desc;
+            } else {
+                dynamicText = data.ai.market.sentiment || "--";
+            }
+            setTxt('var-co-dynamic', `<strong>營運與動態：</strong> ${dynamicText}`);
+            
             setTxt('var-co-metrics', `<strong>基本指標：</strong> 最新 NAV $${data.ai.nav}, 近四季EPS $${data.ai.eps_ttm}`);
             
-            // A. 壓力測試摘要
             const bt = data.ai.buffett_tests;
             let buffettSum = data.ai.buffett_summary || '系統完成5項壓力測試，詳見下方清單。';
             setTxt('var-test-summary', `<strong>測試結果總結：</strong> ${buffettSum}`);
@@ -334,7 +320,6 @@ window.loadReport = async function() {
             `;
             setTxt('var-test-table-body', testsHtml);
 
-            // B. 五年數據表格與摘要
             let finHtml = "";
             data.ai.history_5y.forEach(y => {
                 let yld = y.yield ? y.yield + "%" : "--";
@@ -350,7 +335,6 @@ window.loadReport = async function() {
             
             setTxt('var-fin-summary', `<strong>數據摘要：</strong><br>1. 估價基準：採用近四季 EPS ($${data.ai.eps_ttm}) 計算。<br>2. 配息政策：該股近期主要為「${divFreq}」。<br><span style="color:#E5E7EB; font-size: 13px; display:inline-block; margin-top:4px;"><strong>標註說明：</strong>${finAnn}</span><br><span style="color:#D4AF37; font-size: 13px; display:inline-block; margin-top:6px;">💡 AI 聯網查證之平均殖利率：近三年 ${yield3y} / 近五年 ${yield5y}</span>`);
 
-            // C. 體質總評
             let h = data.ai.health || {};
             let tagColor = h.tag === '強健' ? 'tag-buy' : (h.tag === '警示' ? 'tag-sell' : 'tag-hold');
             setTxt('var-health-tag', `<span class="tag ${tagColor}">${h.tag || '未評估'}</span>`);
@@ -368,7 +352,7 @@ window.loadReport = async function() {
                 });
             } else { hTable = `<tr><td colspan="3">無詳細檢核數據</td></tr>`; }
             setTxt('var-health-table-body', hTable);
-            // [修改重點] 估價分析表格渲染 PE 變數
+            
             setTxt('var-val-pe-a', `12x ~ 30x`);
             setTxt('var-val-pe-b', (data.math.valB.fail ? 'N/A' : `${data.math.valB.pe_cheap}x ~ ${data.math.valB.pe_exp}x`));
             setTxt('var-val-cheap-a', `$${data.math.valA.cheap}`);
@@ -378,7 +362,7 @@ window.loadReport = async function() {
 
             setTxt('var-mkt-policy', `<strong>政策風險：</strong> ${data.ai.market.policy}`);
             setTxt('var-mkt-fx', `<strong>匯率敏感度：</strong> ${data.ai.market.fx}`);
-            // 處理市場情緒標籤與顏色
+            
             let sentData = data.ai.market.sentiment;
             let sentHtml = "";
             if (typeof sentData === 'object' && sentData !== null) {
@@ -403,7 +387,7 @@ window.loadReport = async function() {
             setTxt('var-matrix-prob-bear', sc[2].prob + "%"); setTxt('var-matrix-desc-bear', sc[2].desc);
 
             setTxt('var-conc-price-level', `<strong>價格位階：</strong> 股價 $${data.realPrice} 位於 ${data.realPrice < data.math.avgCheap ? '淑價區間以下' : (data.realPrice > data.math.avgExp ? '貴價區間以上' : '合理區間')}。`);
-            // 套用巴菲特班講稿之 GDP 進出場與基期邏輯
+            
             let gdpVal = Number(data.ai.gdp_yoy);
             let gdpText = `最新公佈為 ${data.ai.gdp_yoy}%。`;
             if (!isNaN(gdpVal)) {
