@@ -1,9 +1,9 @@
 <!-- 
-  [VER] v4.3 (2026-02-21)
+  [VER] v4.3.1 (2026-02-23)
   [DESC] 撿股功能上線，新增觀察名單頁面
     1. 新增 pickService.js 負責撿股邏輯，包含加入觀察名單、過濾和排序功能
     2. 新增觀察名單頁面，提供使用者管理和查看已加入觀察名單的股票
-    3. 全域更新按鈕、上一頁攔截器、總覽UI調整
+    3. 全域更新按鈕、上一頁攔截器、總覽UI調整 (Bug fix: 綁定總覽為首頁)
 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -85,7 +85,7 @@
             </div>
             
             <div class="flex gap-3 items-center">
-                <button onclick="window.switchPage('home')" id="header-nav-home" class="flex items-center justify-center text-gold hover:text-[#FFE082] transition-colors focus:outline-none bg-transparent active:scale-95">
+                <button onclick="window.navToPage('home')" id="header-nav-home" class="flex items-center justify-center text-gold hover:text-[#FFE082] transition-colors focus:outline-none bg-transparent active:scale-95">
                     <span class="material-icons text-[26px]">dashboard</span>
                 </button>
 
@@ -102,7 +102,7 @@
                         </div>
                         <div class="py-1">
                             <button onclick="window.manualSync()" class="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-[#D4AF37] hover:text-black transition flex items-center gap-3">
-                                <span id="sync-icon" class="material-icons text-[18px]">sync</span> <span class="font-medium" id="sync-text">立即同步最新資料</span>
+                                <span id="sync-icon" class="material-icons text-[18px]">sync</span> <span class="font-medium" id="sync-text">立即同步</span>
                             </button>
                             <div class="border-t border-[#333] my-1"></div>
                             
@@ -258,15 +258,15 @@
 
     <nav class="fixed bottom-0 w-full bottom-nav shadow-2xl z-40">
         <div class="max-w-md mx-auto flex justify-around items-center px-4 h-16">
-            <button onclick="window.switchPage('screen')" id="nav-screen" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item">
+            <button onclick="window.navToPage('screen')" id="nav-screen" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item">
                 <span class="material-icons text-2xl mb-0.5">manage_search</span>
                 <span class="text-xs font-bold">篩股</span>
             </button>
-            <button onclick="window.switchPage('pick')" id="nav-pick" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item">
+            <button onclick="window.navToPage('pick')" id="nav-pick" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item">
                 <span class="material-icons text-2xl mb-0.5">star_border</span>
                 <span class="text-xs font-bold">收藏</span>
             </button>
-            <button onclick="window.switchPage('list')" id="nav-list" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item">
+            <button onclick="window.navToPage('list')" id="nav-list" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item">
                 <span class="material-icons text-2xl mb-0.5">list_alt</span>
                 <span class="text-xs font-bold">庫存</span>
             </button>
@@ -308,15 +308,19 @@
 
         // 監聽手機實體返回鍵 / 邊緣返回手勢
         window.addEventListener('popstate', (e) => {
-            // 依照 z-index 由高到低的順序，優先關閉最上層的視窗
+            // 優先檢查並關閉各類彈出視窗 (Modal)
             if (document.getElementById('system-modal') && !document.getElementById('system-modal').classList.contains('hidden')) {
-                window.closeSystemModal(true); // true 代表由 popstate 觸發，不需再執行 history.back()
+                window.closeSystemModal(true);
             } else if (document.getElementById('settings-modal') && document.getElementById('settings-modal').classList.contains('open')) {
                 window.closeSettings(true);
             } else if (document.getElementById('transaction-modal') && document.getElementById('transaction-modal').classList.contains('open')) {
                 window.closeTransactionModal(true);
             } else if (document.getElementById('detail-modal') && document.getElementById('detail-modal').classList.contains('open')) {
                 window.closeStockDetail(true);
+            } else {
+                // 如果沒有視窗，則執行頁籤切換。若無 state 則預設回到首頁
+                const targetPage = (e.state && e.state.page) ? e.state.page : 'home';
+                window.switchPage(targetPage);
             }
         });
         // =====================================
@@ -352,9 +356,9 @@
             } catch(e) { 
                 console.error(e); window.showAlert("同步失敗: " + e.message); 
             } finally {
-                // 恢復原本樣式
+                // 恢復原本樣式與精簡文字
                 if(icon) icon.classList.remove('animate-spin', 'text-gold');
-                if(text) { text.innerText = "立即同步最新資料"; text.classList.remove('text-gold'); }
+                if(text) { text.innerText = "立即同步"; text.classList.remove('text-gold'); }
             }
         }
         // =====================================
@@ -393,7 +397,7 @@
 
         let _modalResolver = null;
         function showAlert(msg, title="系統提示", showDriveBtn=false) { 
-            pushModalState('alert'); // 寫入假歷史紀錄
+            pushModalState('alert'); // 寫入假歷史紀錄以防跳出
             return new Promise((resolve) => { _modalResolver = resolve; document.getElementById('system-modal-title').innerText=title; document.getElementById('system-modal-message').innerText=msg; let actions = '<button onclick="window.closeSystemModal()" class="bg-gold text-black px-6 py-2 rounded text-sm font-bold shadow-lg hover:bg-[#FFE082] focus:outline-none">OK</button>'; if(showDriveBtn) { actions = `<a href="${REPORT_FOLDER_URL}" target="_blank" class="bg-[#333] text-white border border-[#555] px-4 py-2 rounded text-sm font-bold mr-2 hover:bg-[#444] transition focus:outline-none">Open Drive</a>` + actions; } document.getElementById('system-modal-actions').innerHTML=actions; document.getElementById('system-modal').classList.remove('hidden'); });
         }
         function closeSystemModal(fromPop = false) { document.getElementById('system-modal').classList.add('hidden'); if (_modalResolver) { _modalResolver(); _modalResolver = null; } if(fromPop !== true) history.back(); }
@@ -464,13 +468,23 @@
         window.cancelInlineName = (oldName) => { document.getElementById('detail-name').innerText = oldName; };
         window.saveInlineName = async (oldName) => { const newName = document.getElementById('inline-name-input').value.trim(); const nameEl = document.getElementById('detail-name'); if (!newName || newName === oldName) { nameEl.innerText = oldName; return; } if (!userScriptUrl) { window.showAlert("請先設定 GAS URL"); nameEl.innerText = oldName; return; } nameEl.innerHTML = `<span class="text-sm text-gray-400 animate-pulse font-mono tracking-widest">Saving...</span>`; try { const res = await fetch(userScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'edit_name', data: { market: currentDetailMarket, symbol: currentDetailSymbol, newName: newName } }) }); const json = await res.json(); if(json.success) { nameEl.innerText = newName; await syncSheetData(); } else { throw new Error(json.message); } } catch(e) { window.showAlert("更新失敗: " + e.message); nameEl.innerText = oldName; } };
 
+        // =====================================
+        // [修改] 頁籤切換路由邏輯 (防護級控制)
+        // =====================================
         function switchPage(p) { 
+            let currentPage = 'home';
+            document.querySelectorAll('section').forEach(sec => {
+                if (!sec.classList.contains('hidden')) currentPage = sec.id.replace('page-', '');
+            });
+            // 避免無意義的重複切換與捲動
+            if (p === currentPage) return; 
+
             ['page-home','page-list','page-pick','page-screen'].forEach(id => { const el = document.getElementById(id); if(el) el.classList.add('hidden'); }); 
             const target = document.getElementById('page-'+p); if(target) target.classList.remove('hidden'); 
             document.querySelectorAll('.bottom-nav-item').forEach(el=>el.classList.remove('active')); 
             const nav = document.getElementById('nav-'+p); if(nav) nav.classList.add('active'); 
             
-            // 處理頭部的「總覽」按鈕高亮狀態
+            // 處理頭部「總覽」按鈕高亮狀態
             const headerHome = document.getElementById('header-nav-home');
             if(headerHome) {
                 if(p === 'home') {
@@ -483,6 +497,30 @@
             }
             window.scrollToTop();
         }
+
+        function navToPage(p) {
+            let currentPage = 'home';
+            document.querySelectorAll('section').forEach(sec => {
+                if (!sec.classList.contains('hidden')) currentPage = sec.id.replace('page-', '');
+            });
+            
+            if (p === currentPage) return; 
+
+            if (p === 'home') {
+                // 回到首頁：直接返回上一頁的歷史紀錄 (即總覽)
+                history.back(); 
+            } else {
+                if (currentPage === 'home') {
+                    // 從首頁出發：加入一筆新的歷史紀錄
+                    history.pushState({ page: p }, '');
+                } else {
+                    // 在其他頁籤之間切換：替換目前的歷史紀錄 (避免按上一頁要按很多次)
+                    history.replaceState({ page: p }, '');
+                }
+                switchPage(p);
+            }
+        }
+        // =====================================
 
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
         
@@ -537,8 +575,12 @@
             window.logout=async()=>{try{await signOut(auth); window.showAlert("已登出", "系統提示");}catch(e){window.showAlert("登出失敗：" + e.message, "系統提示");}};
             window.toggleFilterMenu = toggleFilterMenu; window.setMarketFilter = setMarketFilter; window.toggleSortMenu = toggleSortMenu; window.setSortField = setSortField; window.toggleSortOrder = toggleSortOrder; window.closeTransactionModal = closeTransactionModal; window.setChartFilter = setChartFilter; window.updateHomeChart = updateHomeChart; window.openHelp = openHelp; window.editStockName = editStockName;
             
-            window.pushModalState = pushModalState; window.manualSync = manualSync;
+            // 暴露新函式
+            window.pushModalState = pushModalState; window.manualSync = manualSync; window.navToPage = navToPage;
         } catch(e) { console.error("Binding Error:", e); }
+
+        // 初始化歷史紀錄狀態為「總覽 (home)」
+        history.replaceState({ page: 'home' }, '');
 
         async function initApp() {
             try {
