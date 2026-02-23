@@ -1,8 +1,8 @@
 /**
- * [VER] v5.4 [2026-02-24]
+ * [VER] v5.5 [2026-02-24]
  * [DESC] 
- * 1. 完善 loadReport 資料綁定 (方案B)，補齊 5 年財報、壓力測試、體質與市場風險等所有欄位。
- * 2. 加入高度容錯防呆機制，避免 AI 遺漏資料導致畫面當機或顯示 undefined。
+ * 1. 完美對接 StockApp_Report_Form.html 所有精緻欄位 (包含風險矩陣、估值參數比較等)。
+ * 2. 修正 ID 綁定錯位問題 (如 mkt-policy, mkt-news)，徹底解決「運算中...」殘留問題。
  */
 window.reportService = (function() {
     async function generateAndSaveReport(prefix = '') {
@@ -72,12 +72,9 @@ window.reportService = (function() {
         } catch (error) { window.showAlert('發生錯誤：\n' + error.message); loadingDiv.style.display = 'none'; }
     }
 
-    /**
- * [VER] v5.4 [2026-02-24]
- * [DESC] 
- * 1. 完善 loadReport 資料綁定 (方案B)，補齊 5 年財報、壓力測試、體質與市場風險等所有欄位。
- * 2. 加入高度容錯防呆機制，避免 AI 遺漏資料導致畫面當機或顯示 undefined。
- */
+
+ // [VER] v5.5 [2026-02-24]
+ 
     async function loadReport(prefix = '') {
         const symbol = window.appState.currentDetailSymbol;
         const scriptUrl = window.appState.userScriptUrl;
@@ -100,17 +97,19 @@ window.reportService = (function() {
                 const doc = new DOMParser().parseFromString(await tplRes.text(), 'text/html');
                 const setTxt = (id, txt) => { if(doc.getElementById(id)) doc.getElementById(id).innerHTML = txt; };     
                 
-                // --- 1. 基礎資訊與頂部區塊 ---
+                // --- 1. 頂層與日期 ---
                 if(prefix === 'fav-') { if(document.getElementById('fav-detail-date')) document.getElementById('fav-detail-date').innerText = data.date; }
                 else { if(document.getElementById('detail-report-date')) document.getElementById('detail-report-date').innerText = data.date; }
-                        
                 setTxt('var-report-date', data.date); 
                 setTxt('var-stock-title', `${data.symbol} ${data.ai?.company_name || ''}`);
                 setTxt('var-biz-intro', data.ai?.biz_intro || '尚無業務簡介'); 
-                setTxt('var-current-price', "$" + data.realPrice);
                 
-                // 估值與儀表板
+                // --- 2. 儀表板與估值 ---
+                setTxt('var-current-price', "$" + data.realPrice);
+                setTxt('var-price-date', `Date: ${data.date}`);
                 setTxt('var-rating-text', data.decision?.rating || '--');
+                setTxt('var-rating-signal', data.decision?.signal || '--');
+                
                 if(data.decision?.rating === "BUY" && doc.getElementById('var-rating-text')) doc.getElementById('var-rating-text').style.color = "#4ADE80";
                 if(data.decision?.rating === "SELL" && doc.getElementById('var-rating-text')) doc.getElementById('var-rating-text').style.color = "#F87171";
                 
@@ -118,8 +117,11 @@ window.reportService = (function() {
                 if(doc.getElementById('var-gauge-fill')) doc.getElementById('var-gauge-fill').style.transform = `rotate(${((data.ai?.risk?.confidence_score || 0)/100)*180}deg)`;
                 
                 setTxt('var-current-pe', (data.math?.currentPE || '--') + "倍");
+                setTxt('var-pe-range', `(動態區間：${data.math?.range?.pe || '--'})`);
                 setTxt('var-cheap-avg', "$" + (data.math?.avgCheap || '--')); 
+                setTxt('var-cheap-range', data.math?.range?.cheap || '(-- ~ --)');
                 setTxt('var-exp-avg', "$" + (data.math?.avgExp || '--'));
+                setTxt('var-exp-range', data.math?.range?.exp || '(-- ~ --)');
                 
                 // 溫度計指標
                 if (data.math && data.math.avgCheap && data.math.avgExp) {
@@ -131,97 +133,79 @@ window.reportService = (function() {
                     let badge = doc.getElementById('var-therm-badge'); if(badge) { badge.innerText = badgeText; badge.style.backgroundColor = badgeBg; badge.style.color = badgeColor; }
                 }
 
-                // --- 2. 綜合摘要與財務標註 ---
+                // 操作建議與公司概要
                 setTxt('var-op-advice', `操作建議：${data.decision?.strategy || '--'}`);
-                setTxt('var-buffett-summary', data.ai?.buffett_summary || "目前無 AI 綜合摘要。");
-                setTxt('var-fin-annotation', data.ai?.fin_annotation || "無特別財務標註。");
-                
-                // 單一數據綁定
-                setTxt('var-nav', data.ai?.nav || "--");
-                setTxt('var-reinvestment-rate', data.ai?.reinvestment_rate || "--");
-                setTxt('var-gdp-yoy', data.ai?.gdp_yoy || "--");
-                setTxt('var-yield-3y', data.ai?.avg_yield_3y || "--");
-                setTxt('var-yield-5y', data.ai?.avg_yield_5y || "--");
-                setTxt('var-div-frequency', data.ai?.div_frequency || "--");
+                setTxt('var-op-desc', data.ai?.buffett_summary || "目前無 AI 綜合摘要。");
+                let sentimentDesc = data.ai?.market?.sentiment?.desc || data.ai?.market?.sentiment || "尚無明確情緒動向";
+                setTxt('var-co-dynamic', `<strong>營運與動態：</strong> ${sentimentDesc}`);
+                setTxt('var-co-metrics', `<strong>基本指標：</strong> 最新淨值: ${data.ai?.nav || '--'}, 盈再率: ${data.ai?.reinvestment_rate || '--'}, GDP年增率: ${data.ai?.gdp_yoy || '--'}`);
 
-                // --- 3. 體質分析區塊 ---
-                setTxt('var-health-tag', data.ai?.health?.tag || "--");
-                setTxt('var-health-desc', data.ai?.health?.desc || "無體質詳細說明。");
-                let healthTableHtml = "";
-                if (Array.isArray(data.ai?.health?.table)) {
-                    data.ai.health.table.forEach(row => {
-                        healthTableHtml += `<tr class="border-b border-[#333]">
-                            <td class="py-2 text-gray-400 font-bold">${row.item || '--'}</td>
-                            <td class="py-2 text-white">${row.data || '--'}</td>
-                            <td class="py-2 text-right text-[#D4AF37]">${row.eval || '--'}</td>
-                        </tr>`;
-                    });
-                }
-                setTxt('var-health-table-body', healthTableHtml || `<tr><td colspan="3" class="text-center py-2 text-gray-500">無體質檢核資料</td></tr>`);
-
-                // --- 4. 近五年數據表格 ---
-                let finHtml = "";
-                if (Array.isArray(data.ai?.history_5y)) {
-                    data.ai.history_5y.forEach(item => {
-                        finHtml += `<tr>
-                            <td class="px-2 py-2 border-b border-[#333] text-gray-300">${item.year || '--'}</td>
-                            <td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.eps || '--'}</td>
-                            <td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.div || '--'}</td>
-                            <td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.roe || '--'}%</td>
-                            <td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.yield || '--'}%</td>
-                            <td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.payout || '--'}%</td>
-                        </tr>`;
-                    });
-                }
-                setTxt('var-fin-table-body', finHtml || `<tr><td colspan="6" class="text-center py-4 text-gray-500">無近五年財報資料</td></tr>`);
-
-                // --- 5. 巴菲特五維壓力測試 ---
+                // --- 3. 基本面檢視 (壓力測試與財務表格) ---
+                setTxt('var-test-summary', `<strong>測試結果摘要：</strong> ${data.ai?.fin_annotation || '無特別標註'}`);
                 let testsHtml = "";
                 if(data.ai?.buffett_tests) {
                     const bt = data.ai.buffett_tests;
-                    const testItems = [
-                        { name: '獲利能力', key: bt.profit }, { name: '現金流量', key: bt.cashflow },
-                        { name: '配息穩定', key: bt.dividend }, { name: '規模門檻', key: bt.scale }, { name: '籌碼結構', key: bt.chips }
-                    ];
+                    const testItems = [ { name: '獲利能力', key: bt.profit }, { name: '現金流量', key: bt.cashflow }, { name: '配息穩定', key: bt.dividend }, { name: '規模門檻', key: bt.scale }, { name: '籌碼結構', key: bt.chips } ];
                     testItems.forEach(t => {
                         let statusColor = t.key?.status === '通過' ? 'text-green-500' : (t.key?.status === '未通過' ? 'text-red-500' : 'text-gray-400');
-                        testsHtml += `<tr class="border-b border-[#333]">
-                            <td class="py-2 text-gray-400 font-bold">${t.name}</td>
-                            <td class="py-2 text-white text-right">${t.key?.value || '--'}</td>
-                            <td class="py-2 text-right ${statusColor} font-bold">${t.key?.status || '--'}</td>
-                        </tr>`;
+                        testsHtml += `<tr class="border-b border-[#333]"><td class="py-2 text-gray-400 font-bold">${t.name}</td><td class="py-2 text-white text-right">${t.key?.value || '--'}</td><td class="py-2 text-right ${statusColor} font-bold">${t.key?.status || '--'}</td></tr>`;
                     });
                 }
-                setTxt('var-test-table-body', testsHtml || `<tr><td colspan="3" class="text-center py-4 text-gray-500">無壓力測試資料</td></tr>`);
+                setTxt('var-test-table-body', testsHtml || `<tr><td colspan="3" class="text-center py-4 text-gray-500">無資料</td></tr>`);
 
-                // --- 6. 市場資訊與風險 ---
-                setTxt('var-co-dynamic', `<strong>市場情緒：</strong> ${data.ai?.market?.sentiment?.desc || data.ai?.market?.sentiment || "尚無明確情緒動向"}`);
-                setTxt('var-market-policy', data.ai?.market?.policy || "無政策風險相關資訊。");
-                setTxt('var-market-fx', data.ai?.market?.fx || "無匯率影響相關資訊。");
-                setTxt('var-market-analysts', data.ai?.market?.analysts || "無分析師觀點。");
+                setTxt('var-fin-summary', `<strong>數據摘要：</strong> 近三年平均殖利率: ${data.ai?.avg_yield_3y || '--'}%, 配息頻率: ${data.ai?.div_frequency || '--'}`);
+                let finHtml = "";
+                if (Array.isArray(data.ai?.history_5y)) {
+                    data.ai.history_5y.forEach(item => { finHtml += `<tr><td class="px-2 py-2 border-b border-[#333] text-gray-300">${item.year || '--'}</td><td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.div || '--'}</td><td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.yield || '--'}%</td><td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.eps || '--'}</td><td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.payout || '--'}%</td><td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.roe || '--'}%</td></tr>`; });
+                }
+                setTxt('var-fin-table-body', finHtml || `<tr><td colspan="6" class="text-center py-4 text-gray-500">無近五年資料</td></tr>`);
+
+                setTxt('var-health-tag', data.ai?.health?.tag || "--");
+                setTxt('var-health-desc', `<strong>體質說明：</strong> ${data.ai?.health?.desc || "無說明"}`);
+                let healthTableHtml = "";
+                if (Array.isArray(data.ai?.health?.table)) {
+                    data.ai.health.table.forEach(row => { healthTableHtml += `<tr class="border-b border-[#333]"><td class="py-2 text-gray-400 font-bold">${row.item || '--'}</td><td class="py-2 text-white">${row.data || '--'}</td><td class="py-2 text-right text-[#D4AF37]">${row.eval || '--'}</td></tr>`; });
+                }
+                setTxt('var-health-table-body', healthTableHtml || `<tr><td colspan="3" class="text-center py-2 text-gray-500">無資料</td></tr>`);
+
+                // --- 4. 估價分析表格 ---
+                setTxt('var-val-pe-a', `12 / 30 倍`);
+                setTxt('var-val-pe-b', `${data.ai?.pe_hist_low || '--'} / ${data.ai?.pe_hist_high || '--'} 倍`);
+                setTxt('var-val-cheap-a', `$${data.math?.valA?.cheap || '--'}`);
+                setTxt('var-val-exp-a', `$${data.math?.valA?.exp || '--'}`);
+                setTxt('var-val-cheap-b', `$${data.math?.valB?.cheap || '--'}`);
+                setTxt('var-val-exp-b', `$${data.math?.valB?.exp || '--'}`);
+
+                // --- 5. 市場資訊分析 ---
+                setTxt('var-mkt-policy', `<strong>政策風險：</strong> ${data.ai?.market?.policy || "無相關資訊"}`);
+                setTxt('var-mkt-fx', `<strong>匯率敏感度：</strong> ${data.ai?.market?.fx || "無相關資訊"}`);
+                setTxt('var-mkt-sentiment', `<strong>市場情緒：</strong> ${sentimentDesc}`);
+                setTxt('var-mkt-analyst', `<strong>分析師觀點：</strong> ${data.ai?.market?.analysts || "無相關資訊"}`);
                 
-                // 新聞與警示標籤
                 let newsHtml = (data.ai?.market?.news || []).map(n => `<li class="mb-1 text-gray-300 text-sm">・${n}</li>`).join('');
-                setTxt('var-market-news', newsHtml ? `<ul class="mt-2">${newsHtml}</ul>` : "無最新新聞");
+                setTxt('var-mkt-news', newsHtml ? `<ul class="mt-2">${newsHtml}</ul>` : "<strong>關鍵新聞：</strong> 無最新新聞");
                 
+                setTxt('var-risk-confidence-list', `<li>AI 綜合風險信心指數為：<span class="text-[#D4AF37] font-bold">${data.ai?.risk?.confidence_score || '--'} / 100</span></li>`);
                 let flagsHtml = (data.ai?.risk?.flags || []).map(f => `<span class="bg-red-900/30 text-red-400 border border-red-800/50 px-2 py-1 rounded text-xs mr-2 mb-2 inline-block">${f}</span>`).join('');
-                setTxt('var-risk-flags', flagsHtml || `<span class="text-gray-500 text-sm">無特別風險警示</span>`);
+                setTxt('var-risk-flags-list', flagsHtml || `<li><span class="text-gray-500 text-sm">無特別風險警示</span></li>`);
 
-                // 情境矩陣
-                let scenariosHtml = "";
-                if (Array.isArray(data.ai?.risk?.scenarios)) {
-                    data.ai.risk.scenarios.forEach(s => {
-                        scenariosHtml += `<div class="mb-2"><span class="font-bold text-[#D4AF37]">${s.type} (${s.prob}%)：</span><span class="text-gray-300 text-sm">${s.desc}</span></div>`;
-                    });
-                }
-                setTxt('var-risk-scenarios', scenariosHtml || "無情境分析資料");
+                // 風險矩陣
+                let scenarios = data.ai?.risk?.scenarios || [];
+                if(scenarios.length >= 1) { setTxt('var-matrix-prob-bull', `${scenarios[0].prob}%`); setTxt('var-matrix-desc-bull', scenarios[0].desc); }
+                if(scenarios.length >= 2) { setTxt('var-matrix-prob-base', `${scenarios[1].prob}%`); setTxt('var-matrix-desc-base', scenarios[1].desc); }
+                if(scenarios.length >= 3) { setTxt('var-matrix-prob-bear', `${scenarios[2].prob}%`); setTxt('var-matrix-desc-bear', scenarios[2].desc); }
 
-                // 完成渲染並寫入 Iframe
+                // --- 6. 最終分析師點評 ---
+                setTxt('var-conc-price-level', `<strong>價格位階：</strong> ${data.decision?.signal || '--'}`);
+                setTxt('var-conc-gdp-signal', `<strong>總體訊號：</strong> 最新實質 GDP 年增率 ${data.ai?.gdp_yoy || '--'}`);
+                setTxt('var-conc-strategy', data.decision?.strategy || '無進一步建議。');
+
+                // 完成渲染
                 frame.srcdoc = doc.documentElement.outerHTML;
                 loadingDiv.style.display = 'none'; contentDiv.classList.remove('hidden');
                 
                 // 動態調整高度
-                setTimeout(() => { try { frame.style.height = (frame.contentWindow.document.body.scrollHeight + 50) + 'px'; } catch(e) { frame.style.height = '1200px'; } }, 800);
+                setTimeout(() => { try { frame.style.height = (frame.contentWindow.document.body.scrollHeight + 50) + 'px'; } catch(e) { frame.style.height = '1500px'; } }, 800);
             } else {
                 window.showAlert(`找不到雲端報告，請點擊上方「同步」按鈕重新產生。`);
                 loadingDiv.style.display = 'none';
