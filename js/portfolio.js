@@ -1,6 +1,7 @@
 /**
- * [VER] v5.0 [2026-02-23]
- * [DESC] 庫存清單、圓餅圖與庫存詳情模組
+ * [VER] v5.2 [2026-02-23]
+ * [DESC] 
+ * 1. 優化庫存詳情溫度計標籤，導入智慧邊緣對齊與不換行設定，修復文字跑位問題。
  */
 window.portfolioService = (function() {
     let allPortfolioData = [];
@@ -60,7 +61,14 @@ window.portfolioService = (function() {
         document.getElementById('detail-qty').innerText = fmt(stock.qty); document.getElementById('detail-cost').innerText = fmt(stock.cost); const costOrg = stock.cost * stock.qty; document.getElementById('detail-exp-return-grid').innerText = stock.expReturn ? stock.expReturn + "%" : "4%"; document.getElementById('detail-cost-twd-primary').innerText = prefix + fmt(Math.round(costOrg)); const costTWD = stock.marketValue - stock.gain; document.getElementById('detail-cost-twd-secondary').innerText = "NT$ " + fmt(Math.round(costTWD)); const mktOrg = stock.price * stock.qty; document.getElementById('detail-market-primary').innerText = prefix + fmt(Math.round(mktOrg)); document.getElementById('detail-market-secondary').innerText = "NT$ " + fmt(stock.marketValue); const gainOrg = stock.gainOrg || ((stock.price - stock.cost) * stock.qty); document.getElementById('detail-gain-primary').innerText = (gainOrg >= 0 ? "+" : "") + fmt(Math.round(gainOrg)); document.getElementById('detail-gain-primary').className = `text-val-md ${gainOrg >= 0 ? 'text-[#EF4444]' : 'text-[#22C55E]'}`; document.getElementById('detail-gain-secondary').innerText = (isGain ? "+NT$ " : "NT$ ") + fmt(Math.round(stock.gain)); document.getElementById('detail-gain-secondary').className = `text-[13px] font-bold font-mono mt-1.5 ${isGain ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
         const price = Number(stock.price) || 0; const cheap = Number(stock.cheap) || 0; const pricey = Number(stock.pricey) || 0; const thermSection = document.getElementById('thermometer-section');
         if (cheap > 0 && pricey > 0) {
-            thermSection.classList.remove('hidden'); document.getElementById('val-cheap').innerText = fmt(cheap); document.getElementById('val-pricey').innerText = fmt(pricey); let pct = 0; let badgeText = "現價"; let badgeColor = "bg-[#D4AF37] text-black"; if (price <= cheap) { pct = 0; badgeText = "低於淑價"; badgeColor = "bg-green-600 text-white"; } else if (price >= pricey) { pct = 100; badgeText = "高於貴價"; badgeColor = "bg-red-600 text-white"; } else { pct = ((price - cheap) / (pricey - cheap)) * 100; pct = Math.max(0, Math.min(100, pct)); } document.getElementById('therm-indicator-line').style.left = pct + "%"; document.getElementById('detail-price-text').style.left = pct + "%"; document.getElementById('detail-price-text').innerText = fmt(price); const label = document.getElementById('therm-current-label'); label.style.left = pct + "%"; label.innerText = badgeText; label.className = `absolute text-[11px] font-black px-2 py-0.5 rounded shadow-lg z-20 transform -translate-x-1/2 top-0 ${badgeColor}`;
+            thermSection.classList.remove('hidden'); document.getElementById('val-cheap').innerText = fmt(cheap); document.getElementById('val-pricey').innerText = fmt(pricey); let pct = 0; let badgeText = "現價"; let badgeColor = "bg-[#D4AF37] text-black"; if (price <= cheap) { pct = 0; badgeText = "低於淑價"; badgeColor = "bg-green-600 text-white"; } else if (price >= pricey) { pct = 100; badgeText = "高於貴價"; badgeColor = "bg-red-600 text-white"; } else { pct = ((price - cheap) / (pricey - cheap)) * 100; pct = Math.max(0, Math.min(100, pct)); } document.getElementById('therm-indicator-line').style.left = pct + "%"; document.getElementById('detail-price-text').style.left = pct + "%"; document.getElementById('detail-price-text').innerText = fmt(price); const label = document.getElementById('therm-current-label'); label.style.left = pct + "%"; label.innerText = badgeText; 
+            
+            // 智慧邊緣對齊邏輯
+            let alignClass = "-translate-x-1/2"; // 預位置中
+            if (pct <= 5) alignClass = "translate-x-0"; // 靠左邊界
+            else if (pct >= 95) alignClass = "-translate-x-full"; // 靠右邊界
+            
+            label.className = `absolute text-[11px] font-black px-2 py-0.5 rounded shadow-lg z-20 transform ${alignClass} top-0 whitespace-nowrap ${badgeColor}`;
         } else { thermSection.classList.add('hidden'); }
         const editBtn = document.getElementById('btn-header-edit'); if(editBtn) editBtn.onclick = (e) => { e.stopPropagation(); window.txService.openTransactionModal(market, symbol); };
         document.getElementById('report-frame').srcdoc = ""; document.getElementById('report-content').classList.add('hidden'); document.getElementById('report-loading').classList.add('hidden'); document.getElementById('detail-modal').classList.add('open');
