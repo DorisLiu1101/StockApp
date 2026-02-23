@@ -1,9 +1,9 @@
 <!-- 
-  [VER] v4.2 (2026-02-21)
+  [VER] v4.3 (2026-02-21)
   [DESC] 撿股功能上線，新增觀察名單頁面
     1. 新增 pickService.js 負責撿股邏輯，包含加入觀察名單、過濾和排序功能
     2. 新增觀察名單頁面，提供使用者管理和查看已加入觀察名單的股票
-    3. 首頁新增快速加入觀察名單的輸入框和按鈕，提升使用者體驗
+    3. 全域更新按鈕、上一頁攔截器、總覽UI調整
 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -85,8 +85,8 @@
             </div>
             
             <div class="flex gap-3 items-center">
-                <button onclick="window.switchPage('home')" id="header-nav-home" class="flex items-center justify-center w-9 h-9 rounded-full bg-[#1A1A1A] border border-gold text-gold hover:border-gold hover:text-gold transition-colors focus:outline-none shadow-sm">
-                    <span class="material-icons text-[18px]">dashboard</span>
+                <button onclick="window.switchPage('home')" id="header-nav-home" class="flex items-center justify-center text-gold hover:text-[#FFE082] transition-colors focus:outline-none bg-transparent active:scale-95">
+                    <span class="material-icons text-[26px]">dashboard</span>
                 </button>
 
                 <button id="btn-login" class="hidden px-3 py-1.5 bg-[#111] border border-gold text-gold text-xs font-bold rounded" onclick="window.loginGoogle()">Login</button>
@@ -95,12 +95,17 @@
                         <span id="header-avatar-icon" class="material-icons text-xl text-gray-500">account_circle</span>
                         <img id="header-avatar-img" src="" referrerpolicy="no-referrer" crossorigin="anonymous" class="w-full h-full object-cover hidden absolute inset-0" onerror="this.style.display='none';">
                     </button>
-                    <div id="user-menu-dropdown" class="hidden absolute top-full mt-3 right-0 w-52 bg-[#1E1E1E] border border-[#333] rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-[60] overflow-hidden transform origin-top-right transition-all">
+                    <div id="user-menu-dropdown" class="hidden absolute top-full mt-3 right-0 w-56 bg-[#1E1E1E] border border-[#333] rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-[60] overflow-hidden transform origin-top-right transition-all">
                         <div class="px-4 py-3 border-b border-[#333] bg-[#252525]">
                             <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Signed in as</p>
                             <p id="menu-user-name" class="text-sm text-white font-bold truncate">Guest User</p>
                         </div>
                         <div class="py-1">
+                            <button onclick="window.manualSync()" class="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-[#D4AF37] hover:text-black transition flex items-center gap-3">
+                                <span id="sync-icon" class="material-icons text-[18px]">sync</span> <span class="font-medium" id="sync-text">立即同步最新資料</span>
+                            </button>
+                            <div class="border-t border-[#333] my-1"></div>
+                            
                             <button onclick="window.openSettings()" class="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-[#D4AF37] hover:text-black transition flex items-center gap-3">
                                 <span class="material-icons text-[18px]">settings</span> <span class="font-medium">資料來源設定</span>
                             </button>
@@ -294,6 +299,28 @@
         
         const REPORT_FOLDER_URL = "https://drive.google.com/drive/folders/1GdtSyWHYhwZ8JnugPGzgBhIRwXKScIZR";
 
+        // =====================================
+        // [新增] History API 狀態推播 (攔截返回鍵核心)
+        // =====================================
+        function pushModalState(modalName) { 
+            history.pushState({ modal: modalName }, ''); 
+        }
+
+        // 監聽手機實體返回鍵 / 邊緣返回手勢
+        window.addEventListener('popstate', (e) => {
+            // 依照 z-index 由高到低的順序，優先關閉最上層的視窗
+            if (document.getElementById('system-modal') && !document.getElementById('system-modal').classList.contains('hidden')) {
+                window.closeSystemModal(true); // true 代表由 popstate 觸發，不需再執行 history.back()
+            } else if (document.getElementById('settings-modal') && document.getElementById('settings-modal').classList.contains('open')) {
+                window.closeSettings(true);
+            } else if (document.getElementById('transaction-modal') && document.getElementById('transaction-modal').classList.contains('open')) {
+                window.closeTransactionModal(true);
+            } else if (document.getElementById('detail-modal') && document.getElementById('detail-modal').classList.contains('open')) {
+                window.closeStockDetail(true);
+            }
+        });
+        // =====================================
+
         async function syncSheetData() {
             if (!auth || !currentUser) return window.showAlert("系統尚未就緒，請重新整理。");
             if(!userScriptUrl) return window.openSettings();
@@ -303,6 +330,34 @@
                 await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'portfolio', 'summary'), data, {merge:true}); 
             } catch(e) { console.error(e); window.showAlert("同步失敗: "+e.message); }
         }
+
+        // =====================================
+        // [新增] 全域手動同步按鈕邏輯
+        // =====================================
+        async function manualSync() {
+            if (!auth || !currentUser) return window.showAlert("系統尚未就緒，請重新整理。");
+            if (!userScriptUrl) return window.openSettings();
+            
+            const icon = document.getElementById('sync-icon');
+            const text = document.getElementById('sync-text');
+            if(icon) icon.classList.add('animate-spin', 'text-gold');
+            if(text) { text.innerText = "資料同步中..."; text.classList.add('text-gold'); }
+            
+            try { 
+                const res = await fetch(userScriptUrl); 
+                const data = await res.json(); 
+                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'portfolio', 'summary'), data, {merge:true}); 
+                window.toggleUserMenu(); // 成功後關閉選單
+                window.showAlert("✅ 已成功從 Google 試算表抓取最新資料！", "同步完成");
+            } catch(e) { 
+                console.error(e); window.showAlert("同步失敗: " + e.message); 
+            } finally {
+                // 恢復原本樣式
+                if(icon) icon.classList.remove('animate-spin', 'text-gold');
+                if(text) { text.innerText = "立即同步最新資料"; text.classList.remove('text-gold'); }
+            }
+        }
+        // =====================================
 
         async function saveTransaction() {
             const m = document.getElementById('tx-market').value; const s = document.getElementById('tx-symbol').value; const name = document.getElementById('tx-name').value; const p = document.getElementById('tx-price').value; const q = document.getElementById('tx-qty').value;
@@ -336,12 +391,12 @@
             } catch(e){ console.error("Load Settings Error", e); } 
         }
 
-        function closeSystemModal() { document.getElementById('system-modal').classList.add('hidden'); if (_modalResolver) { _modalResolver(); _modalResolver = null; } }
-
         let _modalResolver = null;
         function showAlert(msg, title="系統提示", showDriveBtn=false) { 
+            pushModalState('alert'); // 寫入假歷史紀錄
             return new Promise((resolve) => { _modalResolver = resolve; document.getElementById('system-modal-title').innerText=title; document.getElementById('system-modal-message').innerText=msg; let actions = '<button onclick="window.closeSystemModal()" class="bg-gold text-black px-6 py-2 rounded text-sm font-bold shadow-lg hover:bg-[#FFE082] focus:outline-none">OK</button>'; if(showDriveBtn) { actions = `<a href="${REPORT_FOLDER_URL}" target="_blank" class="bg-[#333] text-white border border-[#555] px-4 py-2 rounded text-sm font-bold mr-2 hover:bg-[#444] transition focus:outline-none">Open Drive</a>` + actions; } document.getElementById('system-modal-actions').innerHTML=actions; document.getElementById('system-modal').classList.remove('hidden'); });
         }
+        function closeSystemModal(fromPop = false) { document.getElementById('system-modal').classList.add('hidden'); if (_modalResolver) { _modalResolver(); _modalResolver = null; } if(fromPop !== true) history.back(); }
 
         function startDataListener(uid) {
             onSnapshot(doc(db, 'artifacts', appId, 'users', uid, 'portfolio', 'summary'), (snap) => {
@@ -349,11 +404,7 @@
                     const d=snap.data(), fmt=(n)=>n.toLocaleString();
                     document.getElementById('total-asset').innerText=fmt(d.totalAsset||0); document.getElementById('daily-profit').innerText=(d.dailyProfit>=0?"+":"")+fmt(d.dailyProfit||0); document.getElementById('total-return').innerText=(d.dailyProfitPct>=0?"+":"")+(d.dailyProfitPct||0)+"%"; document.getElementById('cash-level').innerText=(d.cashLevel||0)+"%";
                     if(d.portfolio){ allPortfolioData=d.portfolio; window.filterStocks(); window.updateHomeChart('ALL'); }
-                    
-                    // ======== [新增] 接收共用資料庫的收藏清單 ========
-                    if (window.pickService && d.favorites) {
-                        window.pickService.setFavoritesData(d.favorites);
-                    }
+                    if (window.pickService && d.favorites) { window.pickService.setFavoritesData(d.favorites); }
                 }
             }, (err) => console.error("Firestore Listen Error", err));
         }
@@ -398,10 +449,9 @@
             catch (e) { statusDiv.innerText = "同步失敗"; statusDiv.className = "text-center text-xs h-4 font-mono text-red-500"; btn.disabled = false; urlInput.disabled = false; }
         }
 
-        function openSettings() { document.getElementById('settings-modal').classList.add('open'); const menu = document.getElementById('user-menu-dropdown'); const overlay = document.getElementById('user-menu-overlay'); if (menu && !menu.classList.contains('hidden')) { menu.classList.add('hidden'); if(overlay) overlay.classList.add('hidden'); } }
-        function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
-        function closeTransactionModal() { document.getElementById('transaction-modal').classList.remove('open'); }
-        function openHelp() { alert("建構中"); }
+        function openSettings() { pushModalState('settings'); document.getElementById('settings-modal').classList.add('open'); const menu = document.getElementById('user-menu-dropdown'); const overlay = document.getElementById('user-menu-overlay'); if (menu && !menu.classList.contains('hidden')) { menu.classList.add('hidden'); if(overlay) overlay.classList.add('hidden'); } }
+        function closeSettings(fromPop = false) { document.getElementById('settings-modal').classList.remove('open'); if(fromPop !== true) history.back(); }
+        function openHelp() { window.showAlert("說明功能建構中"); }
         function closeHelp() {}
        
         function editStockName() {
@@ -414,34 +464,21 @@
         window.cancelInlineName = (oldName) => { document.getElementById('detail-name').innerText = oldName; };
         window.saveInlineName = async (oldName) => { const newName = document.getElementById('inline-name-input').value.trim(); const nameEl = document.getElementById('detail-name'); if (!newName || newName === oldName) { nameEl.innerText = oldName; return; } if (!userScriptUrl) { window.showAlert("請先設定 GAS URL"); nameEl.innerText = oldName; return; } nameEl.innerHTML = `<span class="text-sm text-gray-400 animate-pulse font-mono tracking-widest">Saving...</span>`; try { const res = await fetch(userScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'edit_name', data: { market: currentDetailMarket, symbol: currentDetailSymbol, newName: newName } }) }); const json = await res.json(); if(json.success) { nameEl.innerText = newName; await syncSheetData(); } else { throw new Error(json.message); } } catch(e) { window.showAlert("更新失敗: " + e.message); nameEl.innerText = oldName; } };
 
-        // --- 全新切換邏輯：支援總覽與底部導覽的分離 ---
         function switchPage(p) { 
-            // 隱藏所有頁面
-            ['page-home','page-list','page-pick','page-screen'].forEach(id => {
-                const el = document.getElementById(id);
-                if(el) el.classList.add('hidden');
-            }); 
-            
-            // 顯示目標頁面
-            const target = document.getElementById('page-'+p);
-            if(target) target.classList.remove('hidden'); 
-            
-            // 移除底部所有 active 樣式
+            ['page-home','page-list','page-pick','page-screen'].forEach(id => { const el = document.getElementById(id); if(el) el.classList.add('hidden'); }); 
+            const target = document.getElementById('page-'+p); if(target) target.classList.remove('hidden'); 
             document.querySelectorAll('.bottom-nav-item').forEach(el=>el.classList.remove('active')); 
-            
-            // 若點擊的是底部四頁籤之一，加上 active
-            const nav = document.getElementById('nav-'+p);
-            if(nav) nav.classList.add('active'); 
+            const nav = document.getElementById('nav-'+p); if(nav) nav.classList.add('active'); 
             
             // 處理頭部的「總覽」按鈕高亮狀態
             const headerHome = document.getElementById('header-nav-home');
             if(headerHome) {
                 if(p === 'home') {
-                    headerHome.classList.add('text-gold', 'border-gold');
-                    headerHome.classList.remove('text-gray-400', 'border-[#333]');
+                    headerHome.classList.add('text-gold');
+                    headerHome.classList.remove('text-gray-500');
                 } else {
-                    headerHome.classList.remove('text-gold', 'border-gold');
-                    headerHome.classList.add('text-gray-400', 'border-[#333]');
+                    headerHome.classList.remove('text-gold');
+                    headerHome.classList.add('text-gray-500');
                 }
             }
             window.scrollToTop();
@@ -466,6 +503,7 @@
         }
 
         function openStockDetail(market, symbol) {
+            pushModalState('detail');
             const stock = allPortfolioData.find(s => s.market === market && s.symbol === symbol); if(!stock) return window.showAlert("無此持股資料");
             currentDetailSymbol = symbol; currentDetailMarket = market; 
             const fmt = (n) => n.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1}); const isGain = stock.gain >= 0;
@@ -483,11 +521,14 @@
             const editBtn = document.getElementById('btn-header-edit'); if(editBtn) editBtn.onclick = (e) => { e.stopPropagation(); window.openTransactionModal(market, symbol); };
             document.getElementById('report-frame').srcdoc = ""; document.getElementById('report-content').classList.add('hidden'); document.getElementById('report-loading').classList.add('hidden'); document.getElementById('report-frame').style.height = '0px'; document.getElementById('detail-modal').classList.add('open');
         }
-        function closeStockDetail() { document.getElementById('detail-modal').classList.remove('open'); document.getElementById('report-frame').srcdoc = ""; }
+        function closeStockDetail(fromPop = false) { document.getElementById('detail-modal').classList.remove('open'); document.getElementById('report-frame').srcdoc = ""; if(fromPop !== true) history.back(); }
+        
         function setTxType(t) { txType = t; window.resetTxStatus(); const bB=document.getElementById('btn-tx-buy'), bS=document.getElementById('btn-tx-sell'); if(t==='buy'){ bB.className="tx-btn tx-btn-buy-active flex-1"; bS.className="tx-btn tx-btn-inactive flex-1"; }else{ bB.className="tx-btn tx-btn-inactive flex-1"; bS.className="tx-btn tx-btn-sell-active flex-1"; } }
         function resetTxStatus() { const sD=document.getElementById('tx-status'), sB=document.getElementById('btn-tx-submit'); if(sD) sD.innerHTML=""; if(sB){ sB.disabled=false; sB.innerText="確認新增"; sB.classList.remove('opacity-50','cursor-not-allowed'); } }
         function lookupSymbolName() { const m = document.getElementById('tx-market').value; const s = document.getElementById('tx-symbol').value.trim().toUpperCase(); const nameInput = document.getElementById('tx-name'); if(!s) { nameInput.value = ''; return; } const stock = allPortfolioData.find(i => String(i.symbol).toUpperCase() === s && (i.market === m)); if(stock) { nameInput.value = stock.name || ""; nameInput.setAttribute('data-auto-filled', 'true'); } else { if (document.activeElement !== nameInput) { if (!nameInput.value || nameInput.getAttribute('data-auto-filled') === 'true') { nameInput.value = ''; nameInput.removeAttribute('data-auto-filled'); } } } }
-        function openTransactionModal(m, s) { const mS=document.getElementById('tx-market'), sI=document.getElementById('tx-symbol'), d=document.getElementById('tx-name-display'); mS.value=m||'TW'; sI.value=s||''; document.getElementById('tx-name').value = ''; window.resetTxStatus(); if(s) window.lookupSymbolName(); mS.disabled=!!s; sI.readOnly=!!s; if(s) sI.classList.add('opacity-60','cursor-not-allowed'); else sI.classList.remove('opacity-60','cursor-not-allowed'); document.getElementById('tx-price').value=''; document.getElementById('tx-qty').value=''; window.setTxType('buy'); document.getElementById('transaction-modal').classList.add('open'); }
+        
+        function openTransactionModal(m, s) { pushModalState('tx'); const mS=document.getElementById('tx-market'), sI=document.getElementById('tx-symbol'), d=document.getElementById('tx-name-display'); mS.value=m||'TW'; sI.value=s||''; document.getElementById('tx-name').value = ''; window.resetTxStatus(); if(s) window.lookupSymbolName(); mS.disabled=!!s; sI.readOnly=!!s; if(s) sI.classList.add('opacity-60','cursor-not-allowed'); else sI.classList.remove('opacity-60','cursor-not-allowed'); document.getElementById('tx-price').value=''; document.getElementById('tx-qty').value=''; window.setTxType('buy'); document.getElementById('transaction-modal').classList.add('open'); }
+        function closeTransactionModal(fromPop = false) { document.getElementById('transaction-modal').classList.remove('open'); if(fromPop !== true) history.back(); }
 
         try {
             window.updateUserUI=updateUserUI; window.toggleUserMenu=toggleUserMenu; window.loadUserSettings=loadUserSettings; window.closeSystemModal=closeSystemModal; window.showAlert=showAlert; window.renderChart=renderChart; window.filterStocks=filterStocks; window.renderStockList=renderStockList; window.openStockDetail=openStockDetail; window.closeStockDetail=closeStockDetail; window.syncSheetData=syncSheetData; 
@@ -495,6 +536,8 @@
             window.loginGoogle=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){window.showAlert("無法開啟登入畫面：" + e.message, "系統提示");}};
             window.logout=async()=>{try{await signOut(auth); window.showAlert("已登出", "系統提示");}catch(e){window.showAlert("登出失敗：" + e.message, "系統提示");}};
             window.toggleFilterMenu = toggleFilterMenu; window.setMarketFilter = setMarketFilter; window.toggleSortMenu = toggleSortMenu; window.setSortField = setSortField; window.toggleSortOrder = toggleSortOrder; window.closeTransactionModal = closeTransactionModal; window.setChartFilter = setChartFilter; window.updateHomeChart = updateHomeChart; window.openHelp = openHelp; window.editStockName = editStockName;
+            
+            window.pushModalState = pushModalState; window.manualSync = manualSync;
         } catch(e) { console.error("Binding Error:", e); }
 
         async function initApp() {
