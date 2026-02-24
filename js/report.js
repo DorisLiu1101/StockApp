@@ -1,8 +1,6 @@
-/**
- * [VER] v5.9 [2026-02-25]
- * [DESC] 
- * 1. 強化 Prompt：直接加入嚴格範例以鎖死 biz_intro 的精煉標籤格式。
- * 2. 移除操作建議底色，改用高亮純文字與左側金線排版。
+ /**
+ * [VER] v5.10 [2026-02-25]
+ * [DESC] 執行方案A (強力字串整平法)：將所有換行與控制字元替換為空白，徹底修復 JSON.parse 崩潰問題。
  */
 window.reportService = (function() {
     async function generateAndSaveReport(prefix = '') {
@@ -40,9 +38,11 @@ window.reportService = (function() {
             let reportRaw;
             try {
                 let jsonStr = rawText.match(/\{[\s\S]*\}/)[0].replace(/```json/gi, '').replace(/```/g, '').trim();
-                jsonStr = jsonStr.replace(/\n/g, "\\n").replace(/\r/g, "");
+                // 🛡️ [核心修改] 將所有換行(\n, \r)與縮排(\t)壓平成單一空白，確保 JSON 結構絕對安全
+                jsonStr = jsonStr.replace(/[\n\r]+/g, ' ').replace(/\t/g, ' ');
                 reportRaw = JSON.parse(jsonStr);
             } catch (parseError) {
+                console.error("JSON 解析崩潰，原始字串為:", rawText);
                 throw new Error("AI 產出格式異常。請點擊「更新按鈕」重試！");
             }
 
