@@ -1,9 +1,8 @@
 /**
- * [VER] v5.11 [2026-02-25]
+ * [VER] v5.12 [2026-02-25]
  * [DESC] 
- * 1. 配合 HTML 瘦身，拔除所有 setTxt 內的硬體圖示與多餘的「XX標題：」前綴。
- * 2. 獨立風險矩陣的機率與名稱 ID，精準渲染 XX%。
- * 3. 確保保留防崩潰的強力字串整平法 (.replace(/[\n\r]+/g, ' ')).
+ * 1. 導入動態提示詞 (Dynamic Prompting)：美股強制維持英文公司名稱，台/日股則翻譯為繁體中文。
+ * 2. 繼承 v5.11 所有純淨排版與強效字串整平防護。
  */
 window.reportService = (function() {
     async function generateAndSaveReport(prefix = '') {
@@ -23,12 +22,18 @@ window.reportService = (function() {
             let marketName = market === 'US' ? "美股" : (market === 'JP' ? "日股" : "台股");
             loadingText.innerText = '呼叫後端進行即時抓價與 AI 聯網分析中...';
             
-            // 🛡️ Prompt 完全維持原樣，不影響任何已揭露之欄位
+            // 🛡️ [核心修改] 動態指令：判斷如果是美股，就嚴格限制維持英文原名
+            const langRule = market === 'US' 
+                ? "除「公司名稱」必須維持『英文原名』外，其餘所有內容必須強制翻譯並使用「繁體中文(台灣)」，禁止簡體字。" 
+                : "所有內容(含公司名稱)必須強制翻譯並使用「繁體中文(台灣)」，禁止簡體字。";
+                
+            const companyNameFormat = market === 'US' ? "英文公司原名(嚴禁翻譯為中文)" : "繁體公司名稱";
+
             const prompt = `角色：巴菲特價值投資分析師。任務：分析${marketName} ${symbol}。目前股價為 {{REAL_PRICE}}。請聯網搜尋最新財報、新聞。
 ⚠️極度重要規範：
-1. 內容必須強制翻譯並使用「繁體中文(台灣)」，禁止簡體字。
+1. ${langRule}
 2. 嚴格只輸出純 JSON！(若值為文字，絕對禁止包含"雙引號")。請以 { 開頭：
-{"company_name": "繁體公司名稱", "biz_intro": "嚴格遵守『標籤A | 標籤B | 標籤C』格式之精煉業務簡介(例如：金屬機殼龍頭 | 轉型高階醫材與半導體設備 或 台灣第二大水泥廠 | 嘉惠電力(綠能) | 中國市場轉機)，嚴禁長句敘述", "nav": 最新每股淨值(數字), "reinvestment_rate": 盈再率(數字), "gdp_yoy": 實質GDP年增率(數字), "eps_ttm": 近四季EPS(數字), "pe_hist_low": 近3年最低本益比(數字), "pe_hist_high": 近3年最高本益比(數字), "avg_yield_3y": 近3年平均殖利率(數字), "avg_yield_5y": 近5年平均殖利率(數字), "div_frequency": "配息頻率", "buffett_summary": ["摘要重點1(限30字)", "摘要重點2(限30字)", "摘要重點3(限30字)"], "fin_annotation": "財務簡要標註", "health": { "tag": "強健或中等", "desc": "體質說明(50字內)", "table": [ {"item": "盈再率", "data": "數字", "eval": "評價(如:良好)"}, {"item": "ROE趨勢", "data": "說明", "eval": "評價(如:趨勢向上)"}, {"item": "本益比位階", "data": "說明", "eval": "評價(如:歷史高位)"}, {"item": "營運現金流", "data": "說明", "eval": "評價"}, {"item": "負債結構", "data": "說明", "eval": "評價"} ] }, "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0, "yield": 5.2, "payout": 50.0}], "buffett_tests": { "profit": {"value": "28.5%", "status": "通過"}, "cashflow": {"value": "85%", "status": "通過"}, "dividend": {"value": "42%", "status": "通過"}, "scale": {"value": "符合標準", "status": "通過"}, "chips": {"value": "穩定", "status": "通過"} }, "market": { "policy": "政策風險精煉說明", "fx": "匯率影響精煉說明", "sentiment": { "tag": "極度貪婪等", "desc": "情緒說明" }, "news": ["重點新聞1", "重點新聞2"], "analysts": "分析師觀點精煉" }, "risk": { "confidence_score": 75, "flags": ["風險1", "風險2"], "scenarios": [ {"type": "牛市", "prob": 20, "desc": "說明"}, {"type": "標準", "prob": 50, "desc": "說明"}, {"type": "熊市", "prob": 30, "desc": "說明"} ] } }`;
+{"company_name": "${companyNameFormat}", "biz_intro": "嚴格遵守『標籤A | 標籤B | 標籤C』格式之精煉業務簡介(例如：金屬機殼龍頭 | 轉型高階醫材與半導體設備 或 台灣第二大水泥廠 | 嘉惠電力(綠能) | 中國市場轉機)，嚴禁長句敘述", "nav": 最新每股淨值(數字), "reinvestment_rate": 盈再率(數字), "gdp_yoy": 實質GDP年增率(數字), "eps_ttm": 近四季EPS(數字), "pe_hist_low": 近3年最低本益比(數字), "pe_hist_high": 近3年最高本益比(數字), "avg_yield_3y": 近3年平均殖利率(數字), "avg_yield_5y": 近5年平均殖利率(數字), "div_frequency": "配息頻率", "buffett_summary": ["摘要重點1(限30字)", "摘要重點2(限30字)", "摘要重點3(限30字)"], "fin_annotation": "財務簡要標註", "health": { "tag": "強健或中等", "desc": "體質說明(50字內)", "table": [ {"item": "盈再率", "data": "數字", "eval": "評價(如:良好)"}, {"item": "ROE趨勢", "data": "說明", "eval": "評價(如:趨勢向上)"}, {"item": "本益比位階", "data": "說明", "eval": "評價(如:歷史高位)"}, {"item": "營運現金流", "data": "說明", "eval": "評價"}, {"item": "負債結構", "data": "說明", "eval": "評價"} ] }, "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0, "yield": 5.2, "payout": 50.0}], "buffett_tests": { "profit": {"value": "28.5%", "status": "通過"}, "cashflow": {"value": "85%", "status": "通過"}, "dividend": {"value": "42%", "status": "通過"}, "scale": {"value": "符合標準", "status": "通過"}, "chips": {"value": "穩定", "status": "通過"} }, "market": { "policy": "政策風險精煉說明", "fx": "匯率影響精煉說明", "sentiment": { "tag": "極度貪婪等", "desc": "情緒說明" }, "news": ["重點新聞1", "重點新聞2"], "analysts": "分析師觀點精煉" }, "risk": { "confidence_score": 75, "flags": ["風險1", "風險2"], "scenarios": [ {"type": "牛市", "prob": 20, "desc": "說明"}, {"type": "標準", "prob": 50, "desc": "說明"}, {"type": "熊市", "prob": 30, "desc": "說明"} ] } }`;
             
             const aiRes = await fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ action: 'askGemini', data: { prompt: prompt, symbol: symbol, market: market } }) });
             const aiResJson = await aiRes.json();
@@ -41,7 +46,6 @@ window.reportService = (function() {
             let reportRaw;
             try {
                 let jsonStr = rawText.match(/\{[\s\S]*\}/)[0].replace(/```json/gi, '').replace(/```/g, '').trim();
-                // 保留方案A：壓平所有換行與控制字元
                 jsonStr = jsonStr.replace(/[\n\r]+/g, ' ').replace(/\t/g, ' ');
                 reportRaw = JSON.parse(jsonStr);
             } catch (parseError) {
@@ -137,7 +141,6 @@ window.reportService = (function() {
                     let badge = doc.getElementById('var-therm-badge'); if(badge) { badge.innerText = badgeText; badge.style.backgroundColor = badgeBg; badge.style.color = badgeColor; }
                 }
 
-                // 拔除所有「前綴文字」，直接填入乾淨資料
                 setTxt('var-op-advice', `<strong style="color:var(--color-primary);">操作建議：</strong> <span style="color:#FFF; font-weight:400;">${data.decision?.strategy || '--'}</span>`);
                 
                 let summaryHtml = "";
@@ -195,7 +198,6 @@ window.reportService = (function() {
                 setTxt('var-mkt-policy', data.ai?.market?.policy || "無相關資訊");
                 setTxt('var-mkt-fx', data.ai?.market?.fx || "無相關資訊");
                 
-                // 情緒標籤綁定至標題旁的新 ID，並改用沉穩暗色系
                 let sentiTag = data.ai?.market?.sentiment?.tag || "中立";
                 let sentiColor = sentiTag.includes('貪婪') ? 'text-[#86EFAC]' : (sentiTag.includes('恐懼') ? 'text-[#FCA5A5]' : 'text-[#FDE047]');
                 setTxt('var-mkt-sentiment-badge', `<span class="badge badge-neutral bg-transparent border-0 ${sentiColor} px-0" style="font-size:13px; font-weight:normal;">[${sentiTag}]</span>`);
@@ -209,7 +211,6 @@ window.reportService = (function() {
                 let flagsHtml = (data.ai?.risk?.flags || []).map(f => `<span class="badge badge-fail" style="margin-right:8px; margin-bottom:8px;">${f}</span>`).join('');
                 setTxt('var-risk-flags-list', flagsHtml || `<span class="badge badge-neutral border-0 bg-transparent text-gray-500">無特別風險警示</span>`);
 
-                // 風險矩陣分離 ID：名稱圖示在第一欄、機率在第二欄純文字 XX%
                 let scenarios = data.ai?.risk?.scenarios || [];
                 if(scenarios.length >= 1) { 
                     setTxt('var-matrix-name-bull', `<span class="material-icons" style="font-size:16px; vertical-align:-3px; color:#4ADE80; margin-right:4px;">trending_up</span><strong>牛市 (Bull)</strong>`); 
