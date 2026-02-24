@@ -1,6 +1,6 @@
 /**
- * [VER] v1.0 [2026-02-23]
- * [DESC] 收藏清單與專屬彈窗模組
+ * [VER] v2.0 [2026-02-23]
+ * [DESC] 名稱編輯功能，並驅動溫度計的滑動與顏色運算
  */
 
 window.pickService = (function() {
@@ -95,14 +95,44 @@ window.pickService = (function() {
         
         document.getElementById('fav-detail-symbol').innerText = symbol;
         document.getElementById('fav-detail-name').innerText = stock.name || '--';
-        document.getElementById('fav-detail-price').innerText = stock.price ? stock.price : '--';
-        document.getElementById('fav-detail-exp').innerText = stock.expReturn ? stock.expReturn + '%' : '--';
+        
+        // [修改 2] 右上方顯示預期報酬率與動態顏色
+        const expEl = document.getElementById('fav-detail-exp-top');
+        expEl.innerText = stock.expReturn ? stock.expReturn + '%' : '--';
+        if (Number(stock.expReturn) >= 0) expEl.className = "text-2xl font-bold tracking-tighter leading-none text-[#EF4444] font-mono";
+        else expEl.className = "text-2xl font-bold tracking-tighter leading-none text-[#22C55E] font-mono";
+
+        // [修改 3] 報告日期
         document.getElementById('fav-detail-date').innerText = stock.reportDate || '--';
+
+        // [修改 4] 股價溫度計邏輯
+        const price = Number(stock.price) || 0; const cheap = Number(stock.cheap) || 0; const pricey = Number(stock.pricey) || 0;
+        const thermSection = document.getElementById('fav-thermometer-section');
+        if (cheap > 0 && pricey > 0) {
+            thermSection.classList.remove('hidden');
+            const fmt = (n) => n.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1});
+            document.getElementById('fav-val-cheap').innerText = fmt(cheap);
+            document.getElementById('fav-val-pricey').innerText = fmt(pricey);
+            let pct = 0; let badgeText = "現價"; let badgeColor = "bg-[#D4AF37] text-black"; 
+            if (price <= cheap) { pct = 0; badgeText = "低於淑價"; badgeColor = "bg-green-600 text-white"; } 
+            else if (price >= pricey) { pct = 100; badgeText = "高於貴價"; badgeColor = "bg-red-600 text-white"; } 
+            else { pct = ((price - cheap) / (pricey - cheap)) * 100; pct = Math.max(0, Math.min(100, pct)); }
+            
+            document.getElementById('fav-therm-indicator-line').style.left = pct + "%"; 
+            document.getElementById('fav-detail-price-text').style.left = pct + "%"; 
+            document.getElementById('fav-detail-price-text').innerText = fmt(price); 
+            
+            const label = document.getElementById('fav-therm-current-label');
+            label.style.left = pct + "%"; label.innerText = badgeText;
+            
+            let alignClass = "-translate-x-1/2"; 
+            if (pct <= 5) alignClass = "translate-x-0"; else if (pct >= 95) alignClass = "-translate-x-full";
+            label.className = `absolute text-[11px] font-black px-2 py-0.5 rounded shadow-lg z-20 transform ${alignClass} top-0 whitespace-nowrap ${badgeColor}`;
+        } else { thermSection.classList.add('hidden'); }
 
         document.getElementById('fav-report-frame').srcdoc = "";
         document.getElementById('fav-report-content').classList.add('hidden');
         document.getElementById('fav-report-loading').classList.add('hidden');
-        
         document.getElementById('favorite-detail-modal').classList.add('open');
     }
 
@@ -114,12 +144,36 @@ window.pickService = (function() {
         if(fromPop !== true && typeof history.back === 'function') history.back();
     }
 
+    // [修改 1] 新增修改名稱功能
+    function editFavoriteName() {
+        const nameEl = document.getElementById('fav-detail-name');
+        if (nameEl.querySelector('input')) return; 
+        const currentName = nameEl.innerText === '--' ? '' : nameEl.innerText;
+        nameEl.innerHTML = `<div class="flex items-center gap-2"><input type="text" id="fav-inline-name-input" value="${currentName}" class="bg-[#1A1A1A] border border-[#D4AF37] rounded px-2 py-0.5 text-[18px] text-white w-28 focus:outline-none shadow-inner"><button onclick="window.pickService.saveInlineFavName('${currentName}')" class="text-green-500 hover:text-green-400 p-1 bg-[#2A2A2A] rounded border border-green-900/50"><span class="material-icons text-sm">check</span></button><button onclick="window.pickService.cancelInlineFavName('${currentName}')" class="text-red-500 hover:text-red-400 p-1 bg-[#2A2A2A] rounded border border-red-900/50"><span class="material-icons text-sm">close</span></button></div>`;
+    }
+    function cancelInlineFavName(oldName) { document.getElementById('fav-detail-name').innerText = oldName || '--'; }
+    async function saveInlineFavName(oldName) { 
+        const newName = document.getElementById('fav-inline-name-input').value.trim(); const nameEl = document.getElementById('fav-detail-name'); 
+        if (!newName || newName === oldName) { nameEl.innerText = oldName || '--'; return; } 
+        if (!window.appState.userScriptUrl) { window.showAlert("請先設定 URL"); nameEl.innerText = oldName || '--'; return; } 
+        nameEl.innerHTML = `<span class="text-sm text-gray-400 animate-pulse font-mono tracking-widest">Saving...</span>`; 
+        try { 
+            const res = await fetch(window.appState.userScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'edit_fav_name', data: { market: window.appState.currentDetailMarket, symbol: window.appState.currentDetailSymbol, newName: newName } }) }); 
+            const json = await res.json(); 
+            if(json.success) { 
+                nameEl.innerText = newName; 
+                if(window.manualSync) window.manualSync(); // 觸發全域重新抓取以更新列表
+            } else throw new Error(json.message); 
+        } catch(e) { window.showAlert("更新失敗: " + e.message); nameEl.innerText = oldName || '--'; } 
+    }
+
     function removeFavorite() {
         window.showAlert("提示：移除收藏功能正在後端建置中，稍後更新即可使用！", "建構中");
     }
 
+    // 匯出新增加的方法
     return {
         addFavorite, toggleFilter, setMarketFilter, toggleSort, setSortField, toggleSortOrder, setFavoritesData,
-        openFavoriteDetail, closeFavoriteDetail, removeFavorite
+        openFavoriteDetail, closeFavoriteDetail, removeFavorite, editFavoriteName, cancelInlineFavName, saveInlineFavName
     };
 })();
