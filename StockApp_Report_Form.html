@@ -1,10 +1,7 @@
 <!-- 
-  [VER] v4.1 [DATE] 2026-02-23
+  [VER] v5.0 [DATE] 2026-02-23
   [DESC]  
-    1. 美化標籤 (Badge)
-    2. 專業圖示微調
-    3. 凍結表格第一欄
-    4. 公司概要新增營運動態與基本指標兩大項目，並放在綜合摘要下方以利閱讀邏輯 
+  1. 全新設計報告版型，採用現代化玻璃質感卡片風格，增強視覺層次與專業感。
 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -64,7 +61,6 @@
         h1, h2, h3 { margin: 0 0 12px 0; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
         h1 { font-size: 1.6rem; color: #fff; }
         .card h2 { font-size: 1.2rem; display: flex; align-items: center; margin-top: 10px; margin-bottom: 15px; }
-        .card h2::before { content: ''; display: inline-block; width: 4px; height: 16px; background: var(--color-primary); margin-right: 12px; border-radius: 2px; }
         h3 { font-size: 1rem; color: var(--color-text); display: flex; align-items: center; gap: 10px; opacity: 0.95; }
         .report-section h3 { justify-content: flex-start; margin-top: 20px; }
         .card h3 { justify-content: center; } .text-left h3 { justify-content: flex-start; } h3 i { color: var(--color-primary); }
@@ -89,7 +85,6 @@
         .gauge-fill { position: absolute; top: 0; left: 0; width: 120px; height: 120px; background: conic-gradient(from 270deg, #b4941f 0%, #D4AF37 50%, #ffe082 75%, transparent 75%); border-radius: 50%; mask: radial-gradient(transparent 53%, black 55%); -webkit-mask: radial-gradient(transparent 53%, black 55%); filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.3)); transition: transform 1s ease-out; }
         .gauge-value-center { position: absolute; bottom: 0; left: 0; width: 100%; text-align: center; font-size: 2rem; font-weight: 800; color: #fff; line-height: 1; z-index: 20; text-shadow: 0 0 10px rgba(0,0,0,0.8); font-family: monospace; }
 
-        /* [修改重點 1] 儀表板排版與對齊優化 */
         .thermometer-bar { height: 10px; background: linear-gradient(90deg, #22C55E 0%, #EAB308 50%, #EF4444 100%); border-radius: 50px; position: relative; margin: 30px 0 15px 0; }
         .thermometer-marker { position: absolute; top: -5px; width: 4px; height: 20px; background: #fff; border-radius: 2px; box-shadow: 0 0 4px rgba(0,0,0,0.8); transform: translateX(-50%); transition: left 1s ease-out; }
 
@@ -129,27 +124,31 @@
             details { display: block !important; border: 1px solid #eee; }
             .summary-highlight { background: #f9f9f9; border-left-color: #000; color: #000; }
         }
-        /* --- [新增] 美化標籤 (Badge) --- */
+        
+        /* 標籤與圖示樣式 */
         .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; letter-spacing: 1px; display: inline-block; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .badge-pass { background: rgba(34, 197, 94, 0.15); color: #4ADE80; border: 1px solid rgba(34, 197, 94, 0.3); }
         .badge-fail { background: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); }
         .badge-neutral { background: rgba(250, 204, 21, 0.15); color: #FACC15; border: 1px solid rgba(250, 204, 21, 0.3); }
 
-        /* --- [新增] 專業圖示微調 --- */
-        .rpt-icon { font-size: 17px; vertical-align: -3px; color: var(--color-primary); margin-right: 6px; }
+        .rpt-icon { font-size: 18px; vertical-align: -3px; color: var(--color-primary); margin-right: 6px; }
 
-        /* --- [新增] 凍結表格第一欄 --- */
+        /* 凍結表格第一欄 */
         .table-container { position: relative; overflow-x: auto; max-width: 100%; }
         .table-container table { width: 100%; min-width: 450px; }
         .table-container th:first-child, .table-container td:first-child { 
-            position: sticky; 
-            left: 0; 
-            background: #111111; 
-            z-index: 1; 
-            border-right: 1px solid rgba(255,255,255,0.2); 
-            box-shadow: 2px 0 5px rgba(0,0,0,0.4); 
+            position: sticky; left: 0; background: #111111; z-index: 1; border-right: 1px solid rgba(255,255,255,0.2); box-shadow: 2px 0 5px rgba(0,0,0,0.4); 
         }
         .table-container th:first-child { z-index: 2; background: #1a1a1a; }
+        
+        /* 操作建議高亮字體 (無底色) */
+        .advice-highlight {
+            border-left: 4px solid var(--color-primary);
+            padding: 4px 0 4px 12px;
+            margin: 15px 0;
+            font-size: 1.15rem;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
@@ -162,13 +161,13 @@
         </button>
         <div>
             <h1 id="var-stock-title">---- --</h1>
-            <p class="text-sm" id="var-biz-intro" style="color: var(--color-muted);">公司核心業務簡介載入中...</p>
+            <p class="text-sm" id="var-biz-intro" style="color: var(--color-primary); font-weight: 500; letter-spacing: 0.5px;">公司核心業務簡介載入中...</p>
         </div>
     </div>
 
     <div class="grid-3">
         <div class="card" style="text-align: center;">
-            <h3 style="margin-bottom: 5px;">投資評級</h3>
+            <h3 style="margin-bottom: 5px;"><i class="material-icons rpt-icon">stars</i> 投資評級</h3>
             <div class="rating-split-container">
                 <div class="rating-col rating-col-left">
                     <div class="rating-price-main" id="var-current-price">$---.--</div>
@@ -182,7 +181,7 @@
         </div>
 
         <div class="card" style="text-align: center;">
-            <h3 style="margin-bottom: 5px;">市場信心</h3>
+            <h3 style="margin-bottom: 5px;"><i class="material-icons rpt-icon">speed</i> 市場信心</h3>
             <div class="gauge-container">
                 <div class="gauge-bg">&nbsp;</div>
                 <div class="gauge-fill" id="var-gauge-fill" style="transform: rotate(0deg);">&nbsp;</div>
@@ -191,14 +190,14 @@
         </div>
 
         <div class="card" style="text-align: center;">
-            <h3 style="margin-bottom: 5px;">當前本益比</h3>
+            <h3 style="margin-bottom: 5px;"><i class="material-icons rpt-icon">calculate</i> 當前本益比</h3>
             <span class="big-number" id="var-current-pe">--倍</span>
             <small class="value-range" id="var-pe-range" style="justify-content: center;">(動態區間：-- ~ --)</small>
         </div>
     </div>
 
     <div class="card">
-        <div class="text-left"><h3>估值儀表板 (PE均值)</h3></div>
+        <div class="text-left"><h3><i class="material-icons rpt-icon">dashboard</i> 估值儀表板 (PE均值)</h3></div>
         <div class="valuation-row">
             <div class="value-block">
                 <small>淑價 (Cheap)</small>
@@ -223,13 +222,13 @@
     </div>
 
     <div class="report-section">
-        <div style="background: rgba(212, 175, 55, 0.12); border: 1px solid rgba(212, 175, 55, 0.4); padding: 16px; border-radius: 8px; box-shadow: inset 0 0 15px rgba(0,0,0,0.3);">
-            <div class="text-left"><h3 id="var-op-advice" style="color: var(--color-primary); margin-bottom: 0; font-size: 1.1rem; line-height: 1.5;">操作建議：運算中...</h3></div>
+        <div class="text-left advice-highlight" id="var-op-advice">
+            <strong style="color:var(--color-primary);">操作建議：</strong> 運算中...
         </div>
     </div>
 
     <div class="report-section">
-        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem;">business</span> 公司概要</h2>
+        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem; margin-right: 6px;">business</span> 公司概要</h2>
         <ul id="var-company-summary" style="margin-bottom: 18px; padding-left: 20px; list-style-type: disc; color: #E5E7EB; opacity: 0.95;">
             <li>綜合摘要載入中...</li>
         </ul>
@@ -240,9 +239,9 @@
     </div>
 
     <div class="report-section">
-        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem;">analytics</span> 1. 基本面檢視</h2>
+        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem; margin-right: 6px;">analytics</span> 1. 基本面檢視</h2>
         
-        <div class="text-left"><h3>A. 巴菲特五維壓力測試</h3></div>
+        <div class="text-left"><h3><i class="material-icons rpt-icon">compress</i> A. 巴菲特五維壓力測試</h3></div>
         <div class="summary-highlight" id="var-test-summary"><strong>測試結果摘要：</strong> 運算中...</div>
         <details>
             <summary>點擊展開詳細檢核結果</summary>
@@ -255,7 +254,7 @@
             </div>
         </details>
 
-        <div class="text-left"><h3>B. 數據表格 (近 5 年)</h3></div>
+        <div class="text-left"><h3><i class="material-icons rpt-icon">table_chart</i> B. 數據表格 (近 5 年)</h3></div>
         <div class="summary-highlight" id="var-fin-summary">
             <strong>數據摘要：</strong> 運算中...
         </div>
@@ -270,7 +269,7 @@
             </div>
         </details>
 
-        <div class="text-left"><h3 style="display: flex; align-items: center; gap: 10px; margin-top: 25px;">C. 體質總評 <span id="var-health-tag"></span></h3></div>
+        <div class="text-left"><h3 style="display: flex; align-items: center; gap: 10px; margin-top: 25px;"><i class="material-icons rpt-icon">health_and_safety</i> C. 體質總評 <span id="var-health-tag"></span></h3></div>
         <div class="summary-highlight" style="border-left: 3px solid var(--color-primary);">
             <span id="var-health-desc"><strong>體質說明：</strong> 運算中...</span>
         </div>
@@ -287,7 +286,7 @@
     </div>
 
     <div class="report-section">
-        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem;">price_check</span> 2. 估價分析</h2>
+        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem; margin-right: 6px;">price_check</span> 2. 估價分析</h2>
         <div class="alert-box" id="var-val-alert" style="display:none;"></div>
         <details>
             <summary>點擊查看估價模型詳細參數與情境</summary>
@@ -308,9 +307,9 @@
     </div>
 
     <div class="report-section">
-        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem;">radar</span> 3. 市場資訊分析</h2>
+        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem; margin-right: 6px;">radar</span> 3. 市場資訊分析</h2>
         
-        <div class="text-left"><h3>總體宏觀</h3></div>
+        <div class="text-left"><h3><i class="material-icons rpt-icon">public</i> 總體宏觀</h3></div>
         <ul>
             <li id="var-mkt-policy"><strong>政策風險：</strong> 聯網查證中...</li>
             <li id="var-mkt-fx"><strong>匯率敏感度：</strong> 聯網查證中...</li>
@@ -318,7 +317,7 @@
 
         <hr class="section-divider">
 
-        <div class="text-left"><h3>市場情緒</h3></div>
+        <div class="text-left"><h3><i class="material-icons rpt-icon">psychology</i> 市場情緒</h3></div>
         <div id="var-mkt-sentiment" style="margin-bottom: 15px;"><strong>市場情緒：</strong> 聯網查證中...</div>
         <ul>
             <li id="var-mkt-news"><strong>關鍵新聞：</strong> 聯網查證中...</li>
@@ -327,7 +326,7 @@
 
         <hr class="section-divider">
 
-        <div class="text-left"><h3>風險警示</h3></div>
+        <div class="text-left"><h3><i class="material-icons rpt-icon">warning_amber</i> 風險警示</h3></div>
         <h4>1. 信心指數拆解</h4>
         <ul id="var-risk-confidence-list">
             <li>信心指數解讀載入中...</li>
@@ -352,13 +351,13 @@
     </div>
 
     <div class="card">
-        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem;">insights</span> 4. 分析師關鍵點評</h2>
+        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem; margin-right: 6px;">insights</span> 4. 分析師關鍵點評</h2>
         <ul>
             <li id="var-conc-price-level"><strong>價格位階：</strong> 運算中...</li>
             <li id="var-conc-gdp-signal"><strong>GDP 訊號：</strong> 運算中...</li>
         </ul>
         <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-top: 20px;">
-            <div class="text-left"><h3>💡 最終策略建議</h3></div>
+            <div class="text-left"><h3><i class="material-icons rpt-icon">lightbulb</i> 最終策略建議</h3></div>
             <p style="color:var(--color-primary); font-size:12px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px dashed rgba(212,175,55,0.3);">
                 <em>"好公司 = 穩定的ROE + ROE 大於 15% + 盈再率 小於 80% + 配息率 大於 40% + 常利 大於 USD 75M + 產品不會變"</em>
             </p>
@@ -372,10 +371,8 @@
     </footer>
 </div>
 <script>
-    // [修改重點 3] 加入 Details 展開/收合的高度監聽器，自動調整外層 iframe 解決截斷問題
     document.querySelectorAll('details').forEach(detail => {
         detail.addEventListener('toggle', () => {
-            // 給予 50ms 緩衝，讓瀏覽器完成 DOM 展開渲染後再抓取正確的高度
             setTimeout(() => {
                 if (window.frameElement) {
                     window.frameElement.style.height = (document.body.scrollHeight + 50) + 'px';
