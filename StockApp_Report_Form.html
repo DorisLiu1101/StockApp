@@ -1,7 +1,7 @@
 <!-- 
-  [VER] v5.0 [DATE] 2026-02-23
+  [VER] v6.0 [DATE] 2026-02-23
   [DESC]  
-  1. 全新設計報告版型，採用現代化玻璃質感卡片風格，增強視覺層次與專業感。
+  1. 沉穩配色的 Badge、全域表格置中、H3 左側配色邊線，並移除了所有冗餘圖示與市場情緒小標
 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -50,27 +50,32 @@
         .report-section { padding: 25px 5px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: transparent; }
         .report-section:last-child { border-bottom: none; }
         
+        /* 標題設計優化 */
         .report-section h2, .card h2 { margin-top: 0; font-size: 1.3rem; color: #fff; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-left: none; padding-left: 0; letter-spacing: 1px; }
-        .report-section h2::before, .card h2::before { display: none; } 
         
+        h1, h2, h3 { margin: 0 0 12px 0; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
+        h1 { font-size: 1.6rem; color: #fff; }
+        .card h2 { font-size: 1.2rem; display: flex; align-items: center; margin-top: 10px; margin-bottom: 15px; }
+        
+        /* H3 標題減法：移除圖示，加入左側配色邊線 */
+        h3 { font-size: 1.05rem; color: #E5E7EB; display: flex; align-items: center; opacity: 0.95; margin-top: 25px; }
+        .report-section h3 { border-left: 3px solid var(--color-primary); padding-left: 10px; }
+        .card h3 { justify-content: center; border-left: none; padding-left: 0; color: var(--color-muted); font-size: 0.95rem; margin-top: 5px; } 
+        .text-left h3 { justify-content: flex-start; } 
+        
+        /* 風險警示專屬紅線與圖示 */
+        h3.risk-title { border-left-color: #EF4444; color: #FCA5A5; }
+        h3.risk-title i { color: #EF4444; margin-right: 6px; font-size: 1.2rem; }
+
         .section-divider { border: 0; height: 1px; background: rgba(255,255,255,0.08); margin: 25px 0; }
 
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         @media (max-width: 768px) { .grid-3 { grid-template-columns: 1fr; } body { padding: 0; } }
 
-        h1, h2, h3 { margin: 0 0 12px 0; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
-        h1 { font-size: 1.6rem; color: #fff; }
-        .card h2 { font-size: 1.2rem; display: flex; align-items: center; margin-top: 10px; margin-bottom: 15px; }
-        h3 { font-size: 1rem; color: var(--color-text); display: flex; align-items: center; gap: 10px; opacity: 0.95; }
-        .report-section h3 { justify-content: flex-start; margin-top: 20px; }
-        .card h3 { justify-content: center; } .text-left h3 { justify-content: flex-start; } h3 i { color: var(--color-primary); }
-
         .header-card { position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%); padding-top: 35px; }
         .header-card h1 { margin-bottom: 4px; line-height: 1.2; font-family: monospace; }
         .header-card p { margin: 0; }
         .report-date-stamp { position: absolute; top: 10px; left: 10px; font-family: monospace; font-size: 11pt; color: var(--color-muted); z-index: 10; opacity: 0.6; }
-        .btn-header-download { position: absolute; top: 10px; right: 10px; font-family: monospace; font-size: 11pt; color: var(--color-muted); border: none; padding: 0; background: none; cursor: pointer; display: flex; align-items: center; gap: 6px; z-index: 10; opacity: 0.6; }
-        .btn-header-download:hover { color: var(--color-primary); opacity: 1; }
 
         .rating-split-container { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); }
         .rating-col { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0 5px; }
@@ -101,54 +106,31 @@
         summary::after { content: '+'; font-size: 1.2rem; font-weight: bold; }
         details[open] summary::after { content: '-'; }
 
-        .table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 5px; }
-        table { width: 100%; border-collapse: collapse; white-space: nowrap; margin-top: 0; }
+        /* 表格優化與 2~N 欄置中 */
+        .table-container { position: relative; width: 100%; overflow-x: auto; max-width: 100%; padding-bottom: 5px; }
+        .table-container table { width: 100%; border-collapse: collapse; white-space: nowrap; margin-top: 0; min-width: 450px; }
         th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 10.5pt; }
         th { color: var(--color-muted); font-weight: 500; background: rgba(255,255,255,0.02); }
         td { font-feature-settings: "tnum"; font-family: monospace; }
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: rgba(255,255,255,0.03); }
+        
+        .table-container th:not(:first-child), .table-container td:not(:first-child) { text-align: center; } /* 除了第一欄，其餘置中 */
+        .table-container th:first-child, .table-container td:first-child { position: sticky; left: 0; background: #111111; z-index: 1; border-right: 1px solid rgba(255,255,255,0.1); box-shadow: 2px 0 5px rgba(0,0,0,0.4); text-align: left; }
+        .table-container th:first-child { z-index: 2; background: #1a1a1a; }
 
-        .tag { padding: 3px 8px; border-radius: 4px; font-weight: 600; display: inline-block; letter-spacing: 0.5px; font-size: 10pt !important; }
-        .tag-buy { background: rgba(34, 197, 94, 0.15); color: #4ADE80; border: 1px solid rgba(34, 197, 94, 0.3); }
-        .tag-sell { background: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        /* 沉穩質感標籤 (Badge) */
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; letter-spacing: 1px; display: inline-block; white-space: nowrap; border: 1px solid transparent; }
+        .badge-pass { background: rgba(20, 83, 45, 0.4); color: #86EFAC; border-color: rgba(20, 83, 45, 0.8); }
+        .badge-fail { background: rgba(127, 29, 29, 0.4); color: #FCA5A5; border-color: rgba(127, 29, 29, 0.8); }
+        .badge-neutral { background: rgba(113, 63, 18, 0.4); color: #FDE047; border-color: rgba(113, 63, 18, 0.8); }
 
         .summary-highlight { font-size: 1rem; font-weight: 400; line-height: 1.6; color: #fff; padding: 12px; border-left: 3px solid var(--color-primary); background: rgba(255, 255, 255, 0.03); margin-bottom: 16px; border-radius: 0; }
-        .alert-box { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #FCA5A5; padding: 10px; border-radius: 4px; margin-bottom: 16px; display: flex; gap: 10px; align-items: flex-start; }
+        .advice-highlight { border-left: 4px solid var(--color-primary); padding: 4px 0 4px 12px; margin: 15px 0; font-size: 1.15rem; line-height: 1.5; }
 
-        @media print {
-            .no-print, .btn-header-download { display: none !important; }
-            body { background: #fff; color: #000; }
-            .card, .report-section { border: none; box-shadow: none; background: none; color: #000; backdrop-filter: none; border-bottom: 1px solid #ddd; }
-            h1, h2, h3, .rating-price-main, .gauge-value-center, .rating-buy-text, .big-number, .val-cheap, .val-expensive { color: #000 !important; text-shadow: none !important; }
-            details { display: block !important; border: 1px solid #eee; }
-            .summary-highlight { background: #f9f9f9; border-left-color: #000; color: #000; }
-        }
-        
-        /* 標籤與圖示樣式 */
-        .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; letter-spacing: 1px; display: inline-block; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        .badge-pass { background: rgba(34, 197, 94, 0.15); color: #4ADE80; border: 1px solid rgba(34, 197, 94, 0.3); }
-        .badge-fail { background: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-        .badge-neutral { background: rgba(250, 204, 21, 0.15); color: #FACC15; border: 1px solid rgba(250, 204, 21, 0.3); }
-
-        .rpt-icon { font-size: 18px; vertical-align: -3px; color: var(--color-primary); margin-right: 6px; }
-
-        /* 凍結表格第一欄 */
-        .table-container { position: relative; overflow-x: auto; max-width: 100%; }
-        .table-container table { width: 100%; min-width: 450px; }
-        .table-container th:first-child, .table-container td:first-child { 
-            position: sticky; left: 0; background: #111111; z-index: 1; border-right: 1px solid rgba(255,255,255,0.2); box-shadow: 2px 0 5px rgba(0,0,0,0.4); 
-        }
-        .table-container th:first-child { z-index: 2; background: #1a1a1a; }
-        
-        /* 操作建議高亮字體 (無底色) */
-        .advice-highlight {
-            border-left: 4px solid var(--color-primary);
-            padding: 4px 0 4px 12px;
-            margin: 15px 0;
-            font-size: 1.15rem;
-            line-height: 1.5;
-        }
+        /* 列表基礎排版 */
+        ul.clean-list { list-style: none; padding-left: 0; margin-top: 8px; }
+        ul.clean-list li { margin-bottom: 8px; line-height: 1.6; color: #E5E7EB; }
     </style>
 </head>
 <body>
@@ -156,9 +138,6 @@
     
     <div class="card header-card">
         <div class="report-date-stamp" id="var-report-date">YYYY/MM/DD</div>
-        <button class="btn-header-download no-print" onclick="downloadReport()" title="下載報告">
-            <i class="fas fa-download"></i> 下載
-        </button>
         <div>
             <h1 id="var-stock-title">---- --</h1>
             <p class="text-sm" id="var-biz-intro" style="color: var(--color-primary); font-weight: 500; letter-spacing: 0.5px;">公司核心業務簡介載入中...</p>
@@ -167,7 +146,7 @@
 
     <div class="grid-3">
         <div class="card" style="text-align: center;">
-            <h3 style="margin-bottom: 5px;"><i class="material-icons rpt-icon">stars</i> 投資評級</h3>
+            <h3>投資評級</h3>
             <div class="rating-split-container">
                 <div class="rating-col rating-col-left">
                     <div class="rating-price-main" id="var-current-price">$---.--</div>
@@ -181,7 +160,7 @@
         </div>
 
         <div class="card" style="text-align: center;">
-            <h3 style="margin-bottom: 5px;"><i class="material-icons rpt-icon">speed</i> 市場信心</h3>
+            <h3>市場信心</h3>
             <div class="gauge-container">
                 <div class="gauge-bg">&nbsp;</div>
                 <div class="gauge-fill" id="var-gauge-fill" style="transform: rotate(0deg);">&nbsp;</div>
@@ -190,14 +169,14 @@
         </div>
 
         <div class="card" style="text-align: center;">
-            <h3 style="margin-bottom: 5px;"><i class="material-icons rpt-icon">calculate</i> 當前本益比</h3>
+            <h3>當前本益比</h3>
             <span class="big-number" id="var-current-pe">--倍</span>
             <small class="value-range" id="var-pe-range" style="justify-content: center;">(動態區間：-- ~ --)</small>
         </div>
     </div>
 
     <div class="card">
-        <div class="text-left"><h3><i class="material-icons rpt-icon">dashboard</i> 估值儀表板 (PE均值)</h3></div>
+        <div class="text-left"><h3>估值儀表板 (PE均值)</h3></div>
         <div class="valuation-row">
             <div class="value-block">
                 <small>淑價 (Cheap)</small>
@@ -232,54 +211,47 @@
         <ul id="var-company-summary" style="margin-bottom: 18px; padding-left: 20px; list-style-type: disc; color: #E5E7EB; opacity: 0.95;">
             <li>綜合摘要載入中...</li>
         </ul>
-        <ul style="list-style: none; padding-left: 0; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
-            <li id="var-co-dynamic" style="margin-bottom: 8px;"><strong>營運與動態：</strong> 載入中...</li>
-            <li id="var-co-metrics"><strong>基本指標：</strong> 載入中...</li>
+        <ul class="clean-list" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
+            <li id="var-co-dynamic">載入中...</li>
+            <li id="var-co-metrics">載入中...</li>
         </ul>
     </div>
 
     <div class="report-section">
         <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem; margin-right: 6px;">analytics</span> 1. 基本面檢視</h2>
         
-        <div class="text-left"><h3><i class="material-icons rpt-icon">compress</i> A. 巴菲特五維壓力測試</h3></div>
-        <div class="summary-highlight" id="var-test-summary"><strong>測試結果摘要：</strong> 運算中...</div>
+        <div class="text-left"><h3>A. 巴菲特五維壓力測試</h3></div>
+        <div class="summary-highlight" id="var-test-summary">運算中...</div>
         <details>
             <summary>點擊展開詳細檢核結果</summary>
             <div class="table-container">
                 <table>
                     <thead><tr><th>檢核項目</th><th>最新數據</th><th>狀態</th></tr></thead>
-                    <tbody id="var-test-table-body">
-                        </tbody>
+                    <tbody id="var-test-table-body"></tbody>
                 </table>
             </div>
         </details>
 
-        <div class="text-left"><h3><i class="material-icons rpt-icon">table_chart</i> B. 數據表格 (近 5 年)</h3></div>
-        <div class="summary-highlight" id="var-fin-summary">
-            <strong>數據摘要：</strong> 運算中...
-        </div>
+        <div class="text-left"><h3>B. 數據表格 (近 5 年)</h3></div>
+        <div class="summary-highlight" id="var-fin-summary">運算中...</div>
         <details>
             <summary>點擊展開詳細財務數據 (近5年)</summary>
             <div class="table-container">
                 <table>
                     <thead><tr><th>年度</th><th>現金股利</th><th>殖利率</th><th>EPS</th><th>配息率</th><th>ROE</th></tr></thead>
-                    <tbody id="var-fin-table-body">
-                        </tbody>
+                    <tbody id="var-fin-table-body"></tbody>
                 </table>
             </div>
         </details>
 
-        <div class="text-left"><h3 style="display: flex; align-items: center; gap: 10px; margin-top: 25px;"><i class="material-icons rpt-icon">health_and_safety</i> C. 體質總評 <span id="var-health-tag"></span></h3></div>
-        <div class="summary-highlight" style="border-left: 3px solid var(--color-primary);">
-            <span id="var-health-desc"><strong>體質說明：</strong> 運算中...</span>
-        </div>
+        <div class="text-left"><h3>C. 體質總評 <span id="var-health-tag" style="margin-left:8px;"></span></h3></div>
+        <div class="summary-highlight" id="var-health-desc">運算中...</div>
         <details>
             <summary>點擊展開詳細檢核數據</summary>
             <div class="table-container">
                 <table>
                     <thead><tr><th>檢核項目</th><th>數據</th><th>評價</th></tr></thead>
-                    <tbody id="var-health-table-body">
-                    </tbody>
+                    <tbody id="var-health-table-body"></tbody>
                 </table>
             </div>
         </details>
@@ -287,7 +259,6 @@
 
     <div class="report-section">
         <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem; margin-right: 6px;">price_check</span> 2. 估價分析</h2>
-        <div class="alert-box" id="var-val-alert" style="display:none;"></div>
         <details>
             <summary>點擊查看估價模型詳細參數與情境</summary>
             <div class="table-container">
@@ -309,42 +280,37 @@
     <div class="report-section">
         <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem; margin-right: 6px;">radar</span> 3. 市場資訊分析</h2>
         
-        <div class="text-left"><h3><i class="material-icons rpt-icon">public</i> 總體宏觀</h3></div>
-        <ul>
-            <li id="var-mkt-policy"><strong>政策風險：</strong> 聯網查證中...</li>
-            <li id="var-mkt-fx"><strong>匯率敏感度：</strong> 聯網查證中...</li>
+        <div class="text-left"><h3>總體宏觀</h3></div>
+        <ul class="clean-list">
+            <li id="var-mkt-policy">聯網查證中...</li>
+            <li id="var-mkt-fx">聯網查證中...</li>
         </ul>
 
         <hr class="section-divider">
 
-        <div class="text-left"><h3><i class="material-icons rpt-icon">psychology</i> 市場情緒</h3></div>
-        <div id="var-mkt-sentiment" style="margin-bottom: 15px;"><strong>市場情緒：</strong> 聯網查證中...</div>
-        <ul>
-            <li id="var-mkt-news"><strong>關鍵新聞：</strong> 聯網查證中...</li>
-            <li id="var-mkt-analyst"><strong>分析師觀點：</strong> 聯網查證中...</li>
+        <div class="text-left"><h3>市場情緒 <span id="var-mkt-sentiment-badge" style="margin-left: 10px;"></span></h3></div>
+        <ul class="clean-list">
+            <li id="var-mkt-news">聯網查證中...</li>
+            <li id="var-mkt-analyst">聯網查證中...</li>
         </ul>
 
         <hr class="section-divider">
 
-        <div class="text-left"><h3><i class="material-icons rpt-icon">warning_amber</i> 風險警示</h3></div>
-        <h4>1. 信心指數拆解</h4>
-        <ul id="var-risk-confidence-list">
-            <li>信心指數解讀載入中...</li>
-        </ul>
+        <div class="text-left"><h3 class="risk-title"><i class="material-icons">warning_amber</i>風險警示</h3></div>
+        <h4 style="margin: 15px 0 8px 0; color: #9CA3AF;">1. 信心指數拆解</h4>
+        <ul class="clean-list" id="var-risk-confidence-list"><li>解讀載入中...</li></ul>
 
-        <h4>2. 風險標註 (Risk Flags)</h4>
-        <ul id="var-risk-flags-list">
-            <li>檢查中...</li>
-        </ul>
+        <h4 style="margin: 15px 0 8px 0; color: #9CA3AF;">2. 風險標註 (Risk Flags)</h4>
+        <div id="var-risk-flags-list" style="margin-bottom: 15px;">檢查中...</div>
 
-        <h4>3. 三情境風險矩陣</h4>
+        <h4 style="margin: 15px 0 8px 0; color: #9CA3AF;">3. 三情境風險矩陣</h4>
         <div class="table-container">
             <table>
-                <thead><tr><th>情境</th><th>機率</th><th>假設與影響</th></tr></thead>
+                <thead><tr><th>情境</th><th>機率</th><th>影響評估</th></tr></thead>
                 <tbody>
-                    <tr><td>🐂 <strong>牛市 (Bull)</strong></td><td id="var-matrix-prob-bull">--%</td><td id="var-matrix-desc-bull">載入中...</td></tr>
-                    <tr><td>⚖️ <strong>標準 (Base)</strong></td><td id="var-matrix-prob-base">--%</td><td id="var-matrix-desc-base">載入中...</td></tr>
-                    <tr><td>🐻 <strong>熊市 (Bear)</strong></td><td id="var-matrix-prob-bear">--%</td><td id="var-matrix-desc-bear">載入中...</td></tr>
+                    <tr><td id="var-matrix-name-bull">牛市 (Bull)</td><td id="var-matrix-prob-bull">--%</td><td id="var-matrix-desc-bull" style="text-align: left;">載入中...</td></tr>
+                    <tr><td id="var-matrix-name-base">標準 (Base)</td><td id="var-matrix-prob-base">--%</td><td id="var-matrix-desc-base" style="text-align: left;">載入中...</td></tr>
+                    <tr><td id="var-matrix-name-bear">熊市 (Bear)</td><td id="var-matrix-prob-bear">--%</td><td id="var-matrix-desc-bear" style="text-align: left;">載入中...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -352,14 +318,14 @@
 
     <div class="card">
         <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem; margin-right: 6px;">insights</span> 4. 分析師關鍵點評</h2>
-        <ul>
-            <li id="var-conc-price-level"><strong>價格位階：</strong> 運算中...</li>
-            <li id="var-conc-gdp-signal"><strong>GDP 訊號：</strong> 運算中...</li>
+        <ul class="clean-list">
+            <li id="var-conc-price-level">運算中...</li>
+            <li id="var-conc-gdp-signal">運算中...</li>
         </ul>
         <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-top: 20px;">
-            <div class="text-left"><h3><i class="material-icons rpt-icon">lightbulb</i> 最終策略建議</h3></div>
+            <div class="text-left" style="margin-bottom: 12px;"><h3 style="margin-top:0;">最終策略建議</h3></div>
             <p style="color:var(--color-primary); font-size:12px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px dashed rgba(212,175,55,0.3);">
-                <em>"好公司 = 穩定的ROE + ROE 大於 15% + 盈再率 小於 80% + 配息率 大於 40% + 常利 大於 USD 75M + 產品不會變"</em>
+                <em>"好公司 = 穩定的ROE + ROE > 15% + 盈再率 < 80% + 配息率 > 40% + 常利 > USD 75M + 產品不會變"</em>
             </p>
             <p id="var-conc-strategy" style="font-size: 14px;">最終投資建議載入中...</p>
         </div>
@@ -374,27 +340,10 @@
     document.querySelectorAll('details').forEach(detail => {
         detail.addEventListener('toggle', () => {
             setTimeout(() => {
-                if (window.frameElement) {
-                    window.frameElement.style.height = (document.body.scrollHeight + 50) + 'px';
-                }
+                if (window.frameElement) window.frameElement.style.height = (document.body.scrollHeight + 50) + 'px';
             }, 50); 
         });
     });
-
-    function downloadReport() {
-        const htmlContent = document.documentElement.outerHTML;
-        const blob = new Blob([htmlContent], { type: 'text/html' });
-        const stockTitle = document.getElementById('var-stock-title').innerText || "報告";
-        const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-        const fileName = `${stockTitle.replace(/\s+/g, '_')}_${date}.html`;
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(a.href);
-    }
 </script>
 </body>
 </html>
