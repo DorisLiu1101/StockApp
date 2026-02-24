@@ -1,9 +1,10 @@
 <!-- 
-  [VER] v4.0 [DATE] 2026-02-23
+  [VER] v4.1 [DATE] 2026-02-23
   [DESC]  
     1. 美化標籤 (Badge)
     2. 專業圖示微調
-    3. 凍結表格第一欄    
+    3. 凍結表格第一欄
+    4. 公司概要新增營運動態與基本指標兩大項目，並放在綜合摘要下方以利閱讀邏輯 
 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -222,14 +223,18 @@
     </div>
 
     <div class="report-section">
-        <div class="text-left"><h3 id="var-op-advice">操作建議：運算中...</h3></div>
-        <p id="var-op-desc">結合股價位階與總體經濟的具體操作建議載入中...</p>
+        <div style="background: rgba(212, 175, 55, 0.12); border: 1px solid rgba(212, 175, 55, 0.4); padding: 16px; border-radius: 8px; box-shadow: inset 0 0 15px rgba(0,0,0,0.3);">
+            <div class="text-left"><h3 id="var-op-advice" style="color: var(--color-primary); margin-bottom: 0; font-size: 1.1rem; line-height: 1.5;">操作建議：運算中...</h3></div>
+        </div>
     </div>
 
     <div class="report-section">
-        <h2>公司概要</h2>
-        <ul>
-            <li id="var-co-dynamic"><strong>營運與動態：</strong> 載入中...</li>
+        <h2><span class="material-icons" style="color:#D4AF37; font-size: 1.4rem;">business</span> 公司概要</h2>
+        <ul id="var-company-summary" style="margin-bottom: 18px; padding-left: 20px; list-style-type: disc; color: #E5E7EB; opacity: 0.95;">
+            <li>綜合摘要載入中...</li>
+        </ul>
+        <ul style="list-style: none; padding-left: 0; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
+            <li id="var-co-dynamic" style="margin-bottom: 8px;"><strong>營運與動態：</strong> 載入中...</li>
             <li id="var-co-metrics"><strong>基本指標：</strong> 載入中...</li>
         </ul>
     </div>
