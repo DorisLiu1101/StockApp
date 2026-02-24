@@ -1,8 +1,9 @@
 /**
- * [VER] v5.6 [2026-02-24]
+ * [VER] v5.7 [2026-02-24]
  * [DESC] 
  * 1. 移除 GAS 端的強制 JSON 限制以保留聯網功能。
  * 2. 強化 Prompt 嚴禁字串內使用雙引號，並加入 JSON 解析失敗的友善攔截機制。
+ * 3. 優化報告渲染邏輯，優先使用雲端檔案的最後修改日期，修復手動存檔造成的日期遺失問題。
  */
 window.reportService = (function() {
 
@@ -104,10 +105,14 @@ window.reportService = (function() {
                 const setTxt = (id, txt) => { if(doc.getElementById(id)) doc.getElementById(id).innerHTML = txt; };     
                 
                 // --- 1. 頂層與日期 ---
-                if(prefix === 'fav-') { if(document.getElementById('fav-detail-date')) document.getElementById('fav-detail-date').innerText = data.date; }
-                else { if(document.getElementById('detail-report-date')) document.getElementById('detail-report-date').innerText = data.date; }
-                setTxt('var-report-date', data.date); 
-                setTxt('var-stock-title', `${data.symbol} ${data.ai?.company_name || ''}`);
+                // [核心修改] 優先使用雲端檔案的最後修改日期 (result.date)，修復手動存檔造成的日期遺失
+                const finalDate = (data.date || result.date || "--").replace(/-/g, "/");
+                
+                if(prefix === 'fav-') { if(document.getElementById('fav-detail-date')) document.getElementById('fav-detail-date').innerText = finalDate; }
+                else { if(document.getElementById('detail-report-date')) document.getElementById('detail-report-date').innerText = finalDate; }
+                
+                setTxt('var-report-date', finalDate); 
+                setTxt('var-stock-title', `${data.symbol || symbol} ${data.ai?.company_name || ''}`);
                 setTxt('var-biz-intro', data.ai?.biz_intro || '尚無業務簡介'); 
                 
                 // --- 2. 儀表板與估值 ---
