@@ -1,6 +1,9 @@
- /**
- * [VER] v5.10 [2026-02-25]
- * [DESC] 執行方案A (強力字串整平法)：將所有換行與控制字元替換為空白，徹底修復 JSON.parse 崩潰問題。
+/**
+ * [VER] v5.11 [2026-02-25]
+ * [DESC] 
+ * 1. 配合 HTML 瘦身，拔除所有 setTxt 內的硬體圖示與多餘的「XX標題：」前綴。
+ * 2. 獨立風險矩陣的機率與名稱 ID，精準渲染 XX%。
+ * 3. 確保保留防崩潰的強力字串整平法 (.replace(/[\n\r]+/g, ' ')).
  */
 window.reportService = (function() {
     async function generateAndSaveReport(prefix = '') {
@@ -20,7 +23,7 @@ window.reportService = (function() {
             let marketName = market === 'US' ? "美股" : (market === 'JP' ? "日股" : "台股");
             loadingText.innerText = '呼叫後端進行即時抓價與 AI 聯網分析中...';
             
-            // 🛡️ [核心修改] 把您的完美範例直接餵給 AI，強制鎖死 biz_intro 的標籤格式
+            // 🛡️ Prompt 完全維持原樣，不影響任何已揭露之欄位
             const prompt = `角色：巴菲特價值投資分析師。任務：分析${marketName} ${symbol}。目前股價為 {{REAL_PRICE}}。請聯網搜尋最新財報、新聞。
 ⚠️極度重要規範：
 1. 內容必須強制翻譯並使用「繁體中文(台灣)」，禁止簡體字。
@@ -38,11 +41,11 @@ window.reportService = (function() {
             let reportRaw;
             try {
                 let jsonStr = rawText.match(/\{[\s\S]*\}/)[0].replace(/```json/gi, '').replace(/```/g, '').trim();
-                // 🛡️ [核心修改] 將所有換行(\n, \r)與縮排(\t)壓平成單一空白，確保 JSON 結構絕對安全
+                // 保留方案A：壓平所有換行與控制字元
                 jsonStr = jsonStr.replace(/[\n\r]+/g, ' ').replace(/\t/g, ' ');
                 reportRaw = JSON.parse(jsonStr);
             } catch (parseError) {
-                console.error("JSON 解析崩潰，原始字串為:", rawText);
+                console.error("解析失敗:", rawText);
                 throw new Error("AI 產出格式異常。請點擊「更新按鈕」重試！");
             }
 
@@ -104,22 +107,26 @@ window.reportService = (function() {
                 if(prefix === 'fav-') { if(document.getElementById('fav-detail-date')) document.getElementById('fav-detail-date').innerText = finalDate; }
                 else { if(document.getElementById('detail-report-date')) document.getElementById('detail-report-date').innerText = finalDate; }
                 
-                setTxt('var-report-date', finalDate); setTxt('var-stock-title', `${data.symbol} ${data.ai?.company_name || ''}`);
-                
+                setTxt('var-report-date', finalDate); 
+                setTxt('var-stock-title', `${data.symbol} ${data.ai?.company_name || ''}`);
                 setTxt('var-biz-intro', data.ai?.biz_intro || '尚無業務簡介'); 
                 setTxt('var-current-price', "$" + data.realPrice);
                 setTxt('var-price-date', `Date: ${finalDate}`);
                 
-                setTxt('var-rating-text', data.decision?.rating || '--'); setTxt('var-rating-signal', data.decision?.signal || '--');
+                setTxt('var-rating-text', data.decision?.rating || '--'); 
+                setTxt('var-rating-signal', data.decision?.signal || '--');
                 if(data.decision?.rating === "BUY" && doc.getElementById('var-rating-text')) doc.getElementById('var-rating-text').style.color = "#4ADE80";
                 if(data.decision?.rating === "SELL" && doc.getElementById('var-rating-text')) doc.getElementById('var-rating-text').style.color = "#F87171";
                 
                 setTxt('var-confidence-score', data.ai?.risk?.confidence_score || '--');
                 if(doc.getElementById('var-gauge-fill')) doc.getElementById('var-gauge-fill').style.transform = `rotate(${((data.ai?.risk?.confidence_score || 0)/100)*180}deg)`;
                 
-                setTxt('var-current-pe', (data.math?.currentPE || '--') + "倍"); setTxt('var-pe-range', `(動態區間：${data.math?.range?.pe || '--'})`);
-                setTxt('var-cheap-avg', "$" + (data.math?.avgCheap || '--')); setTxt('var-cheap-range', data.math?.range?.cheap || '(-- ~ --)');
-                setTxt('var-exp-avg', "$" + (data.math?.avgExp || '--')); setTxt('var-exp-range', data.math?.range?.exp || '(-- ~ --)');
+                setTxt('var-current-pe', (data.math?.currentPE || '--') + "倍"); 
+                setTxt('var-pe-range', `(動態區間：${data.math?.range?.pe || '--'})`);
+                setTxt('var-cheap-avg', "$" + (data.math?.avgCheap || '--')); 
+                setTxt('var-cheap-range', data.math?.range?.cheap || '(-- ~ --)');
+                setTxt('var-exp-avg', "$" + (data.math?.avgExp || '--')); 
+                setTxt('var-exp-range', data.math?.range?.exp || '(-- ~ --)');
                 
                 if (data.math && data.math.avgCheap && data.math.avgExp) {
                     let pct = 0; let badgeText = "合理"; let badgeBg = "#FACC15"; let badgeColor = "#000";
@@ -130,24 +137,23 @@ window.reportService = (function() {
                     let badge = doc.getElementById('var-therm-badge'); if(badge) { badge.innerText = badgeText; badge.style.backgroundColor = badgeBg; badge.style.color = badgeColor; }
                 }
 
-                // [修改] 將操作建議替換為無底色的重點醒目文字
-                setTxt('var-op-advice', `<strong style="color:var(--color-primary);">操作建議：</strong><span style="color:#FFF; font-weight:400;"> ${data.decision?.strategy || '--'}</span>`);
+                // 拔除所有「前綴文字」，直接填入乾淨資料
+                setTxt('var-op-advice', `<strong style="color:var(--color-primary);">操作建議：</strong> <span style="color:#FFF; font-weight:400;">${data.decision?.strategy || '--'}</span>`);
                 
                 let summaryHtml = "";
                 if (Array.isArray(data.ai?.buffett_summary)) {
-                    summaryHtml = data.ai.buffett_summary.map(s => `<li style="margin-bottom:6px; line-height:1.6;">${s}</li>`).join('');
+                    summaryHtml = data.ai.buffett_summary.map(s => `<li>${s}</li>`).join('');
                 } else if (typeof data.ai?.buffett_summary === 'string') {
-                    summaryHtml = `<li style="margin-bottom:6px; line-height:1.6;">${data.ai.buffett_summary}</li>`;
+                    summaryHtml = `<li>${data.ai.buffett_summary}</li>`;
                 } else {
                     summaryHtml = `<li>目前無 AI 綜合摘要。</li>`;
                 }
                 setTxt('var-company-summary', summaryHtml);
                 
-                let sentimentDesc = data.ai?.market?.sentiment?.desc || data.ai?.market?.sentiment || "尚無明確情緒動向";
-                setTxt('var-co-dynamic', `<strong>營運與動態：</strong> ${sentimentDesc}`);
-                setTxt('var-co-metrics', `<strong>基本指標：</strong> 最新淨值: ${data.ai?.nav || '--'} | 盈再率: ${data.ai?.reinvestment_rate || '--'} | GDP年增率: ${data.ai?.gdp_yoy || '--'}`);
+                setTxt('var-co-dynamic', data.ai?.market?.sentiment?.desc || data.ai?.market?.sentiment || "尚無明確情緒動向");
+                setTxt('var-co-metrics', `最新淨值: ${data.ai?.nav || '--'} | 盈再率: ${data.ai?.reinvestment_rate || '--'} | GDP年增率: ${data.ai?.gdp_yoy || '--'}`);
 
-                setTxt('var-test-summary', `<strong>測試結果摘要：</strong> ${data.ai?.fin_annotation || '無特別標註'}`);
+                setTxt('var-test-summary', data.ai?.fin_annotation || '無特別標註');
                 
                 let testsHtml = "";
                 if(data.ai?.buffett_tests) {
@@ -156,20 +162,20 @@ window.reportService = (function() {
                     testItems.forEach(t => {
                         let statusText = t.key?.status || '--';
                         let badgeClass = statusText.includes('未') || statusText.includes('不') ? 'badge-fail' : (statusText.includes('通過') ? 'badge-pass' : 'badge-neutral');
-                        testsHtml += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.08);"><td><strong>${t.name}</strong></td><td style="text-align: right;">${t.key?.value || '--'}</td><td style="text-align: right;"><span class="badge ${badgeClass}">${statusText}</span></td></tr>`;
+                        testsHtml += `<tr><td><strong>${t.name}</strong></td><td>${t.key?.value || '--'}</td><td><span class="badge ${badgeClass}">${statusText}</span></td></tr>`;
                     });
                 }
-                setTxt('var-test-table-body', testsHtml || `<tr><td colspan="3" class="text-center">無資料</td></tr>`);
+                setTxt('var-test-table-body', testsHtml || `<tr><td colspan="3">無資料</td></tr>`);
 
-                setTxt('var-fin-summary', `<strong>數據摘要：</strong> 近三年平均殖利率: ${data.ai?.avg_yield_3y || '--'}%, 配息頻率: ${data.ai?.div_frequency || '--'}`);
+                setTxt('var-fin-summary', `近三年平均殖利率: ${data.ai?.avg_yield_3y || '--'}%, 配息頻率: ${data.ai?.div_frequency || '--'}`);
                 let finHtml = "";
                 if (Array.isArray(data.ai?.history_5y)) {
                     data.ai.history_5y.forEach(item => { finHtml += `<tr><td><strong>${item.year || '--'}</strong></td><td>${item.div || '--'}</td><td>${item.yield || '--'}%</td><td>${item.eps || '--'}</td><td>${item.payout || '--'}%</td><td>${item.roe || '--'}%</td></tr>`; });
                 }
-                setTxt('var-fin-table-body', finHtml || `<tr><td colspan="6" class="text-center">無近五年資料</td></tr>`);
+                setTxt('var-fin-table-body', finHtml || `<tr><td colspan="6">無近五年資料</td></tr>`);
 
-                setTxt('var-health-tag', data.ai?.health?.tag || "分析中");
-                setTxt('var-health-desc', `<strong>體質說明：</strong> ${data.ai?.health?.desc || "無說明"}`);
+                setTxt('var-health-tag', data.ai?.health?.tag || "");
+                setTxt('var-health-desc', data.ai?.health?.desc || "無說明");
                 let healthTableHtml = "";
                 if (Array.isArray(data.ai?.health?.table)) {
                     data.ai.health.table.forEach(row => { 
@@ -177,47 +183,52 @@ window.reportService = (function() {
                         let evalPass = evalText.includes('好') || evalText.includes('穩') || evalText.includes('高') || evalText.includes('向上') || evalText.includes('佳') || evalText.includes('充裕');
                         let evalFail = evalText.includes('差') || evalText.includes('弱') || evalText.includes('低') || evalText.includes('高位') || evalText.includes('警戒');
                         let badgeClass = evalPass ? 'badge-pass' : (evalFail ? 'badge-fail' : 'badge-neutral');
-                        healthTableHtml += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.08);"><td><strong>${row.item || '--'}</strong></td><td>${row.data || '--'}</td><td style="text-align: right;"><span class="badge ${badgeClass}">${evalText}</span></td></tr>`; 
+                        healthTableHtml += `<tr><td><strong>${row.item || '--'}</strong></td><td>${row.data || '--'}</td><td><span class="badge ${badgeClass}">${evalText}</span></td></tr>`; 
                     });
                 }
-                setTxt('var-health-table-body', healthTableHtml || `<tr><td colspan="3" class="text-center">無資料</td></tr>`);
+                setTxt('var-health-table-body', healthTableHtml || `<tr><td colspan="3">無資料</td></tr>`);
 
                 setTxt('var-val-pe-a', `12 / 30 倍`); setTxt('var-val-pe-b', `${data.ai?.pe_hist_low || '--'} / ${data.ai?.pe_hist_high || '--'} 倍`);
                 setTxt('var-val-cheap-a', `$${data.math?.valA?.cheap || '--'}`); setTxt('var-val-exp-a', `$${data.math?.valA?.exp || '--'}`);
                 setTxt('var-val-cheap-b', `$${data.math?.valB?.cheap || '--'}`); setTxt('var-val-exp-b', `$${data.math?.valB?.exp || '--'}`);
 
-                setTxt('var-mkt-policy', `<strong>政策風險：</strong> ${data.ai?.market?.policy || "無相關資訊"}`);
-                setTxt('var-mkt-fx', `<strong>匯率敏感度：</strong> ${data.ai?.market?.fx || "無相關資訊"}`);
+                setTxt('var-mkt-policy', data.ai?.market?.policy || "無相關資訊");
+                setTxt('var-mkt-fx', data.ai?.market?.fx || "無相關資訊");
                 
+                // 情緒標籤綁定至標題旁的新 ID，並改用沉穩暗色系
                 let sentiTag = data.ai?.market?.sentiment?.tag || "中立";
-                let sentiColor = sentiTag.includes('貪婪') ? 'text-[#4ADE80]' : (sentiTag.includes('恐懼') ? 'text-[#F87171]' : 'text-[#FACC15]');
-                setTxt('var-mkt-sentiment', `<strong>市場情緒：</strong> <span class="badge badge-neutral bg-transparent border-0 ${sentiColor} px-0" style="font-size:14px;">${sentiTag}</span> <br> ${sentimentDesc}`);
+                let sentiColor = sentiTag.includes('貪婪') ? 'text-[#86EFAC]' : (sentiTag.includes('恐懼') ? 'text-[#FCA5A5]' : 'text-[#FDE047]');
+                setTxt('var-mkt-sentiment-badge', `<span class="badge badge-neutral bg-transparent border-0 ${sentiColor} px-0" style="font-size:13px; font-weight:normal;">[${sentiTag}]</span>`);
                 
-                setTxt('var-mkt-analyst', `<strong>分析師觀點：</strong> ${data.ai?.market?.analysts || "無相關資訊"}`);
+                setTxt('var-mkt-analyst', data.ai?.market?.analysts || "無相關資訊");
                 
-                let newsHtml = (data.ai?.market?.news || []).map(n => `<li style="margin-bottom:8px; line-height:1.5; color:#E5E7EB;"><span class="material-icons" style="color:#D4AF37; font-size:12px; vertical-align:1px; margin-right:6px;">article</span>${n}</li>`).join('');
-                setTxt('var-mkt-news', newsHtml ? `<ul style="list-style:none; padding-left:0; margin-top:8px;">${newsHtml}</ul>` : "<strong>關鍵新聞：</strong> 無最新新聞");
+                let newsHtml = (data.ai?.market?.news || []).map(n => `<li>${n}</li>`).join('');
+                setTxt('var-mkt-news', newsHtml ? `<ul class="clean-list" style="margin-top:0;">${newsHtml}</ul>` : "無最新新聞");
                 
-                setTxt('var-risk-confidence-list', `<li style="margin-bottom:8px;"><strong>AI 綜合風險信心指數：</strong> <span class="badge badge-neutral" style="font-size:13px;">${data.ai?.risk?.confidence_score || '--'} / 100</span></li>`);
-                let flagsHtml = (data.ai?.risk?.flags || []).map(f => `<span class="badge badge-fail" style="margin-right:8px; margin-bottom:8px;"><span class="material-icons" style="font-size:12px; vertical-align:-2px; margin-right:2px;">warning</span>${f}</span>`).join('');
-                setTxt('var-risk-flags-list', flagsHtml || `<span class="badge badge-neutral text-gray-400 border-gray-600 bg-transparent">無特別風險警示</span>`);
+                setTxt('var-risk-confidence-list', `<li>${data.ai?.risk?.confidence_score || '--'} / 100</li>`);
+                let flagsHtml = (data.ai?.risk?.flags || []).map(f => `<span class="badge badge-fail" style="margin-right:8px; margin-bottom:8px;">${f}</span>`).join('');
+                setTxt('var-risk-flags-list', flagsHtml || `<span class="badge badge-neutral border-0 bg-transparent text-gray-500">無特別風險警示</span>`);
 
+                // 風險矩陣分離 ID：名稱圖示在第一欄、機率在第二欄純文字 XX%
                 let scenarios = data.ai?.risk?.scenarios || [];
                 if(scenarios.length >= 1) { 
-                    setTxt('var-matrix-prob-bull', `<span class="material-icons" style="font-size:16px; vertical-align:-3px; color:#4ADE80; margin-right:4px;">trending_up</span><strong>牛市 (Bull)</strong><br><span style="color:#9CA3AF; font-size:12px; font-weight:normal;">${scenarios[0].prob}%</span>`); 
+                    setTxt('var-matrix-name-bull', `<span class="material-icons" style="font-size:16px; vertical-align:-3px; color:#4ADE80; margin-right:4px;">trending_up</span><strong>牛市 (Bull)</strong>`); 
+                    setTxt('var-matrix-prob-bull', `${scenarios[0].prob}%`); 
                     setTxt('var-matrix-desc-bull', scenarios[0].desc); 
                 }
                 if(scenarios.length >= 2) { 
-                    setTxt('var-matrix-prob-base', `<span class="material-icons" style="font-size:16px; vertical-align:-3px; color:#FACC15; margin-right:4px;">balance</span><strong>標準 (Base)</strong><br><span style="color:#9CA3AF; font-size:12px; font-weight:normal;">${scenarios[1].prob}%</span>`); 
+                    setTxt('var-matrix-name-base', `<span class="material-icons" style="font-size:16px; vertical-align:-3px; color:#FACC15; margin-right:4px;">balance</span><strong>標準 (Base)</strong>`); 
+                    setTxt('var-matrix-prob-base', `${scenarios[1].prob}%`); 
                     setTxt('var-matrix-desc-base', scenarios[1].desc); 
                 }
                 if(scenarios.length >= 3) { 
-                    setTxt('var-matrix-prob-bear', `<span class="material-icons" style="font-size:16px; vertical-align:-3px; color:#F87171; margin-right:4px;">trending_down</span><strong>熊市 (Bear)</strong><br><span style="color:#9CA3AF; font-size:12px; font-weight:normal;">${scenarios[2].prob}%</span>`); 
+                    setTxt('var-matrix-name-bear', `<span class="material-icons" style="font-size:16px; vertical-align:-3px; color:#F87171; margin-right:4px;">trending_down</span><strong>熊市 (Bear)</strong>`); 
+                    setTxt('var-matrix-prob-bear', `${scenarios[2].prob}%`); 
                     setTxt('var-matrix-desc-bear', scenarios[2].desc); 
                 }
 
-                setTxt('var-conc-price-level', `<strong>價格位階：</strong> ${data.decision?.signal || '--'}`);
-                setTxt('var-conc-gdp-signal', `<strong>總體訊號：</strong> 實質 GDP 年增率 ${data.ai?.gdp_yoy || '--'}`);
+                setTxt('var-conc-price-level', data.decision?.signal || '--');
+                setTxt('var-conc-gdp-signal', `實質 GDP 年增率 ${data.ai?.gdp_yoy || '--'}`);
                 setTxt('var-conc-strategy', data.decision?.strategy || '無進一步建議。');
 
                 frame.srcdoc = doc.documentElement.outerHTML;
