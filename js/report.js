@@ -1,8 +1,8 @@
 /**
- * [VER] v5.8.1 [2026-02-25]
+ * [VER] v5.9 [2026-02-25]
  * [DESC] 
- * 1. 強化 Prompt：強制 biz_intro 為一句話簡介，強制 buffett_summary 為陣列條列式。
- * 2. 修復 HTML 錯位：將摘要精準渲染至公司概要區塊，並加上高亮操作建議。
+ * 1. 強化 Prompt：直接加入嚴格範例以鎖死 biz_intro 的精煉標籤格式。
+ * 2. 移除操作建議底色，改用高亮純文字與左側金線排版。
  */
 window.reportService = (function() {
     async function generateAndSaveReport(prefix = '') {
@@ -22,12 +22,12 @@ window.reportService = (function() {
             let marketName = market === 'US' ? "美股" : (market === 'JP' ? "日股" : "台股");
             loadingText.innerText = '呼叫後端進行即時抓價與 AI 聯網分析中...';
             
-            // 🛡️ [核心修改] 嚴格限制簡介格式，並強制綜合摘要輸出為 Array
+            // 🛡️ [核心修改] 把您的完美範例直接餵給 AI，強制鎖死 biz_intro 的標籤格式
             const prompt = `角色：巴菲特價值投資分析師。任務：分析${marketName} ${symbol}。目前股價為 {{REAL_PRICE}}。請聯網搜尋最新財報、新聞。
 ⚠️極度重要規範：
 1. 內容必須強制翻譯並使用「繁體中文(台灣)」，禁止簡體字。
 2. 嚴格只輸出純 JSON！(若值為文字，絕對禁止包含"雙引號")。請以 { 開頭：
-{"company_name": "繁體公司名稱", "biz_intro": "核心業務簡介(嚴格限制20字內，多業務請用' | '分隔，例如：金屬機殼龍頭 | 轉型高階醫材與設備)", "nav": 最新每股淨值(數字), "reinvestment_rate": 盈再率(數字), "gdp_yoy": 實質GDP年增率(數字), "eps_ttm": 近四季EPS(數字), "pe_hist_low": 近3年最低本益比(數字), "pe_hist_high": 近3年最高本益比(數字), "avg_yield_3y": 近3年平均殖利率(數字), "avg_yield_5y": 近5年平均殖利率(數字), "div_frequency": "配息頻率", "buffett_summary": ["摘要重點1(限30字)", "摘要重點2(限30字)", "摘要重點3(限30字)"], "fin_annotation": "財務簡要標註", "health": { "tag": "強健或中等", "desc": "體質說明(50字內)", "table": [ {"item": "盈再率", "data": "數字", "eval": "評價(如:良好)"}, {"item": "ROE趨勢", "data": "說明", "eval": "評價(如:趨勢向上)"}, {"item": "本益比位階", "data": "說明", "eval": "評價(如:歷史高位)"}, {"item": "營運現金流", "data": "說明", "eval": "評價"}, {"item": "負債結構", "data": "說明", "eval": "評價"} ] }, "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0, "yield": 5.2, "payout": 50.0}], "buffett_tests": { "profit": {"value": "28.5%", "status": "通過"}, "cashflow": {"value": "85%", "status": "通過"}, "dividend": {"value": "42%", "status": "通過"}, "scale": {"value": "符合標準", "status": "通過"}, "chips": {"value": "穩定", "status": "通過"} }, "market": { "policy": "政策風險精煉說明", "fx": "匯率影響精煉說明", "sentiment": { "tag": "極度貪婪等", "desc": "情緒說明" }, "news": ["重點新聞1", "重點新聞2"], "analysts": "分析師觀點精煉" }, "risk": { "confidence_score": 75, "flags": ["風險1", "風險2"], "scenarios": [ {"type": "牛市", "prob": 20, "desc": "說明"}, {"type": "標準", "prob": 50, "desc": "說明"}, {"type": "熊市", "prob": 30, "desc": "說明"} ] } }`;
+{"company_name": "繁體公司名稱", "biz_intro": "嚴格遵守『標籤A | 標籤B | 標籤C』格式之精煉業務簡介(例如：金屬機殼龍頭 | 轉型高階醫材與半導體設備 或 台灣第二大水泥廠 | 嘉惠電力(綠能) | 中國市場轉機)，嚴禁長句敘述", "nav": 最新每股淨值(數字), "reinvestment_rate": 盈再率(數字), "gdp_yoy": 實質GDP年增率(數字), "eps_ttm": 近四季EPS(數字), "pe_hist_low": 近3年最低本益比(數字), "pe_hist_high": 近3年最高本益比(數字), "avg_yield_3y": 近3年平均殖利率(數字), "avg_yield_5y": 近5年平均殖利率(數字), "div_frequency": "配息頻率", "buffett_summary": ["摘要重點1(限30字)", "摘要重點2(限30字)", "摘要重點3(限30字)"], "fin_annotation": "財務簡要標註", "health": { "tag": "強健或中等", "desc": "體質說明(50字內)", "table": [ {"item": "盈再率", "data": "數字", "eval": "評價(如:良好)"}, {"item": "ROE趨勢", "data": "說明", "eval": "評價(如:趨勢向上)"}, {"item": "本益比位階", "data": "說明", "eval": "評價(如:歷史高位)"}, {"item": "營運現金流", "data": "說明", "eval": "評價"}, {"item": "負債結構", "data": "說明", "eval": "評價"} ] }, "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0, "yield": 5.2, "payout": 50.0}], "buffett_tests": { "profit": {"value": "28.5%", "status": "通過"}, "cashflow": {"value": "85%", "status": "通過"}, "dividend": {"value": "42%", "status": "通過"}, "scale": {"value": "符合標準", "status": "通過"}, "chips": {"value": "穩定", "status": "通過"} }, "market": { "policy": "政策風險精煉說明", "fx": "匯率影響精煉說明", "sentiment": { "tag": "極度貪婪等", "desc": "情緒說明" }, "news": ["重點新聞1", "重點新聞2"], "analysts": "分析師觀點精煉" }, "risk": { "confidence_score": 75, "flags": ["風險1", "風險2"], "scenarios": [ {"type": "牛市", "prob": 20, "desc": "說明"}, {"type": "標準", "prob": 50, "desc": "說明"}, {"type": "熊市", "prob": 30, "desc": "說明"} ] } }`;
             
             const aiRes = await fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ action: 'askGemini', data: { prompt: prompt, symbol: symbol, market: market } }) });
             const aiResJson = await aiRes.json();
@@ -106,7 +106,6 @@ window.reportService = (function() {
                 
                 setTxt('var-report-date', finalDate); setTxt('var-stock-title', `${data.symbol} ${data.ai?.company_name || ''}`);
                 
-                // [修改 2] 確保簡介欄位寫入
                 setTxt('var-biz-intro', data.ai?.biz_intro || '尚無業務簡介'); 
                 setTxt('var-current-price', "$" + data.realPrice);
                 setTxt('var-price-date', `Date: ${finalDate}`);
@@ -131,10 +130,9 @@ window.reportService = (function() {
                     let badge = doc.getElementById('var-therm-badge'); if(badge) { badge.innerText = badgeText; badge.style.backgroundColor = badgeBg; badge.style.color = badgeColor; }
                 }
 
-                // [修改 1] 將操作建議直接寫入高亮的容器中
-                setTxt('var-op-advice', `<span class="material-icons rpt-icon">lightbulb</span><strong>操作建議：</strong> ${data.decision?.strategy || '--'}`);
+                // [修改] 將操作建議替換為無底色的重點醒目文字
+                setTxt('var-op-advice', `<strong style="color:var(--color-primary);">操作建議：</strong><span style="color:#FFF; font-weight:400;"> ${data.decision?.strategy || '--'}</span>`);
                 
-                // [修改 3] 解析綜合摘要陣列，渲染為條列式 <li>
                 let summaryHtml = "";
                 if (Array.isArray(data.ai?.buffett_summary)) {
                     summaryHtml = data.ai.buffett_summary.map(s => `<li style="margin-bottom:6px; line-height:1.6;">${s}</li>`).join('');
@@ -146,8 +144,8 @@ window.reportService = (function() {
                 setTxt('var-company-summary', summaryHtml);
                 
                 let sentimentDesc = data.ai?.market?.sentiment?.desc || data.ai?.market?.sentiment || "尚無明確情緒動向";
-                setTxt('var-co-dynamic', `<span class="material-icons rpt-icon">trending_up</span><strong>營運與動態：</strong> ${sentimentDesc}`);
-                setTxt('var-co-metrics', `<span class="material-icons rpt-icon">account_balance_wallet</span><strong>基本指標：</strong> 最新淨值: ${data.ai?.nav || '--'} | 盈再率: ${data.ai?.reinvestment_rate || '--'} | GDP年增率: ${data.ai?.gdp_yoy || '--'}`);
+                setTxt('var-co-dynamic', `<strong>營運與動態：</strong> ${sentimentDesc}`);
+                setTxt('var-co-metrics', `<strong>基本指標：</strong> 最新淨值: ${data.ai?.nav || '--'} | 盈再率: ${data.ai?.reinvestment_rate || '--'} | GDP年增率: ${data.ai?.gdp_yoy || '--'}`);
 
                 setTxt('var-test-summary', `<strong>測試結果摘要：</strong> ${data.ai?.fin_annotation || '無特別標註'}`);
                 
@@ -188,19 +186,19 @@ window.reportService = (function() {
                 setTxt('var-val-cheap-a', `$${data.math?.valA?.cheap || '--'}`); setTxt('var-val-exp-a', `$${data.math?.valA?.exp || '--'}`);
                 setTxt('var-val-cheap-b', `$${data.math?.valB?.cheap || '--'}`); setTxt('var-val-exp-b', `$${data.math?.valB?.exp || '--'}`);
 
-                setTxt('var-mkt-policy', `<span class="material-icons rpt-icon">account_balance</span><strong>政策風險：</strong> ${data.ai?.market?.policy || "無相關資訊"}`);
-                setTxt('var-mkt-fx', `<span class="material-icons rpt-icon">currency_exchange</span><strong>匯率敏感度：</strong> ${data.ai?.market?.fx || "無相關資訊"}`);
+                setTxt('var-mkt-policy', `<strong>政策風險：</strong> ${data.ai?.market?.policy || "無相關資訊"}`);
+                setTxt('var-mkt-fx', `<strong>匯率敏感度：</strong> ${data.ai?.market?.fx || "無相關資訊"}`);
                 
                 let sentiTag = data.ai?.market?.sentiment?.tag || "中立";
                 let sentiColor = sentiTag.includes('貪婪') ? 'text-[#4ADE80]' : (sentiTag.includes('恐懼') ? 'text-[#F87171]' : 'text-[#FACC15]');
                 setTxt('var-mkt-sentiment', `<strong>市場情緒：</strong> <span class="badge badge-neutral bg-transparent border-0 ${sentiColor} px-0" style="font-size:14px;">${sentiTag}</span> <br> ${sentimentDesc}`);
                 
-                setTxt('var-mkt-analyst', `<span class="material-icons rpt-icon">groups</span><strong>分析師觀點：</strong> ${data.ai?.market?.analysts || "無相關資訊"}`);
+                setTxt('var-mkt-analyst', `<strong>分析師觀點：</strong> ${data.ai?.market?.analysts || "無相關資訊"}`);
                 
                 let newsHtml = (data.ai?.market?.news || []).map(n => `<li style="margin-bottom:8px; line-height:1.5; color:#E5E7EB;"><span class="material-icons" style="color:#D4AF37; font-size:12px; vertical-align:1px; margin-right:6px;">article</span>${n}</li>`).join('');
                 setTxt('var-mkt-news', newsHtml ? `<ul style="list-style:none; padding-left:0; margin-top:8px;">${newsHtml}</ul>` : "<strong>關鍵新聞：</strong> 無最新新聞");
                 
-                setTxt('var-risk-confidence-list', `<li style="margin-bottom:8px;"><span class="material-icons rpt-icon">analytics</span><strong>AI 綜合風險信心指數：</strong> <span class="badge badge-neutral" style="font-size:13px;">${data.ai?.risk?.confidence_score || '--'} / 100</span></li>`);
+                setTxt('var-risk-confidence-list', `<li style="margin-bottom:8px;"><strong>AI 綜合風險信心指數：</strong> <span class="badge badge-neutral" style="font-size:13px;">${data.ai?.risk?.confidence_score || '--'} / 100</span></li>`);
                 let flagsHtml = (data.ai?.risk?.flags || []).map(f => `<span class="badge badge-fail" style="margin-right:8px; margin-bottom:8px;"><span class="material-icons" style="font-size:12px; vertical-align:-2px; margin-right:2px;">warning</span>${f}</span>`).join('');
                 setTxt('var-risk-flags-list', flagsHtml || `<span class="badge badge-neutral text-gray-400 border-gray-600 bg-transparent">無特別風險警示</span>`);
 
@@ -218,8 +216,8 @@ window.reportService = (function() {
                     setTxt('var-matrix-desc-bear', scenarios[2].desc); 
                 }
 
-                setTxt('var-conc-price-level', `<span class="material-icons rpt-icon">sell</span><strong>價格位階：</strong> ${data.decision?.signal || '--'}`);
-                setTxt('var-conc-gdp-signal', `<span class="material-icons rpt-icon">bar_chart</span><strong>總體訊號：</strong> 實質 GDP 年增率 ${data.ai?.gdp_yoy || '--'}`);
+                setTxt('var-conc-price-level', `<strong>價格位階：</strong> ${data.decision?.signal || '--'}`);
+                setTxt('var-conc-gdp-signal', `<strong>總體訊號：</strong> 實質 GDP 年增率 ${data.ai?.gdp_yoy || '--'}`);
                 setTxt('var-conc-strategy', data.decision?.strategy || '無進一步建議。');
 
                 frame.srcdoc = doc.documentElement.outerHTML;
