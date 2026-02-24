@@ -1,12 +1,10 @@
 /**
- * [VER] v5.7 [2026-02-24]
+ * [VER] v5.8 [2026-02-24]
  * [DESC] 
- * 1. 移除 GAS 端的強制 JSON 限制以保留聯網功能。
- * 2. 強化 Prompt 嚴禁字串內使用雙引號，並加入 JSON 解析失敗的友善攔截機制。
- * 3. 優化報告渲染邏輯，優先使用雲端檔案的最後修改日期，修復手動存檔造成的日期遺失問題。
+ * 1. 強制 AI 使用繁體中文輸出，並規定體質表格必須填滿 5 項指標。
+ * 2. 導入 Badge 狀態標籤、Material Icons 專業圖示排版，並凍結表格首欄。
  */
 window.reportService = (function() {
-
     async function generateAndSaveReport(prefix = '') {
         const symbol = window.appState.currentDetailSymbol;
         const market = window.appState.currentDetailMarket;
@@ -24,32 +22,34 @@ window.reportService = (function() {
             let marketName = market === 'US' ? "美股" : (market === 'JP' ? "日股" : "台股");
             loadingText.innerText = '呼叫後端進行即時抓價與 AI 聯網分析中...';
             
-            // 🛡️ 核心修改：在 Prompt 強調「字串內容絕對禁止使用雙引號」
-            const prompt = `角色：巴菲特價值投資分析師。任務：分析${marketName} ${symbol}。目前真實股價為 {{REAL_PRICE}} 元。請聯網搜尋最新財報、近5年股利與EPS、新聞、與最新 GDP 成長率。必須嚴格只輸出純 JSON 格式！(警告：JSON 欄位值如果是文字，裡面絕對禁止包含"雙引號"，請一律改用單引號或中括號代替，否則系統會崩潰)。絕對禁止任何開場白或 Markdown 標記，請直接以 { 開頭：{"company_name": "公司名稱", "biz_intro": "核心業務簡介", "nav": 最新每股淨值(數字), "reinvestment_rate": 盈再率(數字), "gdp_yoy": 實質GDP年增率(數字), "eps_ttm": 近四季EPS(數字), "pe_hist_low": 近三年最低本益比(數字), "pe_hist_high": 近三年最高本益比(數字), "avg_yield_3y": 近三年平均殖利率(數字), "avg_yield_5y": 近五年平均殖利率(數字), "div_frequency": "配息頻率", "buffett_summary": "綜合摘要", "fin_annotation": "財務簡要標註", "health": { "tag": "強健", "desc": "體質詳細說明", "table": [ {"item": "盈再率", "data": "數字與百分比", "eval": "評價"} ] }, "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0, "yield": 5.2, "payout": 50.0}], "buffett_tests": { "profit": {"value": "28.5%", "status": "通過"}, "cashflow": {"value": "85%", "status": "通過"}, "dividend": {"value": "42%", "status": "通過"}, "scale": {"value": "符合標準", "status": "通過"}, "chips": {"value": "穩定", "status": "通過"} }, "market": { "policy": "政策風險說明...", "fx": "匯率影響...", "sentiment": { "tag": "情緒", "desc": "說明" }, "news": ["新聞1", "新聞2"], "analysts": "分析師觀點" }, "risk": { "confidence_score": 75, "flags": ["警示"], "scenarios": [ {"type": "牛市", "prob": 20, "desc": "說明"}, {"type": "標準", "prob": 50, "desc": "說明"}, {"type": "熊市", "prob": 30, "desc": "說明"} ] } }`;
+            // 🛡️ [核心修改] 強制繁體中文、要求精煉條列化、鎖死體質表格 5 大項目
+            const prompt = `角色：巴菲特價值投資分析師。任務：分析${marketName} ${symbol}。目前股價為 {{REAL_PRICE}}。請聯網搜尋最新財報、新聞。
+⚠️極度重要規範：
+1. 所有內容(含公司名、簡介、各項分析)必須強制翻譯並使用「繁體中文(台灣)」，絕對禁止簡體字或全英文(專有名詞除外)。
+2. 敘述請盡量「條列化」、「精煉」，避免長篇大論造成閱讀疲勞。
+3. 嚴格只輸出純 JSON！(若值為文字，絕對禁止包含"雙引號")。請以 { 開頭：
+{"company_name": "繁體公司名稱", "biz_intro": "核心業務簡介", "nav": 最新每股淨值(數字), "reinvestment_rate": 盈再率(數字), "gdp_yoy": 實質GDP年增率(數字), "eps_ttm": 近四季EPS(數字), "pe_hist_low": 近3年最低本益比(數字), "pe_hist_high": 近3年最高本益比(數字), "avg_yield_3y": 近3年平均殖利率(數字), "avg_yield_5y": 近5年平均殖利率(數字), "div_frequency": "配息頻率", "buffett_summary": "綜合摘要", "fin_annotation": "財務簡要標註", "health": { "tag": "強健或中等", "desc": "體質說明(50字內)", "table": [ {"item": "盈再率", "data": "數字", "eval": "評價(如:良好)"}, {"item": "ROE趨勢", "data": "說明", "eval": "評價(如:趨勢向上)"}, {"item": "本益比位階", "data": "說明", "eval": "評價(如:歷史高位)"}, {"item": "營運現金流", "data": "說明", "eval": "評價"}, {"item": "負債結構", "data": "說明", "eval": "評價"} ] }, "history_5y": [{"year": "2023", "eps": 30.0, "div": 15.0, "roe": 25.0, "yield": 5.2, "payout": 50.0}], "buffett_tests": { "profit": {"value": "28.5%", "status": "通過"}, "cashflow": {"value": "85%", "status": "通過"}, "dividend": {"value": "42%", "status": "通過"}, "scale": {"value": "符合標準", "status": "通過"}, "chips": {"value": "穩定", "status": "通過"} }, "market": { "policy": "政策風險精煉說明", "fx": "匯率影響精煉說明", "sentiment": { "tag": "極度貪婪等", "desc": "情緒說明" }, "news": ["重點新聞1", "重點新聞2"], "analysts": "分析師觀點精煉" }, "risk": { "confidence_score": 75, "flags": ["風險1", "風險2"], "scenarios": [ {"type": "牛市", "prob": 20, "desc": "說明"}, {"type": "標準", "prob": 50, "desc": "說明"}, {"type": "熊市", "prob": 30, "desc": "說明"} ] } }`;
             
             const aiRes = await fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ action: 'askGemini', data: { prompt: prompt, symbol: symbol, market: market } }) });
             const aiResJson = await aiRes.json();
-            if (!aiResJson.success) throw new Error(aiResJson.message || "伺服器發生未知錯誤。");
+            if (!aiResJson.success) throw new Error(aiResJson.message || "伺服器錯誤。");
             
             let realPrice = aiResJson.realPrice || 0;
             const rawText = aiResJson.data?.candidates?.[0]?.content?.parts?.[0]?.text;
             if(!rawText) throw new Error("AI 未能產出有效報告");
             
-            // 🛡️ 核心修改：加入安全攔截網，如果 AI 格式依然寫錯，友善提示使用者重試
             let reportRaw;
             try {
                 let jsonStr = rawText.match(/\{[\s\S]*\}/)[0].replace(/```json/gi, '').replace(/```/g, '').trim();
-                // 過濾掉可能破壞 JSON 結構的換行符號
                 jsonStr = jsonStr.replace(/\n/g, "\\n").replace(/\r/g, "");
                 reportRaw = JSON.parse(jsonStr);
             } catch (parseError) {
-                console.error("JSON 解析失敗:", rawText);
-                throw new Error("AI 本次產出的格式存在異常字符。請點擊「更新按鈕」重新產生一次！");
+                throw new Error("AI 產出格式異常。請點擊「更新按鈕」重試！");
             }
 
             let hasValidMathData = !(isNaN(Number(reportRaw.eps_ttm)) || isNaN(Number(reportRaw.pe_hist_low)) || isNaN(Number(reportRaw.pe_hist_high)));
             let valA = { cheap: 0, exp: 0, pe_cheap: 12, pe_exp: 20, fail: true }, valB = { cheap: 0, exp: 0, pe_cheap: 0, pe_exp: 0, fail: true };
-            let avgCheap = 0, avgExp = 0, currentPE = "N/A", rating = "N/A", signal = "資料不足", strategy = "因 AI 無法取得有效數據，估值運算暫停。";
+            let avgCheap = 0, avgExp = 0, currentPE = "N/A", rating = "N/A", signal = "資料不足", strategy = "因數據不足，估值運算暫停。";
 
             if (realPrice > 0 && hasValidMathData) {
                 const eps = Number(reportRaw.eps_ttm), peLow = Number(reportRaw.pe_hist_low), peHigh = Number(reportRaw.pe_hist_high);
@@ -58,8 +58,8 @@ window.reportService = (function() {
                     valA = { cheap: Math.round(eps * 12), exp: Math.round(eps * 30), pe_cheap: 12, pe_exp: 30, fail: false };
                     valB = { cheap: Math.round(eps * peLow), exp: Math.round(eps * peHigh), pe_cheap: peLow, pe_exp: peHigh, fail: false };
                     avgCheap = Math.round((valA.cheap + valB.cheap) / 2); avgExp = Math.round((valA.exp + valB.exp) / 2);
-                    if (realPrice < avgCheap) { rating = "BUY"; signal = "價值浮現"; strategy = "股價低於平均淑價，具備安全邊際，建議建立部位。"; } 
-                    else if (realPrice > avgExp) { rating = "SELL"; signal = "估值偏高"; strategy = "股價超越平均昂貴價，建議適度獲利了結。"; } 
+                    if (realPrice < avgCheap) { rating = "BUY"; signal = "價值浮現"; strategy = "股價低於平均淑價，建議分批佈局。"; } 
+                    else if (realPrice > avgExp) { rating = "SELL"; signal = "估值偏高"; strategy = "股價超越昂貴價，建議適度獲利了結。"; } 
                     else { rating = "HOLD"; signal = "觀望"; strategy = "股價處於合理區間，建議持有觀望。"; }
                 }
             }
@@ -79,9 +79,6 @@ window.reportService = (function() {
         } catch (error) { window.showAlert('發生錯誤：\n' + error.message); loadingDiv.style.display = 'none'; }
     }
 
-
- // [VER] v5.5 [2026-02-24]
- 
     async function loadReport(prefix = '') {
         const symbol = window.appState.currentDetailSymbol;
         const scriptUrl = window.appState.userScriptUrl;
@@ -104,37 +101,25 @@ window.reportService = (function() {
                 const doc = new DOMParser().parseFromString(await tplRes.text(), 'text/html');
                 const setTxt = (id, txt) => { if(doc.getElementById(id)) doc.getElementById(id).innerHTML = txt; };     
                 
-                // --- 1. 頂層與日期 ---
-                // [核心修改] 優先使用雲端檔案的最後修改日期 (result.date)，修復手動存檔造成的日期遺失
                 const finalDate = (data.date || result.date || "--").replace(/-/g, "/");
-                
                 if(prefix === 'fav-') { if(document.getElementById('fav-detail-date')) document.getElementById('fav-detail-date').innerText = finalDate; }
                 else { if(document.getElementById('detail-report-date')) document.getElementById('detail-report-date').innerText = finalDate; }
                 
-                setTxt('var-report-date', finalDate); 
-                setTxt('var-stock-title', `${data.symbol || symbol} ${data.ai?.company_name || ''}`);
-                setTxt('var-biz-intro', data.ai?.biz_intro || '尚無業務簡介'); 
+                setTxt('var-report-date', finalDate); setTxt('var-stock-title', `${data.symbol} ${data.ai?.company_name || ''}`);
+                setTxt('var-biz-intro', data.ai?.biz_intro || '尚無業務簡介'); setTxt('var-current-price', "$" + data.realPrice);
+                setTxt('var-price-date', `Date: ${finalDate}`);
                 
-                // --- 2. 儀表板與估值 ---
-                setTxt('var-current-price', "$" + data.realPrice);
-                setTxt('var-price-date', `Date: ${data.date}`);
-                setTxt('var-rating-text', data.decision?.rating || '--');
-                setTxt('var-rating-signal', data.decision?.signal || '--');
-                
+                setTxt('var-rating-text', data.decision?.rating || '--'); setTxt('var-rating-signal', data.decision?.signal || '--');
                 if(data.decision?.rating === "BUY" && doc.getElementById('var-rating-text')) doc.getElementById('var-rating-text').style.color = "#4ADE80";
                 if(data.decision?.rating === "SELL" && doc.getElementById('var-rating-text')) doc.getElementById('var-rating-text').style.color = "#F87171";
                 
                 setTxt('var-confidence-score', data.ai?.risk?.confidence_score || '--');
                 if(doc.getElementById('var-gauge-fill')) doc.getElementById('var-gauge-fill').style.transform = `rotate(${((data.ai?.risk?.confidence_score || 0)/100)*180}deg)`;
                 
-                setTxt('var-current-pe', (data.math?.currentPE || '--') + "倍");
-                setTxt('var-pe-range', `(動態區間：${data.math?.range?.pe || '--'})`);
-                setTxt('var-cheap-avg', "$" + (data.math?.avgCheap || '--')); 
-                setTxt('var-cheap-range', data.math?.range?.cheap || '(-- ~ --)');
-                setTxt('var-exp-avg', "$" + (data.math?.avgExp || '--'));
-                setTxt('var-exp-range', data.math?.range?.exp || '(-- ~ --)');
+                setTxt('var-current-pe', (data.math?.currentPE || '--') + "倍"); setTxt('var-pe-range', `(動態區間：${data.math?.range?.pe || '--'})`);
+                setTxt('var-cheap-avg', "$" + (data.math?.avgCheap || '--')); setTxt('var-cheap-range', data.math?.range?.cheap || '(-- ~ --)');
+                setTxt('var-exp-avg', "$" + (data.math?.avgExp || '--')); setTxt('var-exp-range', data.math?.range?.exp || '(-- ~ --)');
                 
-                // 溫度計指標
                 if (data.math && data.math.avgCheap && data.math.avgExp) {
                     let pct = 0; let badgeText = "合理"; let badgeBg = "#FACC15"; let badgeColor = "#000";
                     if (data.realPrice <= data.math.avgCheap) { pct = 0; badgeText = "淑"; badgeBg = "#166534"; badgeColor = "#FFF"; } 
@@ -144,78 +129,93 @@ window.reportService = (function() {
                     let badge = doc.getElementById('var-therm-badge'); if(badge) { badge.innerText = badgeText; badge.style.backgroundColor = badgeBg; badge.style.color = badgeColor; }
                 }
 
-                // 操作建議與公司概要
                 setTxt('var-op-advice', `操作建議：${data.decision?.strategy || '--'}`);
                 setTxt('var-op-desc', data.ai?.buffett_summary || "目前無 AI 綜合摘要。");
+                
                 let sentimentDesc = data.ai?.market?.sentiment?.desc || data.ai?.market?.sentiment || "尚無明確情緒動向";
-                setTxt('var-co-dynamic', `<strong>營運與動態：</strong> ${sentimentDesc}`);
-                setTxt('var-co-metrics', `<strong>基本指標：</strong> 最新淨值: ${data.ai?.nav || '--'}, 盈再率: ${data.ai?.reinvestment_rate || '--'}, GDP年增率: ${data.ai?.gdp_yoy || '--'}`);
+                // 使用 Material Icons 裝飾
+                setTxt('var-co-dynamic', `<span class="material-icons rpt-icon">trending_up</span><strong>營運與動態：</strong> ${sentimentDesc}`);
+                setTxt('var-co-metrics', `<span class="material-icons rpt-icon">account_balance_wallet</span><strong>基本指標：</strong> 最新淨值: ${data.ai?.nav || '--'} | 盈再率: ${data.ai?.reinvestment_rate || '--'} | GDP年增率: ${data.ai?.gdp_yoy || '--'}`);
 
-                // --- 3. 基本面檢視 (壓力測試與財務表格) ---
                 setTxt('var-test-summary', `<strong>測試結果摘要：</strong> ${data.ai?.fin_annotation || '無特別標註'}`);
+                
+                // [修改] 壓力測試標籤化 (Badge)
                 let testsHtml = "";
                 if(data.ai?.buffett_tests) {
                     const bt = data.ai.buffett_tests;
                     const testItems = [ { name: '獲利能力', key: bt.profit }, { name: '現金流量', key: bt.cashflow }, { name: '配息穩定', key: bt.dividend }, { name: '規模門檻', key: bt.scale }, { name: '籌碼結構', key: bt.chips } ];
                     testItems.forEach(t => {
-                        let statusColor = t.key?.status === '通過' ? 'text-green-500' : (t.key?.status === '未通過' ? 'text-red-500' : 'text-gray-400');
-                        testsHtml += `<tr class="border-b border-[#333]"><td class="py-2 text-gray-400 font-bold">${t.name}</td><td class="py-2 text-white text-right">${t.key?.value || '--'}</td><td class="py-2 text-right ${statusColor} font-bold">${t.key?.status || '--'}</td></tr>`;
+                        let statusText = t.key?.status || '--';
+                        let badgeClass = statusText.includes('未') || statusText.includes('不') ? 'badge-fail' : (statusText.includes('通過') ? 'badge-pass' : 'badge-neutral');
+                        testsHtml += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.08);"><td><strong>${t.name}</strong></td><td style="text-align: right;">${t.key?.value || '--'}</td><td style="text-align: right;"><span class="badge ${badgeClass}">${statusText}</span></td></tr>`;
                     });
                 }
-                setTxt('var-test-table-body', testsHtml || `<tr><td colspan="3" class="text-center py-4 text-gray-500">無資料</td></tr>`);
+                setTxt('var-test-table-body', testsHtml || `<tr><td colspan="3" class="text-center">無資料</td></tr>`);
 
                 setTxt('var-fin-summary', `<strong>數據摘要：</strong> 近三年平均殖利率: ${data.ai?.avg_yield_3y || '--'}%, 配息頻率: ${data.ai?.div_frequency || '--'}`);
                 let finHtml = "";
                 if (Array.isArray(data.ai?.history_5y)) {
-                    data.ai.history_5y.forEach(item => { finHtml += `<tr><td class="px-2 py-2 border-b border-[#333] text-gray-300">${item.year || '--'}</td><td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.div || '--'}</td><td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.yield || '--'}%</td><td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.eps || '--'}</td><td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.payout || '--'}%</td><td class="px-2 py-2 border-b border-[#333] text-gray-300 font-mono">${item.roe || '--'}%</td></tr>`; });
+                    data.ai.history_5y.forEach(item => { finHtml += `<tr><td><strong>${item.year || '--'}</strong></td><td>${item.div || '--'}</td><td>${item.yield || '--'}%</td><td>${item.eps || '--'}</td><td>${item.payout || '--'}%</td><td>${item.roe || '--'}%</td></tr>`; });
                 }
-                setTxt('var-fin-table-body', finHtml || `<tr><td colspan="6" class="text-center py-4 text-gray-500">無近五年資料</td></tr>`);
+                setTxt('var-fin-table-body', finHtml || `<tr><td colspan="6" class="text-center">無近五年資料</td></tr>`);
 
-                setTxt('var-health-tag', data.ai?.health?.tag || "--");
+                // [修改] 體質總評標籤化與強制欄位 (Badge)
+                setTxt('var-health-tag', data.ai?.health?.tag || "分析中");
                 setTxt('var-health-desc', `<strong>體質說明：</strong> ${data.ai?.health?.desc || "無說明"}`);
                 let healthTableHtml = "";
                 if (Array.isArray(data.ai?.health?.table)) {
-                    data.ai.health.table.forEach(row => { healthTableHtml += `<tr class="border-b border-[#333]"><td class="py-2 text-gray-400 font-bold">${row.item || '--'}</td><td class="py-2 text-white">${row.data || '--'}</td><td class="py-2 text-right text-[#D4AF37]">${row.eval || '--'}</td></tr>`; });
+                    data.ai.health.table.forEach(row => { 
+                        let evalText = row.eval || '--';
+                        let evalPass = evalText.includes('好') || evalText.includes('穩') || evalText.includes('高') || evalText.includes('向上') || evalText.includes('佳') || evalText.includes('充裕');
+                        let evalFail = evalText.includes('差') || evalText.includes('弱') || evalText.includes('低') || evalText.includes('高位') || evalText.includes('警戒');
+                        let badgeClass = evalPass ? 'badge-pass' : (evalFail ? 'badge-fail' : 'badge-neutral');
+                        healthTableHtml += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.08);"><td><strong>${row.item || '--'}</strong></td><td>${row.data || '--'}</td><td style="text-align: right;"><span class="badge ${badgeClass}">${evalText}</span></td></tr>`; 
+                    });
                 }
-                setTxt('var-health-table-body', healthTableHtml || `<tr><td colspan="3" class="text-center py-2 text-gray-500">無資料</td></tr>`);
+                setTxt('var-health-table-body', healthTableHtml || `<tr><td colspan="3" class="text-center">無資料</td></tr>`);
 
-                // --- 4. 估價分析表格 ---
-                setTxt('var-val-pe-a', `12 / 30 倍`);
-                setTxt('var-val-pe-b', `${data.ai?.pe_hist_low || '--'} / ${data.ai?.pe_hist_high || '--'} 倍`);
-                setTxt('var-val-cheap-a', `$${data.math?.valA?.cheap || '--'}`);
-                setTxt('var-val-exp-a', `$${data.math?.valA?.exp || '--'}`);
-                setTxt('var-val-cheap-b', `$${data.math?.valB?.cheap || '--'}`);
-                setTxt('var-val-exp-b', `$${data.math?.valB?.exp || '--'}`);
+                setTxt('var-val-pe-a', `12 / 30 倍`); setTxt('var-val-pe-b', `${data.ai?.pe_hist_low || '--'} / ${data.ai?.pe_hist_high || '--'} 倍`);
+                setTxt('var-val-cheap-a', `$${data.math?.valA?.cheap || '--'}`); setTxt('var-val-exp-a', `$${data.math?.valA?.exp || '--'}`);
+                setTxt('var-val-cheap-b', `$${data.math?.valB?.cheap || '--'}`); setTxt('var-val-exp-b', `$${data.math?.valB?.exp || '--'}`);
 
-                // --- 5. 市場資訊分析 ---
-                setTxt('var-mkt-policy', `<strong>政策風險：</strong> ${data.ai?.market?.policy || "無相關資訊"}`);
-                setTxt('var-mkt-fx', `<strong>匯率敏感度：</strong> ${data.ai?.market?.fx || "無相關資訊"}`);
-                setTxt('var-mkt-sentiment', `<strong>市場情緒：</strong> ${sentimentDesc}`);
-                setTxt('var-mkt-analyst', `<strong>分析師觀點：</strong> ${data.ai?.market?.analysts || "無相關資訊"}`);
+                // [修改] 完全捨棄 Emoji，改用高質感 Material Icons
+                setTxt('var-mkt-policy', `<span class="material-icons rpt-icon">account_balance</span><strong>政策風險：</strong> ${data.ai?.market?.policy || "無相關資訊"}`);
+                setTxt('var-mkt-fx', `<span class="material-icons rpt-icon">currency_exchange</span><strong>匯率敏感度：</strong> ${data.ai?.market?.fx || "無相關資訊"}`);
                 
-                let newsHtml = (data.ai?.market?.news || []).map(n => `<li class="mb-1 text-gray-300 text-sm">・${n}</li>`).join('');
-                setTxt('var-mkt-news', newsHtml ? `<ul class="mt-2">${newsHtml}</ul>` : "<strong>關鍵新聞：</strong> 無最新新聞");
+                let sentiTag = data.ai?.market?.sentiment?.tag || "中立";
+                let sentiColor = sentiTag.includes('貪婪') ? 'text-[#4ADE80]' : (sentiTag.includes('恐懼') ? 'text-[#F87171]' : 'text-[#FACC15]');
+                setTxt('var-mkt-sentiment', `<strong>市場情緒：</strong> <span class="badge badge-neutral bg-transparent border-0 ${sentiColor} px-0" style="font-size:14px;">${sentiTag}</span> <br> ${sentimentDesc}`);
                 
-                setTxt('var-risk-confidence-list', `<li>AI 綜合風險信心指數為：<span class="text-[#D4AF37] font-bold">${data.ai?.risk?.confidence_score || '--'} / 100</span></li>`);
-                let flagsHtml = (data.ai?.risk?.flags || []).map(f => `<span class="bg-red-900/30 text-red-400 border border-red-800/50 px-2 py-1 rounded text-xs mr-2 mb-2 inline-block">${f}</span>`).join('');
-                setTxt('var-risk-flags-list', flagsHtml || `<li><span class="text-gray-500 text-sm">無特別風險警示</span></li>`);
+                setTxt('var-mkt-analyst', `<span class="material-icons rpt-icon">groups</span><strong>分析師觀點：</strong> ${data.ai?.market?.analysts || "無相關資訊"}`);
+                
+                let newsHtml = (data.ai?.market?.news || []).map(n => `<li style="margin-bottom:8px; line-height:1.5; color:#E5E7EB;"><span class="material-icons" style="color:#D4AF37; font-size:12px; vertical-align:1px; margin-right:6px;">article</span>${n}</li>`).join('');
+                setTxt('var-mkt-news', newsHtml ? `<ul style="list-style:none; padding-left:0; margin-top:8px;">${newsHtml}</ul>` : "<strong>關鍵新聞：</strong> 無最新新聞");
+                
+                setTxt('var-risk-confidence-list', `<li style="margin-bottom:8px;"><span class="material-icons rpt-icon">analytics</span><strong>AI 綜合風險信心指數：</strong> <span class="badge badge-neutral" style="font-size:13px;">${data.ai?.risk?.confidence_score || '--'} / 100</span></li>`);
+                let flagsHtml = (data.ai?.risk?.flags || []).map(f => `<span class="badge badge-fail" style="margin-right:8px; margin-bottom:8px;"><span class="material-icons" style="font-size:12px; vertical-align:-2px; margin-right:2px;">warning</span>${f}</span>`).join('');
+                setTxt('var-risk-flags-list', flagsHtml || `<span class="badge badge-neutral text-gray-400 border-gray-600 bg-transparent">無特別風險警示</span>`);
 
-                // 風險矩陣
+                // 風險矩陣的圖示也改為 Material Icons
                 let scenarios = data.ai?.risk?.scenarios || [];
-                if(scenarios.length >= 1) { setTxt('var-matrix-prob-bull', `${scenarios[0].prob}%`); setTxt('var-matrix-desc-bull', scenarios[0].desc); }
-                if(scenarios.length >= 2) { setTxt('var-matrix-prob-base', `${scenarios[1].prob}%`); setTxt('var-matrix-desc-base', scenarios[1].desc); }
-                if(scenarios.length >= 3) { setTxt('var-matrix-prob-bear', `${scenarios[2].prob}%`); setTxt('var-matrix-desc-bear', scenarios[2].desc); }
+                if(scenarios.length >= 1) { 
+                    setTxt('var-matrix-prob-bull', `<span class="material-icons" style="font-size:16px; vertical-align:-3px; color:#4ADE80; margin-right:4px;">trending_up</span><strong>牛市 (Bull)</strong><br><span style="color:#9CA3AF; font-size:12px; font-weight:normal;">${scenarios[0].prob}%</span>`); 
+                    setTxt('var-matrix-desc-bull', scenarios[0].desc); 
+                }
+                if(scenarios.length >= 2) { 
+                    setTxt('var-matrix-prob-base', `<span class="material-icons" style="font-size:16px; vertical-align:-3px; color:#FACC15; margin-right:4px;">balance</span><strong>標準 (Base)</strong><br><span style="color:#9CA3AF; font-size:12px; font-weight:normal;">${scenarios[1].prob}%</span>`); 
+                    setTxt('var-matrix-desc-base', scenarios[1].desc); 
+                }
+                if(scenarios.length >= 3) { 
+                    setTxt('var-matrix-prob-bear', `<span class="material-icons" style="font-size:16px; vertical-align:-3px; color:#F87171; margin-right:4px;">trending_down</span><strong>熊市 (Bear)</strong><br><span style="color:#9CA3AF; font-size:12px; font-weight:normal;">${scenarios[2].prob}%</span>`); 
+                    setTxt('var-matrix-desc-bear', scenarios[2].desc); 
+                }
 
-                // --- 6. 最終分析師點評 ---
-                setTxt('var-conc-price-level', `<strong>價格位階：</strong> ${data.decision?.signal || '--'}`);
-                setTxt('var-conc-gdp-signal', `<strong>總體訊號：</strong> 最新實質 GDP 年增率 ${data.ai?.gdp_yoy || '--'}`);
+                setTxt('var-conc-price-level', `<span class="material-icons rpt-icon">sell</span><strong>價格位階：</strong> ${data.decision?.signal || '--'}`);
+                setTxt('var-conc-gdp-signal', `<span class="material-icons rpt-icon">bar_chart</span><strong>總體訊號：</strong> 實質 GDP 年增率 ${data.ai?.gdp_yoy || '--'}`);
                 setTxt('var-conc-strategy', data.decision?.strategy || '無進一步建議。');
 
-                // 完成渲染
                 frame.srcdoc = doc.documentElement.outerHTML;
                 loadingDiv.style.display = 'none'; contentDiv.classList.remove('hidden');
-                
-                // 動態調整高度
                 setTimeout(() => { try { frame.style.height = (frame.contentWindow.document.body.scrollHeight + 50) + 'px'; } catch(e) { frame.style.height = '1500px'; } }, 800);
             } else {
                 window.showAlert(`找不到雲端報告，請點擊上方「同步」按鈕重新產生。`);
