@@ -1,5 +1,5 @@
 <!-- 
-  [VER] v5.2 (2026-02-23)
+  [VER] v5.2.1 (2026-02-23)
   [DESC] Html/CSS/JS 重構，優化行動裝置體驗，新增觀察名單功能
     1. 剝離核心邏輯至獨立 JS 模組，提升維護性與可擴展性
     2. 收藏植入溫度計、鉛筆圖示，並重新編排日期與報酬率的位置
@@ -220,14 +220,14 @@
                 <div class="flex items-center gap-2 mb-2 pr-8">
                     <span id="fav-detail-market" class="text-[13.5px] px-2 py-0.5 rounded font-bold uppercase tracking-tighter">TAG</span>
                 </div>
-                <div class="flex justify-between items-baseline border-b border-gray-800 pb-5">
-                    <div class="flex items-baseline gap-2 overflow-hidden">
+                <div class="flex justify-between items-center border-b border-gray-800 pb-5">
+                    <div class="flex items-center gap-2 overflow-hidden">
                         <h2 id="fav-detail-symbol" class="text-2xl font-bold text-white font-mono leading-none flex-shrink-0">--</h2>
-                        <h2 id="fav-detail-name" class="text-2xl font-bold text-[#E5E7EB] truncate">--</h2>
-                        <button onclick="window.pickService.editFavoriteName()" class="text-gray-500 hover:text-[#D4AF37] p-1"><span class="material-icons text-base">edit</span></button>
+                        <h2 id="fav-detail-name" class="text-2xl font-bold text-[#E5E7EB] truncate leading-none">--</h2>
+                        <button onclick="window.pickService.editFavoriteName()" class="text-gray-500 hover:text-[#D4AF37] p-1 flex items-center"><span class="material-icons text-base">edit</span></button>
                     </div>
-                    <div class="flex flex-col items-end">
-                        <span class="text-[10px] text-gray-500 font-bold tracking-widest uppercase mb-1">預期報酬率</span>
+                    <div class="flex items-baseline gap-1.5 flex-shrink-0">
+                        <span class="text-[11px] text-gray-500 font-bold tracking-wider">ExpRE</span>
                         <div id="fav-detail-exp-top" class="text-2xl font-bold tracking-tighter leading-none text-white font-mono">--%</div>
                     </div>
                 </div>
