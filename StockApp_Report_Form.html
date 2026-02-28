@@ -1,8 +1,9 @@
 <!-- 
-  [VER] v6.0 [DATE] 2026-02-23
+  [VER] v6.1 [DATE] 2026-02-23
   [DESC]  
   1. 沉穩配色的 Badge、全域表格置中、H3 左側配色邊線，並移除了所有冗餘圖示與市場情緒小標
--->
+  2. 下載按鈕
+  -->
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -135,6 +136,12 @@
 </head>
 <body>
 <div class="container">
+    
+    <div class="card header-card">
+        <div class="report-date-stamp" id="var-report-date">YYYY/MM/DD</div>
+        <button class="btn-header-download no-print" onclick="downloadReport()" title="下載報告">
+            <i class="fas fa-download"></i> 下載
+        </button>
     
     <div class="card header-card">
         <div class="report-date-stamp" id="var-report-date">YYYY/MM/DD</div>
