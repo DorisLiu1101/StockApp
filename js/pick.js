@@ -1,8 +1,7 @@
 /**
- * [VER] v2.0 [2026-02-23]
- * [DESC] 名稱編輯功能，並驅動溫度計的滑動與顏色運算
+ * [VER] v2.0.0 [2026-03-16]
+ * [DESC] 配合 SPA 架構，加入列表渲染防呆機制，並導出 forceRender 功能供切換分頁時重繪
  */
-
 window.pickService = (function() {
     let favoritesData = []; 
     let currentFilter = 'ALL';
@@ -10,6 +9,9 @@ window.pickService = (function() {
 
     function renderList(list) {
         const container = document.getElementById('pick-list-container');
+        // [加入防呆保護]：如果畫面上沒有收藏列表容器 (例如切換到其他分頁了)，就中止執行
+        if (!container) return;
+
         if (!list || list.length === 0) {
             container.innerHTML = "<p class='text-center text-gray-600 text-sm py-10 uppercase tracking-widest'>目前無收藏個股</p>";
             return;
@@ -22,7 +24,6 @@ window.pickService = (function() {
             else if(item.market === 'US') badgeClass = "bg-yellow-950 text-yellow-300 border-yellow-800";
             else if(item.market === 'JP') badgeClass = "bg-red-950 text-red-300 border-red-800";
 
-            // 點擊事件改為開啟「專屬收藏視窗」
             html += `
             <div onclick="window.pickService.openFavoriteDetail('${item.market}', '${item.symbol}')" class="app-card py-[5px] px-[10px] flex justify-between items-center shadow-sm border border-[#333] hover:border-gold cursor-pointer transition-colors my-[10px] mx-[5px] min-h-[50px] active:scale-[0.98]">
                 <div class="flex items-center gap-2 overflow-hidden w-[55%]">
@@ -79,7 +80,6 @@ window.pickService = (function() {
         if (data && Array.isArray(data)) { favoritesData = data; applyFilterAndSort(); }
     }
 
-    // --- 全新：專屬收藏視窗邏輯 ---
     function openFavoriteDetail(market, symbol) {
         if(window.pushModalState) window.pushModalState('fav-detail');
         const stock = favoritesData.find(s => s.market === market && s.symbol === symbol);
@@ -96,16 +96,11 @@ window.pickService = (function() {
         document.getElementById('fav-detail-symbol').innerText = symbol;
         document.getElementById('fav-detail-name').innerText = stock.name || '--';
         
-        // [修改 2] 右上方顯示預期報酬率與動態顏色
         const expEl = document.getElementById('fav-detail-exp-top');
         expEl.innerText = stock.expReturn ? stock.expReturn + '%' : '--';
         if (Number(stock.expReturn) >= 0) expEl.className = "text-2xl font-bold tracking-tighter leading-none text-[#EF4444] font-mono";
         else expEl.className = "text-2xl font-bold tracking-tighter leading-none text-[#22C55E] font-mono";
 
-        // [修改 3] 報告日期
-        document.getElementById('fav-detail-date').innerText = stock.reportDate || '--';
-
-        // [修改 4] 股價溫度計邏輯
         const price = Number(stock.price) || 0; const cheap = Number(stock.cheap) || 0; const pricey = Number(stock.pricey) || 0;
         const thermSection = document.getElementById('fav-thermometer-section');
         if (cheap > 0 && pricey > 0) {
@@ -144,7 +139,6 @@ window.pickService = (function() {
         if(fromPop !== true && typeof history.back === 'function') history.back();
     }
 
-    // [修改 1] 新增修改名稱功能
     function editFavoriteName() {
         const nameEl = document.getElementById('fav-detail-name');
         if (nameEl.querySelector('input')) return; 
@@ -162,7 +156,7 @@ window.pickService = (function() {
             const json = await res.json(); 
             if(json.success) { 
                 nameEl.innerText = newName; 
-                if(window.manualSync) window.manualSync(); // 觸發全域重新抓取以更新列表
+                if(window.manualSync) window.manualSync(); 
             } else throw new Error(json.message); 
         } catch(e) { window.showAlert("更新失敗: " + e.message); nameEl.innerText = oldName || '--'; } 
     }
@@ -171,9 +165,9 @@ window.pickService = (function() {
         window.showAlert("提示：移除收藏功能正在後端建置中，稍後更新即可使用！", "建構中");
     }
 
-    // 匯出新增加的方法
     return {
         addFavorite, toggleFilter, setMarketFilter, toggleSort, setSortField, toggleSortOrder, setFavoritesData,
-        openFavoriteDetail, closeFavoriteDetail, removeFavorite, editFavoriteName, cancelInlineFavName, saveInlineFavName
+        openFavoriteDetail, closeFavoriteDetail, removeFavorite, editFavoriteName, cancelInlineFavName, saveInlineFavName,
+        forceRender: applyFilterAndSort // [導出渲染接口]：讓主程式可以在切換分頁後強制重繪畫面
     };
 })();

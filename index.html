@@ -1,9 +1,3 @@
-<!-- 
-  [VER] v5.2.1 (2026-02-23)
-  [DESC] Html/CSS/JS 重構，優化行動裝置體驗，新增觀察名單功能
-    1. 剝離核心邏輯至獨立 JS 模組，提升維護性與可擴展性
-    2. 收藏植入溫度計、鉛筆圖示，並重新編排日期與報酬率的位置
--->
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -47,12 +41,13 @@
         .custom-dropdown { background-color: #1E1E1E; border: 1px solid #4B5563; border-radius: 0.75rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); overflow: hidden; z-index: 60; min-width: 180px; }
         .custom-dropdown-item { width: 100%; text-align: left; padding: 1rem 1.25rem; font-size: 0.875rem; color: #E5E7EB; border-bottom: 1px solid #374151; display: block; }
         .custom-dropdown-item:hover { background-color: rgba(212, 175, 55, 0.2); color: #D4AF37; }
-        .tx-btn { height: 40px; border-radius: 6px; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: center; border: 1px solid transparent; cursor: pointer; }
+        .tx-btn { height: 40px; border-radius: 6px; font-size: 0.9rem; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 1px solid transparent; cursor: pointer; }
         .tx-btn-buy-active { background-color: #DC2626 !important; color: white !important; border-color: #EF4444 !important; }
         .tx-btn-sell-active { background-color: #16A34A !important; color: white !important; border-color: #22C55E !important; }
         .tx-btn-inactive { background-color: #1F1F1F; color: #6B7280; border-color: #333; }
         .therm-track { height: 8px; background: linear-gradient(90deg, #22C55E 0%, #EAB308 50%, #EF4444 100%); border-radius: 4px; position: relative; width: 100%; }
         .therm-indicator-line { position: absolute; top: -10px; bottom: -10px; width: 2.5px; background-color: #FFF; box-shadow: 0 0 6px rgba(0,0,0,1); transform: translateX(-50%); z-index: 10; transition: left 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -63,9 +58,6 @@
                 <h1 class="text-2xl font-bold tracking-wider text-gray-100 font-sans">維股利</h1>
             </div>
             <div class="flex gap-3 items-center">
-                <button onclick="window.navToPage('home')" id="header-nav-home" class="flex items-center justify-center text-gold hover:text-[#FFE082] transition-colors focus:outline-none bg-transparent active:scale-95">
-                    <span class="material-icons text-[26px]">dashboard</span>
-                </button>
                 <button id="btn-login" class="hidden px-3 py-1.5 bg-[#111] border border-gold text-gold text-xs font-bold rounded" onclick="window.loginGoogle()">Login</button>
                 <div id="user-menu-container" class="relative hidden">
                     <button onclick="window.toggleUserMenu()" class="flex items-center justify-center relative w-9 h-9 rounded-full border border-gray-600 overflow-hidden focus:outline-none focus:border-gold hover:border-gold transition-colors bg-[#1A1A1A]">
@@ -78,12 +70,11 @@
                             <p id="menu-user-name" class="text-sm text-white font-bold truncate">User</p>
                         </div>
                         <div class="py-1">
-                            <button onclick="window.manualSync()" class="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-[#D4AF37] hover:text-black transition flex items-center gap-3">
-                                <span id="sync-icon" class="material-icons text-[18px]">sync</span> <span class="font-medium" id="sync-text">立即同步</span>
-                            </button>
+                            <button onclick="window.manualSync()" class="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-[#D4AF37] hover:text-black transition flex items-center gap-3"><span id="sync-icon" class="material-icons text-[18px]">sync</span> <span class="font-medium" id="sync-text">立即同步</span></button>
                             <div class="border-t border-[#333] my-1"></div>
                             <button onclick="window.openSettings()" class="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-[#D4AF37] hover:text-black transition flex items-center gap-3"><span class="material-icons text-[18px]">settings</span> <span class="font-medium">資料來源設定</span></button>
                             <button onclick="window.openHelp()" class="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-[#D4AF37] hover:text-black transition flex items-center gap-3"><span class="material-icons text-[18px]">help_outline</span> <span class="font-medium">使用說明</span></button>
+                            <button id="btn-admin-panel" onclick="window.navToPage('admin'); window.toggleUserMenu();" class="hidden w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-[#D4AF37] hover:text-black transition flex items-center gap-3"><span class="material-icons text-[18px]">admin_panel_settings</span> <span class="font-medium">管理者頁面</span></button>
                             <div class="border-t border-[#333] my-1"></div>
                             <button onclick="window.logout()" class="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-900/20 transition flex items-center gap-3"><span class="material-icons text-[18px]">logout</span> <span class="font-medium">登出帳戶</span></button>
                         </div>
@@ -94,202 +85,21 @@
         </div>
     </header>
 
-    <main class="w-full max-w-md md:max-w-7xl mx-auto p-4 space-y-6 min-h-screen">
-        <section id="page-home" class="active space-y-6 md:space-y-0 md:grid md:grid-cols-2 md:gap-6 lg:gap-8">
-            <div class="app-card p-6 relative overflow-hidden">
-                <div class="absolute -right-6 -top-6 opacity-10"><span class="material-icons text-9xl text-gold">account_balance</span></div>
-                <div class="relative z-10">
-                    <div class="flex items-center gap-2 mb-3"><span class="text-xs text-gold uppercase tracking-widest border border-gold px-2 py-0.5 rounded font-bold">Total Assets</span></div>
-                    <div class="flex items-baseline gap-2 mb-8"><span class="text-xl text-gray-400 font-serif">NT$</span><span id="total-asset" class="text-5xl font-light text-white tracking-wide">--</span></div>
-                    <div class="grid grid-cols-3 gap-4 border-t border-[#333] pt-5">
-                        <div><div class="text-xs text-gray-400 mb-1 uppercase font-bold">損益</div><div id="daily-profit" class="text-gray-200 font-bold text-lg">--</div></div>
-                        <div class="border-l border-[#333] pl-4"><div class="text-xs text-gray-400 mb-1 uppercase font-bold">報酬</div><div id="total-return" class="text-gray-200 font-bold text-lg">--</div></div>
-                        <div class="border-l border-[#333] pl-4"><div class="text-xs text-gray-400 mb-1 uppercase font-bold">現金</div><div id="cash-level" class="text-gray-200 font-bold text-lg">--</div></div>
-                    </div>
-                </div>
-            </div>
-            <div class="app-card p-6 flex flex-col justify-center">
-                <div class="flex justify-between items-center mb-5 relative min-h-[32px]">
-                    <h2 class="text-sm font-bold text-gray-300 uppercase tracking-widest">Portfolio</h2>
-                    <div class="relative">
-                        <select onchange="window.portfolioService.updateHomeChart(this.value)" class="bg-[#1A1A1A] text-[#D4AF37] border border-[#D4AF37]/40 rounded-lg px-3 py-1.5 text-xs font-bold tracking-widest focus:outline-none appearance-none pr-9 cursor-pointer hover:border-[#D4AF37] shadow-sm">
-                            <option value="ALL">ALL</option><option value="TW">TW</option><option value="US">US</option><option value="JP">JP</option>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#D4AF37]"><span class="material-icons text-sm">expand_more</span></div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-8 justify-center md:justify-start">
-                    <div id="portfolio-chart" class="w-[140px] h-[140px] rounded-full relative flex justify-center items-center shadow-[0_0_20px_rgba(0,0,0,0.5)] transition-all duration-500" style="background: conic-gradient(#222 0% 100%);">
-                        <div class="w-[100px] h-[100px] bg-[#121212] rounded-full absolute flex flex-col justify-center items-center"><span id="chart-center-text" class="text-2xl font-bold text-gold">--%</span></div>
-                    </div>
-                    <div class="flex-1 space-y-3 min-w-[120px]" id="sector-legend"></div>
-                </div>
-            </div>
-        </section>
-
-        <section id="page-screen" class="hidden flex flex-col items-center justify-center min-h-[60vh] opacity-80 pb-24">
-            <span class="material-icons text-[80px] mb-4 text-[#D4AF37] opacity-30">construction</span>
-            <h2 class="text-2xl font-bold tracking-widest uppercase text-gray-300 mb-2">建構中</h2>
-            <p class="text-sm font-mono text-gray-500">篩選股池功能即將上線</p>
-        </section>
-
-        <section id="page-list" class="hidden space-y-2">
-            <div class="sticky top-0 bg-[#000] pt-1 pb-3 z-10 space-y-3 shadow-lg -mx-4 px-4 md:mx-0 md:px-0 md:bg-transparent md:shadow-none">
-                <div class="relative">
-                    <span class="material-icons absolute left-3 top-3.5 text-gray-400 text-xl">search</span>
-                    <input type="text" id="stock-search" oninput="window.portfolioService.filterStocks()" placeholder="搜尋代號或名稱..." class="w-full bg-[#121212] border border-[#333] text-gray-100 pl-11 pr-4 py-3 rounded-lg text-base focus:border-gold outline-none">
-                </div>
-                <div class="flex justify-between items-center px-1 relative z-20">
-                    <div class="relative">
-                        <button onclick="window.portfolioService.toggleFilterMenu()" class="flex items-center gap-1 text-sm bg-[#1A1A1A] border border-[#333] text-gray-300 px-4 py-2 rounded-lg hover:border-gold hover:text-gold shadow-sm">
-                            <span class="material-icons text-base">filter_list</span><span id="current-filter-label">全部市場</span><span class="material-icons text-xs ml-1">arrow_drop_down</span>
-                        </button>
-                        <div id="filter-menu" class="hidden absolute top-full mt-2 left-0 custom-dropdown">
-                            <button onclick="window.portfolioService.setMarketFilter('ALL')" class="custom-dropdown-item">全部市場</button><button onclick="window.portfolioService.setMarketFilter('TW')" class="custom-dropdown-item">🇹🇼 台股</button><button onclick="window.portfolioService.setMarketFilter('US')" class="custom-dropdown-item">🇺🇸 美股</button><button onclick="window.portfolioService.setMarketFilter('JP')" class="custom-dropdown-item">🇯🇵 日股</button>
-                        </div>
-                        <div id="filter-overlay" onclick="window.portfolioService.toggleFilterMenu()" class="hidden fixed inset-0 z-40"></div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="relative">
-                            <button onclick="window.portfolioService.toggleSortMenu()" class="flex items-center gap-1 text-sm bg-[#1A1A1A] border border-[#333] text-gray-300 px-4 py-2 rounded-l-lg border-r-0 hover:border-gold hover:text-gold shadow-sm">
-                                <span class="material-icons text-base">sort</span><span id="current-sort-field-label">損益</span>
-                            </button>
-                            <div id="sort-menu" class="hidden absolute top-full mt-2 right-0 custom-dropdown">
-                                <button onclick="window.portfolioService.setSortField('gain')" class="custom-dropdown-item">損益</button><button onclick="window.portfolioService.setSortField('weight')" class="custom-dropdown-item">佔比</button><button onclick="window.portfolioService.setSortField('expReturn')" class="custom-dropdown-item">預期報酬</button><button onclick="window.portfolioService.setSortField('symbol')" class="custom-dropdown-item">股號</button>
-                            </div>
-                            <div id="sort-overlay" onclick="window.portfolioService.toggleSortMenu()" class="hidden fixed inset-0 z-40"></div>
-                        </div>
-                        <button onclick="window.portfolioService.toggleSortOrder()" class="flex items-center justify-center text-sm bg-[#1A1A1A] border border-[#333] text-gray-300 px-3 py-2 rounded-r-lg hover:border-gold hover:text-gold shadow-sm">
-                            <span id="sort-arrow-icon" class="material-icons text-base">arrow_downward</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div id="stock-list-container" class="md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 pb-24"></div>
-        </section>
-
-        <section id="page-pick" class="hidden space-y-4">
-            <div class="app-card p-4 bg-[#111]">
-                <label class="text-[10px] text-gray-400 font-bold tracking-wide mb-2 block uppercase">加入觀察名單</label>
-                <div class="flex gap-2">
-                    <div class="w-[70px] flex-shrink-0">
-                        <select id="pick-market" class="w-full bg-[#050505] border border-[#333] rounded px-1 py-2 text-center text-sm text-white focus:border-gold outline-none h-[42px] font-bold tracking-wider appearance-none"><option value="TW">TW</option><option value="US">US</option><option value="JP">JP</option></select>
-                    </div>
-                    <div class="flex-1">
-                        <input type="text" id="pick-symbol" class="w-full bg-[#050505] border border-[#333] rounded px-3 py-2 text-sm text-white focus:border-gold outline-none h-[42px] font-mono placeholder-gray-600 uppercase" placeholder="輸入股號...">
-                    </div>
-                    <button onclick="window.pickService.addFavorite()" class="w-[80px] bg-gold hover:bg-[#FFE082] text-black font-bold rounded text-sm tracking-widest shadow-lg flex-shrink-0 h-[42px]">加入</button>
-                </div>
-            </div>
-            <div class="flex justify-between items-center relative z-20 px-1">
-                <div class="relative">
-                    <button onclick="window.pickService.toggleFilter()" class="flex items-center gap-1 text-xs bg-[#1A1A1A] border border-[#333] text-gray-300 px-3 py-1.5 rounded hover:border-gold hover:text-gold shadow-sm">
-                        <span class="material-icons text-[14px]">filter_list</span><span id="pick-filter-label">全部</span><span class="material-icons text-[12px] ml-1">arrow_drop_down</span>
-                    </button>
-                    <div id="pick-filter-menu" class="hidden absolute top-full mt-1 left-0 custom-dropdown min-w-[120px]">
-                        <button onclick="window.pickService.setMarketFilter('ALL')" class="custom-dropdown-item py-2">全部市場</button>
-                        <button onclick="window.pickService.setMarketFilter('TW')" class="custom-dropdown-item py-2">🇹🇼 台股</button><button onclick="window.pickService.setMarketFilter('US')" class="custom-dropdown-item py-2">🇺🇸 美股</button><button onclick="window.pickService.setMarketFilter('JP')" class="custom-dropdown-item py-2">🇯🇵 日股</button>
-                    </div>
-                    <div id="pick-filter-overlay" onclick="window.pickService.toggleFilter()" class="hidden fixed inset-0 z-40"></div>
-                </div>
-                <div class="flex items-center gap-1">
-                    <div class="relative">
-                        <button onclick="window.pickService.toggleSort()" class="flex items-center gap-1 text-xs bg-[#1A1A1A] border border-[#333] text-gray-300 px-3 py-1.5 rounded-l border-r-0 hover:border-gold hover:text-gold shadow-sm">
-                            <span class="material-icons text-[14px]">sort</span><span id="pick-sort-label">股號</span>
-                        </button>
-                        <div id="pick-sort-menu" class="hidden absolute top-full mt-1 right-0 custom-dropdown min-w-[120px]">
-                            <button onclick="window.pickService.setSortField('symbol')" class="custom-dropdown-item py-2">股號</button><button onclick="window.pickService.setSortField('expReturn')" class="custom-dropdown-item py-2">預期報酬</button>
-                        </div>
-                        <div id="pick-sort-overlay" onclick="window.pickService.toggleSort()" class="hidden fixed inset-0 z-40"></div>
-                    </div>
-                    <button onclick="window.pickService.toggleSortOrder()" class="flex items-center justify-center text-xs bg-[#1A1A1A] border border-[#333] text-gray-300 px-2 py-1.5 rounded-r hover:border-gold hover:text-gold shadow-sm">
-                        <span id="pick-sort-arrow" class="material-icons text-[14px]">arrow_downward</span>
-                    </button>
-                </div>
-            </div>
-            <div id="pick-list-container" class="space-y-2 pb-24"></div>
-        </section>
-    </main>
+    <main id="app-main-container" class="w-full max-w-md md:max-w-7xl mx-auto p-4 min-h-screen"></main>
 
     <div id="detail-modal" class="modal-fullscreen fixed inset-0 z-[55] bg-[#000] flex flex-col"><div class="flex-1 overflow-y-auto p-5 pb-10 hide-scrollbar"><div class="relative mb-6 pt-4"><button onclick="window.portfolioService.closeStockDetail()" class="absolute -top-1 -right-2 p-2 text-gray-500 hover:text-white z-10 focus:outline-none"><span class="material-icons text-2xl">close</span></button><div class="flex items-center gap-2 mb-2 pr-8"><span id="detail-market-tag" class="text-[13.5px] px-2 py-0.5 rounded font-bold uppercase tracking-tighter">TAG</span><span id="detail-sector" class="text-[13.5px] text-[#D4AF37] tracking-widest uppercase font-bold">SECTOR</span></div><div class="flex justify-between items-baseline"><div class="flex items-baseline gap-2 overflow-hidden"><h2 id="detail-symbol" class="text-2xl font-bold text-white font-mono leading-none">--</h2><h2 id="detail-name" class="text-2xl font-bold text-[#E5E7EB] truncate">--</h2><button onclick="window.portfolioService.editStockName()" class="text-gray-500 hover:text-[#D4AF37] p-1"><span class="material-icons text-base">edit</span></button></div><div id="detail-roi" class="text-2xl font-bold tracking-tighter leading-none ml-4">--%</div></div></div><div class="mb-10"><div class="flex items-center justify-between mb-6 border-t border-gray-800 pt-6"><div class="flex items-center gap-2"><span class="material-icons text-[#D4AF37]">pie_chart</span><h3 class="text-[13.5px] font-bold text-blue-100 tracking-[0.2em] uppercase">PORTFOLIO STATISTICS</h3></div><button id="btn-header-edit" class="flex items-center px-3 py-1 rounded bg-[#1A1A1A] border border-gray-600 text-gray-300 text-[10px] font-bold tracking-widest">EDIT</button></div><div class="grid grid-cols-3 gap-y-10 gap-x-2 text-center"><div><div class="text-label-grey mb-2">股數</div><div id="detail-qty" class="text-val-lg text-[#D4AF37]">--</div></div><div><div class="text-label-grey mb-2">平均成本</div><div id="detail-cost" class="text-val-lg text-[#D4AF37]">--</div></div><div><div class="text-label-grey mb-2">預期報酬率</div><div id="detail-exp-return-grid" class="text-val-lg text-[#D4AF37]">--%</div></div><div><div class="text-label-grey mb-2">持有總成本</div><div id="detail-cost-twd-primary" class="text-val-md">--</div><div id="detail-cost-twd-secondary" class="text-[13px] text-gray-500 font-mono mt-1.5">--</div></div><div><div class="text-label-grey mb-2">市場價值</div><div id="detail-market-primary" class="text-val-md">--</div><div id="detail-market-secondary" class="text-[13px] text-gray-500 font-mono mt-1.5">--</div></div><div><div class="text-label-grey mb-2">未實現損益</div><div id="detail-gain-primary" class="text-val-md">--</div><div id="detail-gain-secondary" class="text-[13px] font-bold font-mono mt-1.5">--</div></div></div></div><div id="thermometer-section" class="mb-12 pt-4 hidden"><div class="flex items-center justify-between gap-6"><div class="flex flex-col items-center"><span class="text-label-grey mb-2 text-green-500 font-bold">淑價</span><span id="val-cheap" class="text-xl font-mono font-bold text-green-500 leading-none">--</span></div><div class="flex-1 relative h-20 flex flex-col justify-center"><div id="therm-pointer-top" class="absolute top-0 w-full h-6"><div id="therm-current-label" class="absolute bg-[#D4AF37] text-black text-[11px] font-black px-2 py-0.5 rounded shadow-lg z-20 transform -translate-x-1/2 top-0">現價</div></div><div class="therm-track w-full relative"><div id="therm-indicator-line" class="therm-indicator-line"></div></div><div id="therm-pointer-bottom" class="absolute bottom-0 w-full h-6"><div id="detail-price-text" class="absolute bottom-0 transform -translate-x-1/2 text-white font-mono font-bold text-xl text-center w-24 leading-none">--</div></div></div><div class="flex flex-col items-center"><span class="text-label-grey mb-2 text-red-500 font-bold">貴價</span><span id="val-pricey" class="text-xl font-mono font-bold text-red-500 leading-none">--</span></div></div></div><div class="mb-12"><div class="flex flex-wrap justify-between items-center gap-y-3 mb-4 w-full"><div class="flex items-center gap-4"><button onclick="window.reportService.loadReport('')" class="px-4 py-2 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black text-[#D4AF37] text-[12px] font-bold tracking-widest rounded border border-[#D4AF37]/30 flex items-center gap-2"><span class="material-icons text-base">search</span> 讀取報告</button><div class="text-[12px] text-gray-400 font-mono">報告日期：<span id="detail-report-date">--</span><span id="debug-symbol" class="hidden">--</span></div></div><button onclick="window.reportService.generateAndSaveReport('')" class="w-9 h-9 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black text-[#D4AF37] rounded border border-[#D4AF37]/30 flex items-center justify-center"><span class="material-icons text-lg">sync</span></button></div><div id="report-section" class="rounded-xl overflow-hidden relative min-h-[0px]"><div id="report-loading" class="hidden flex-col items-center py-10"><span class="material-icons animate-spin text-[#D4AF37] mb-3 text-4xl">sync</span><p id="report-loading-text" class="text-[13px] text-gray-500 tracking-[0.3em] font-bold">PROCESSING...</p></div><div id="report-content" class="w-full hidden bg-transparent"><iframe id="report-frame" class="w-full border-none block" scrolling="no"></iframe></div></div></div></div></div>
-
-    <div id="favorite-detail-modal" class="modal-fullscreen fixed inset-0 z-[55] bg-[#000] flex flex-col">
-        <div class="flex-1 overflow-y-auto p-5 pb-10 hide-scrollbar">
-            <div class="relative mb-6 pt-4">
-                <button onclick="window.pickService.closeFavoriteDetail()" class="absolute -top-1 -right-2 p-2 text-gray-500 hover:text-white z-10 focus:outline-none"><span class="material-icons text-2xl">close</span></button>
-                <div class="flex items-center gap-2 mb-2 pr-8">
-                    <span id="fav-detail-market" class="text-[13.5px] px-2 py-0.5 rounded font-bold uppercase tracking-tighter">TAG</span>
-                </div>
-                <div class="flex justify-between items-center border-b border-gray-800 pb-5">
-                    <div class="flex items-center gap-2 overflow-hidden">
-                        <h2 id="fav-detail-symbol" class="text-2xl font-bold text-white font-mono leading-none flex-shrink-0">--</h2>
-                        <h2 id="fav-detail-name" class="text-2xl font-bold text-[#E5E7EB] truncate leading-none">--</h2>
-                        <button onclick="window.pickService.editFavoriteName()" class="text-gray-500 hover:text-[#D4AF37] p-1 flex items-center"><span class="material-icons text-base">edit</span></button>
-                    </div>
-                    <div class="flex items-baseline gap-1.5 flex-shrink-0">
-                        <span class="text-[11px] text-gray-500 font-bold tracking-wider">ExpRE</span>
-                        <div id="fav-detail-exp-top" class="text-2xl font-bold tracking-tighter leading-none text-white font-mono">--%</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="fav-thermometer-section" class="mb-10 pt-2 hidden">
-                <div class="flex items-center justify-between gap-6">
-                    <div class="flex flex-col items-center">
-                        <span class="text-label-grey mb-2 text-green-500 font-bold">淑價</span>
-                        <span id="fav-val-cheap" class="text-xl font-mono font-bold text-green-500 leading-none">--</span>
-                    </div>
-                    <div class="flex-1 relative h-20 flex flex-col justify-center">
-                        <div id="fav-therm-pointer-top" class="absolute top-0 w-full h-6">
-                            <div id="fav-therm-current-label" class="absolute bg-[#D4AF37] text-black text-[11px] font-black px-2 py-0.5 rounded shadow-lg z-20 transform -translate-x-1/2 top-0">現價</div>
-                        </div>
-                        <div class="therm-track w-full relative">
-                            <div id="fav-therm-indicator-line" class="therm-indicator-line"></div>
-                        </div>
-                        <div id="fav-therm-pointer-bottom" class="absolute bottom-0 w-full h-6">
-                            <div id="fav-detail-price-text" class="absolute bottom-0 transform -translate-x-1/2 text-white font-mono font-bold text-xl text-center w-24 leading-none">--</div>
-                        </div>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <span class="text-label-grey mb-2 text-red-500 font-bold">貴價</span>
-                        <span id="fav-val-pricey" class="text-xl font-mono font-bold text-red-500 leading-none">--</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex gap-3 mb-10 mt-2">
-                <button onclick="window.pickService.removeFavorite()" class="flex-1 bg-[#1A1A1A] text-red-400 border border-[#333] py-2.5 rounded-lg font-bold tracking-widest flex items-center justify-center gap-2 text-sm hover:border-red-800 transition"><span class="material-icons text-base">delete_outline</span> 移除收藏</button>
-                <button onclick="window.txService.openTransactionModal(window.appState.currentDetailMarket, window.appState.currentDetailSymbol)" class="flex-1 bg-gold text-black py-2.5 rounded-lg font-bold tracking-widest flex items-center justify-center gap-2 text-sm shadow-lg hover:bg-[#FFE082] transition"><span class="material-icons text-base">add_shopping_cart</span> 建立庫存</button>
-            </div>
-
-            <div class="mb-12">
-                <div class="flex flex-wrap justify-between items-center gap-y-3 mb-4 w-full border-t border-gray-800 pt-6">
-                    <div class="flex items-center gap-4">
-                        <button onclick="window.reportService.loadReport('fav-')" class="px-4 py-2 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black transition-all text-[#D4AF37] text-[12px] font-bold tracking-widest rounded border border-[#D4AF37]/30 flex items-center gap-2 shadow-lg focus:outline-none"><span class="material-icons text-base">search</span> 讀取報告</button>
-                        <div class="text-[12px] text-gray-400 font-mono">報告日期：<span id="fav-detail-date">--</span></div>
-                    </div>
-                    <button onclick="window.reportService.generateAndSaveReport('fav-')" class="w-9 h-9 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black transition-all text-[#D4AF37] rounded border border-[#D4AF37]/30 flex items-center justify-center shadow-lg focus:outline-none active:scale-95"><span class="material-icons text-lg">sync</span></button>
-                </div>
-                <div id="fav-report-section" class="rounded-xl overflow-hidden relative min-h-[0px]">
-                    <div id="fav-report-loading" class="hidden flex-col items-center py-10"><span class="material-icons animate-spin text-[#D4AF37] mb-3 text-4xl">sync</span><p id="fav-report-loading-text" class="text-[13px] text-gray-500 tracking-[0.3em] font-bold">PROCESSING...</p></div>
-                    <div id="fav-report-content" class="w-full hidden bg-transparent"><iframe id="fav-report-frame" class="w-full border-none block" scrolling="no"></iframe></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <div id="favorite-detail-modal" class="modal-fullscreen fixed inset-0 z-[55] bg-[#000] flex flex-col"><div class="flex-1 overflow-y-auto p-5 pb-10 hide-scrollbar"><div class="relative mb-6 pt-4"><button onclick="window.pickService.closeFavoriteDetail()" class="absolute -top-1 -right-2 p-2 text-gray-500 hover:text-white z-10 focus:outline-none"><span class="material-icons text-2xl">close</span></button><div class="flex items-center gap-2 mb-2 pr-8"><span id="fav-detail-market" class="text-[13.5px] px-2 py-0.5 rounded font-bold uppercase tracking-tighter">TAG</span></div><div class="flex justify-between items-center border-b border-gray-800 pb-5"><div class="flex items-center gap-2 overflow-hidden"><h2 id="fav-detail-symbol" class="text-2xl font-bold text-white font-mono leading-none flex-shrink-0">--</h2><h2 id="fav-detail-name" class="text-2xl font-bold text-[#E5E7EB] truncate leading-none">--</h2><button onclick="window.pickService.editFavoriteName()" class="text-gray-500 hover:text-[#D4AF37] p-1 flex items-center"><span class="material-icons text-base">edit</span></button></div><div class="flex items-baseline gap-1.5 flex-shrink-0"><span class="text-[11px] text-gray-500 font-bold tracking-wider">ExpRE</span><div id="fav-detail-exp-top" class="text-2xl font-bold tracking-tighter leading-none text-white font-mono">--%</div></div></div></div><div id="fav-thermometer-section" class="mb-10 pt-2 hidden"><div class="flex items-center justify-between gap-6"><div class="flex flex-col items-center"><span class="text-label-grey mb-2 text-green-500 font-bold">淑價</span><span id="fav-val-cheap" class="text-xl font-mono font-bold text-green-500 leading-none">--</span></div><div class="flex-1 relative h-20 flex flex-col justify-center"><div id="fav-therm-pointer-top" class="absolute top-0 w-full h-6"><div id="fav-therm-current-label" class="absolute bg-[#D4AF37] text-black text-[11px] font-black px-2 py-0.5 rounded shadow-lg z-20 transform -translate-x-1/2 top-0">現價</div></div><div class="therm-track w-full relative"><div id="fav-therm-indicator-line" class="therm-indicator-line"></div></div><div id="fav-therm-pointer-bottom" class="absolute bottom-0 w-full h-6"><div id="fav-detail-price-text" class="absolute bottom-0 transform -translate-x-1/2 text-white font-mono font-bold text-xl text-center w-24 leading-none">--</div></div></div><div class="flex flex-col items-center"><span class="text-label-grey mb-2 text-red-500 font-bold">貴價</span><span id="fav-val-pricey" class="text-xl font-mono font-bold text-red-500 leading-none">--</span></div></div></div><div class="flex gap-3 mb-10 mt-2"><button onclick="window.pickService.removeFavorite()" class="flex-1 bg-[#1A1A1A] text-red-400 border border-[#333] py-2.5 rounded-lg font-bold tracking-widest flex items-center justify-center gap-2 text-sm hover:border-red-800 transition"><span class="material-icons text-base">delete_outline</span> 移除收藏</button><button onclick="window.txService.openTransactionModal(window.appState.currentDetailMarket, window.appState.currentDetailSymbol)" class="flex-1 bg-gold text-black py-2.5 rounded-lg font-bold tracking-widest flex items-center justify-center gap-2 text-sm shadow-lg hover:bg-[#FFE082] transition"><span class="material-icons text-base">add_shopping_cart</span> 建立庫存</button></div><div class="mb-12"><div class="flex flex-wrap justify-between items-center gap-y-3 mb-4 w-full border-t border-gray-800 pt-6"><div class="flex items-center gap-4"><button onclick="window.reportService.loadReport('fav-')" class="px-4 py-2 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black transition-all text-[#D4AF37] text-[12px] font-bold tracking-widest rounded border border-[#D4AF37]/30 flex items-center gap-2 shadow-lg focus:outline-none"><span class="material-icons text-base">search</span> 讀取報告</button><div class="text-[12px] text-gray-400 font-mono">報告日期：<span id="fav-detail-date">--</span></div></div><button onclick="window.reportService.generateAndSaveReport('fav-')" class="w-9 h-9 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black transition-all text-[#D4AF37] rounded border border-[#D4AF37]/30 flex items-center justify-center shadow-lg focus:outline-none active:scale-95"><span class="material-icons text-lg">sync</span></button></div><div id="fav-report-section" class="rounded-xl overflow-hidden relative min-h-[0px]"><div id="fav-report-loading" class="hidden flex-col items-center py-10"><span class="material-icons animate-spin text-[#D4AF37] mb-3 text-4xl">sync</span><p id="fav-report-loading-text" class="text-[13px] text-gray-500 tracking-[0.3em] font-bold">PROCESSING...</p></div><div id="fav-report-content" class="w-full hidden bg-transparent"><iframe id="fav-report-frame" class="w-full border-none block" scrolling="no"></iframe></div></div></div></div></div>
     <div id="settings-modal" class="modal fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md p-4"><div class="app-card w-full max-w-sm p-6 space-y-5"><div class="flex justify-between items-center mb-1"><h3 class="text-gold font-bold tracking-widest text-lg">SETTINGS</h3><button onclick="window.openHelp()" class="text-gray-500 hover:text-gold transition focus:outline-none"><span class="material-icons">help_outline</span></button></div><div class="space-y-2 relative"><label class="text-xs text-gray-400 font-bold uppercase tracking-widest">Google Apps Script URL</label><div class="relative"><input type="url" id="script-url-input" class="w-full bg-[#050505] border border-[#333] rounded p-3 text-xs text-gray-300 font-mono focus:border-gold outline-none pr-10" placeholder="Paste Exec URL here"><span id="settings-check-icon" class="material-icons absolute right-3 top-1/2 transform -translate-y-1/2 text-green-500 hidden">check_circle</span></div></div><button id="btn-save-settings" onclick="window.saveSettings()" class="w-full bg-gold hover:bg-[#FFE082] text-black py-3 rounded font-bold text-sm transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">SAVE</button><div id="settings-status" class="text-center text-xs h-4 font-mono transition-colors"></div><button onclick="window.closeSettings()" class="w-full text-gray-500 text-xs mt-2 hover:text-white transition">Cancel</button></div></div>
-    
     <div id="system-modal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 hidden"><div class="app-card w-full max-w-xs p-6 space-y-4 border-gold/20"><h3 id="system-modal-title" class="text-gold font-bold text-sm tracking-widest">系統提示</h3><p id="system-modal-message" class="text-xs text-gray-300 leading-relaxed break-all font-mono"></p><div id="system-modal-actions" class="flex gap-2 justify-end pt-2"></div></div></div>
-
     <div id="transaction-modal" class="modal fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md p-4"><div class="app-card w-full max-w-sm flex flex-col max-h-[90vh]"><div class="bg-[#111] p-4 flex justify-between items-center border-b border-[#333]"><h3 class="text-white text-sm font-bold tracking-widest">新增交易</h3><button onclick="window.txService.closeTransactionModal()" class="text-gray-500 hover:text-white focus:outline-none"><span class="material-icons text-xl">close</span></button></div><div class="p-5 space-y-4 overflow-y-auto hide-scrollbar"><div class="grid grid-cols-2 gap-3 mb-1"><button type="button" id="btn-tx-buy" onclick="window.txService.setTxType('buy')" class="tx-btn tx-btn-buy-active flex-1">買進</button><button type="button" id="btn-tx-sell" onclick="window.txService.setTxType('sell')" class="tx-btn tx-btn-inactive flex-1">賣出</button></div><div class="flex gap-2"><div class="w-[60px] flex-shrink-0"><label class="text-[10px] text-gray-400 font-bold tracking-wide mb-1 block">市場</label><div class="relative"><select id="tx-market" onchange="window.txService.resetTxStatus(); window.txService.lookupSymbolName()" class="w-full bg-[#050505] border border-[#333] rounded px-1 py-1.5 text-center text-sm text-white focus:border-gold outline-none h-[38px] appearance-none font-bold tracking-wider"><option value="TW">TW</option><option value="US">US</option><option value="JP">JP</option></select></div></div><div class="w-[85px] flex-shrink-0"><label class="text-[10px] text-gray-400 font-bold tracking-wide mb-1 block">代號</label><input type="text" id="tx-symbol" oninput="window.txService.resetTxStatus(); window.txService.lookupSymbolName()" class="w-full bg-[#050505] border border-[#333] rounded px-2 py-1.5 text-sm text-white focus:border-gold outline-none h-[38px] font-mono placeholder-gray-700 uppercase"></div><div class="flex-1 min-w-0"><label class="text-[10px] text-gray-400 font-bold tracking-wide mb-1 block">名稱 <span class="font-normal text-gray-600">(選填)</span></label><input type="text" id="tx-name" class="w-full bg-[#050505] border border-[#333] rounded px-2 py-1.5 text-sm text-[#D4AF37] focus:border-gold outline-none h-[38px] font-bold placeholder-gray-700 truncate"></div></div><div class="grid grid-cols-2 gap-2"><div><label class="text-[10px] text-gray-400 font-bold tracking-wide mb-1 block">價格</label><input type="number" id="tx-price" oninput="window.txService.resetTxStatus()" class="w-full bg-[#050505] border border-[#333] rounded px-2 py-1.5 text-sm text-white focus:border-gold outline-none h-[38px] font-mono appearance-none" placeholder="0.00"></div><div><label class="text-[10px] text-gray-400 font-bold tracking-wide mb-1 block">股數</label><input type="number" id="tx-qty" oninput="window.txService.resetTxStatus()" class="w-full bg-[#050505] border border-[#333] rounded px-2 py-1.5 text-sm text-white focus:border-gold outline-none h-[38px] font-mono appearance-none" placeholder="0"></div></div><button id="btn-tx-submit" onclick="window.txService.saveTransaction()" class="w-full bg-gold hover:bg-[#FFE082] text-black font-bold py-3 rounded text-sm tracking-widest shadow-lg transition active:scale-95 mt-2 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">確認新增</button><div id="tx-status" class="text-center text-xs h-4 font-mono transition-colors font-bold"></div></div></div></div>
 
     <nav class="fixed bottom-0 w-full bottom-nav shadow-2xl z-40">
         <div class="max-w-md mx-auto flex justify-around items-center px-4 h-16">
+            <button onclick="window.navToPage('home')" id="nav-home" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item"><span class="material-icons text-2xl mb-0.5">dashboard</span><span class="text-xs font-bold">總覽</span></button>
             <button onclick="window.navToPage('screen')" id="nav-screen" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item"><span class="material-icons text-2xl mb-0.5">manage_search</span><span class="text-xs font-bold">篩股</span></button>
+            <button onclick="window.txService.openTransactionModal('TW','')" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item hover:text-gold transition group"><span class="material-icons text-3xl mb-0.5 group-hover:scale-110 transition-transform">add_circle_outline</span><span class="text-xs font-bold">新增</span></button>
             <button onclick="window.navToPage('pick')" id="nav-pick" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item"><span class="material-icons text-2xl mb-0.5">star_border</span><span class="text-xs font-bold">收藏</span></button>
             <button onclick="window.navToPage('list')" id="nav-list" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item"><span class="material-icons text-2xl mb-0.5">list_alt</span><span class="text-xs font-bold">庫存</span></button>
-            <button onclick="window.txService.openTransactionModal('TW','')" class="flex flex-col items-center justify-center w-16 h-16 bottom-nav-item hover:text-gold transition group"><span class="material-icons text-3xl mb-0.5 group-hover:scale-110 transition-transform">add_circle_outline</span><span class="text-xs font-bold">新增</span></button>
         </div>
     </nav>
 

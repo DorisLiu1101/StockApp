@@ -1,0 +1,40 @@
+<div class="space-y-4 animate-[fadeIn_0.3s_ease-out]">
+    <div class="app-card p-6">
+        <div class="flex items-center gap-2 mb-4 border-b border-[#333] pb-4">
+            <span class="material-icons text-gold text-3xl">admin_panel_settings</span>
+            <h2 class="text-xl font-bold text-gray-100 tracking-widest uppercase">系統參數管理</h2>
+        </div>
+        
+        <div class="bg-red-900/20 border border-red-900/50 rounded-lg p-3 mb-6 flex items-start gap-3">
+            <span class="material-icons text-red-500 text-lg mt-0.5">security</span>
+            <p class="text-xs text-red-200 font-mono leading-relaxed">
+                此頁面僅限系統管理員 (watting.reg@gmail.com) 存取。<br>
+                設定之參數將直接寫入後端共用配置，請謹慎操作。
+            </p>
+        </div>
+        
+        <div class="space-y-5">
+            <div class="p-4 bg-[#111] rounded border border-[#333]">
+                <label class="text-[10px] text-gray-400 font-bold uppercase tracking-widest block mb-2">安全邊際係數 (Margin of Safety)</label>
+                <div class="flex items-center gap-2">
+                    <input type="number" class="w-full bg-[#050505] border border-[#333] rounded px-3 py-2 text-sm text-white focus:border-gold outline-none font-mono" placeholder="例如: 0.8">
+                    <span class="text-gray-500 font-mono text-sm">倍</span>
+                </div>
+            </div>
+
+            <div class="p-4 bg-[#111] rounded border border-[#333]">
+                <label class="text-[10px] text-gray-400 font-bold uppercase tracking-widest block mb-2">預設盈再率上限 (Reinvestment Rate Limit)</label>
+                <div class="flex items-center gap-2">
+                    <input type="number" class="w-full bg-[#050505] border border-[#333] rounded px-3 py-2 text-sm text-white focus:border-gold outline-none font-mono" placeholder="例如: 80">
+                    <span class="text-gray-500 font-mono text-sm">%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-8 flex justify-end">
+            <button class="bg-gold hover:bg-[#FFE082] text-black font-bold py-2.5 px-8 rounded text-sm tracking-widest shadow-lg transition active:scale-95 flex items-center gap-2">
+                <span class="material-icons text-base">save</span> 儲存設定
+            </button>
+        </div>
+    </div>
+</div>

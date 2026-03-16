@@ -1,6 +1,6 @@
 /**
- * [VER] v5.0 [2026-02-23]
- * [DESC] 系統核心、Firebase 連線與全域路由模組
+ * [VER] v2.0.0 [2026-03-16]
+ * [DESC] 實作動態 HTML 載入架構 (SPA)，加入防呆渲染保護與底部導覽列重構
  */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -10,10 +10,9 @@ let firebaseConfig = { apiKey: "AIzaSyCG3akQbcQvm1khoNyJ0S5xmwNftruo2D8", authDo
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 let db, auth, currentUser;
 
-window.appState = { userScriptUrl: "", currentDetailSymbol: "", currentDetailMarket: "" };
+window.appState = { userScriptUrl: "", currentDetailSymbol: "", currentDetailMarket: "", cachedSummary: null };
 const REPORT_FOLDER_URL = "https://drive.google.com/drive/folders/1GdtSyWHYhwZ8JnugPGzgBhIRwXKScIZR";
 
-// --- 路由與上一頁攔截器 ---
 window.pushModalState = function(modalName) { history.pushState({ modal: modalName }, ''); };
 window.addEventListener('popstate', (e) => {
     if (document.getElementById('system-modal') && !document.getElementById('system-modal').classList.contains('hidden')) { window.closeSystemModal(true); }
@@ -24,7 +23,6 @@ window.addEventListener('popstate', (e) => {
     else { const targetPage = (e.state && e.state.page) ? e.state.page : 'home'; window.switchPage(targetPage); }
 });
 
-// --- 全域資料同步 ---
 window.syncSheetData = async function() {
     if (!auth || !currentUser) return window.showAlert("系統尚未就緒，請重新整理。");
     if(!window.appState.userScriptUrl) return window.openSettings();
@@ -49,25 +47,45 @@ window.manualSync = async function() {
     }
 };
 
-// --- Firebase 監聽器 ---
 function startDataListener(uid) {
     onSnapshot(doc(db, 'artifacts', appId, 'users', uid, 'portfolio', 'summary'), (snap) => {
         if(snap.exists()) {
-            const d=snap.data(), fmt=(n)=>n.toLocaleString();
-            document.getElementById('total-asset').innerText=fmt(d.totalAsset||0); document.getElementById('daily-profit').innerText=(d.dailyProfit>=0?"+":"")+fmt(d.dailyProfit||0); document.getElementById('total-return').innerText=(d.dailyProfitPct>=0?"+":"")+(d.dailyProfitPct||0)+"%"; document.getElementById('cash-level').innerText=(d.cashLevel||0)+"%";
+            const d=snap.data();
+            window.appState.cachedSummary = d; 
+            window.updateHomeUI();
             if(d.portfolio && window.portfolioService){ window.portfolioService.setPortfolioData(d.portfolio); }
             if(d.favorites && window.pickService){ window.pickService.setFavoritesData(d.favorites); }
         }
     });
 }
 
-// --- 使用者介面與設定 ---
+window.updateHomeUI = function() {
+    const d = window.appState.cachedSummary;
+    if(!d) return;
+    const fmt=(n)=>n.toLocaleString();
+    const ta = document.getElementById('total-asset'); if(ta) ta.innerText=fmt(d.totalAsset||0);
+    const dp = document.getElementById('daily-profit'); if(dp) dp.innerText=(d.dailyProfit>=0?"+":"")+fmt(d.dailyProfit||0);
+    const tr = document.getElementById('total-return'); if(tr) tr.innerText=(d.dailyProfitPct>=0?"+":"")+(d.dailyProfitPct||0)+"%";
+    const cl = document.getElementById('cash-level'); if(cl) cl.innerText=(d.cashLevel||0)+"%";
+};
+
 window.updateUserUI = function(user) {
     const btnLogin = document.getElementById('btn-login'), userMenu = document.getElementById('user-menu-container');
     if (user.isAnonymous) { if(btnLogin) btnLogin.classList.remove('hidden'); if(userMenu) userMenu.classList.add('hidden'); } else {
         if(btnLogin) btnLogin.classList.add('hidden'); if(userMenu) userMenu.classList.remove('hidden');
         if(user.photoURL) { const img = document.getElementById('header-avatar-img'); img.src = user.photoURL; img.classList.remove('hidden'); }
         document.getElementById('menu-user-name').innerText = user.displayName || user.email || "User";
+    
+        // [DESC] 新增特定信箱 (watting.reg@gmail.com) 的管理者選單解鎖邏輯
+        const btnAdmin = document.getElementById('btn-admin-panel');
+        if (btnAdmin) {
+            if (user.email === 'watting.reg@gmail.com') {
+                btnAdmin.classList.remove('hidden'); // 信箱符合，顯示按鈕
+            } else {
+                btnAdmin.classList.add('hidden');    // 信箱不符，強制隱藏
+            }
+        }
+    
     }
 };
 window.toggleUserMenu = function() { document.getElementById('user-menu-dropdown').classList.toggle('hidden'); document.getElementById('user-menu-overlay').classList.toggle('hidden'); };
@@ -76,7 +94,6 @@ window.loadUserSettings = async function(uid) {
     if(snap.exists()) { window.appState.userScriptUrl = snap.data().scriptUrl; document.getElementById('script-url-input').value = window.appState.userScriptUrl; document.getElementById('settings-check-icon').classList.remove('hidden'); } } catch(e){} 
 };
 
-// --- 介面共用功能 ---
 let _modalResolver = null;
 window.showAlert = function(msg, title="系統提示", showDriveBtn=false) { 
     window.pushModalState('alert'); return new Promise((resolve) => { _modalResolver = resolve; document.getElementById('system-modal-title').innerText=title; document.getElementById('system-modal-message').innerText=msg; let actions = '<button onclick="window.closeSystemModal()" class="bg-gold text-black px-6 py-2 rounded text-sm font-bold shadow-lg hover:bg-[#FFE082]">OK</button>'; if(showDriveBtn) { actions = `<a href="${REPORT_FOLDER_URL}" target="_blank" class="bg-[#333] text-white border border-[#555] px-4 py-2 rounded text-sm font-bold mr-2">Open Drive</a>` + actions; } document.getElementById('system-modal-actions').innerHTML=actions; document.getElementById('system-modal').classList.remove('hidden'); });
@@ -95,21 +112,52 @@ window.openHelp = function() { window.showAlert("說明功能建構中"); };
 window.loginGoogle = async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){window.showAlert("登入失敗：" + e.message);}};
 window.logout = async()=>{try{await signOut(auth); window.showAlert("已登出");}catch(e){}};
 
-// --- 頁面路由 ---
-window.switchPage = function(p) { 
-    ['page-home','page-list','page-pick','page-screen'].forEach(id => { const el = document.getElementById(id); if(el) el.classList.add('hidden'); }); 
-    const target = document.getElementById('page-'+p); if(target) target.classList.remove('hidden'); 
-    document.querySelectorAll('.bottom-nav-item').forEach(el=>el.classList.remove('active')); const nav = document.getElementById('nav-'+p); if(nav) nav.classList.add('active'); 
-    const headerHome = document.getElementById('header-nav-home'); if(headerHome) { if(p === 'home') { headerHome.classList.add('text-gold'); headerHome.classList.remove('text-gray-500'); } else { headerHome.classList.remove('text-gold'); headerHome.classList.add('text-gray-500'); } }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-};
-window.navToPage = function(p) {
-    let currentPage = 'home'; document.querySelectorAll('section').forEach(sec => { if (!sec.classList.contains('hidden')) currentPage = sec.id.replace('page-', ''); });
-    if (p === currentPage) return; 
-    if (p === 'home') { history.back(); } else { if (currentPage === 'home') { history.pushState({ page: p }, ''); } else { history.replaceState({ page: p }, ''); } window.switchPage(p); }
+// 動態路由核心邏輯 (Dynamic Fetch)
+window.switchPage = async function(p) { 
+    const container = document.getElementById('app-main-container');
+    if(!container) return;
+    
+    // 顯示載入動畫
+    container.innerHTML = '<div class="flex flex-col justify-center items-center h-[60vh]"><span class="material-icons animate-spin text-gold text-4xl mb-4">sync</span><span class="text-gray-500 font-mono text-sm tracking-widest">載入畫面中...</span></div>';
+
+    try {
+        const res = await fetch(`views/${p}.html`);
+        if (!res.ok) throw new Error(`找不到 ${p}.html 檔案`);
+        const html = await res.text();
+        container.innerHTML = html;
+
+        // 更新底部導覽列狀態
+        document.querySelectorAll('.bottom-nav-item').forEach(el=>el.classList.remove('active', 'text-gold'));
+        const nav = document.getElementById('nav-'+p);
+        if(nav) nav.classList.add('active', 'text-gold');
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // 觸發各頁面的專屬渲染保護邏輯
+        if (p === 'home') { window.updateHomeUI(); if(window.portfolioService) window.portfolioService.updateHomeChart('ALL'); }
+        if (p === 'list' && window.portfolioService) window.portfolioService.filterStocks();
+        if (p === 'pick' && window.pickService && window.pickService.forceRender) window.pickService.forceRender();
+
+    } catch(e) {
+        container.innerHTML = `<div class="flex justify-center items-center h-[60vh] text-red-500 font-bold tracking-widest"><span class="material-icons mr-2">error_outline</span> ${e.message}</div>`;
+    }
 };
 
-// --- App 初始化啟動 ---
+window.navToPage = function(p) {
+    let currentPage = 'home';
+    const activeNav = document.querySelector('.bottom-nav-item.active');
+    if (activeNav) currentPage = activeNav.id.replace('nav-', '');
+
+    if (p === currentPage) return; 
+
+    if (p === 'home') { history.pushState({ page: 'home' }, ''); } 
+    else { 
+        if (currentPage === 'home') history.pushState({ page: p }, ''); 
+        else history.replaceState({ page: p }, ''); 
+    }
+    window.switchPage(p);
+};
+
 history.replaceState({ page: 'home' }, '');
 async function initApp() {
     try {
@@ -117,7 +165,8 @@ async function initApp() {
         auth = getAuth(app); db = getFirestore(app);
         try { await setPersistence(auth, browserLocalPersistence); } catch (e) {}
         onAuthStateChanged(auth, async (user) => { 
-            if(user) { currentUser = user; window.updateUserUI(user); window.loadUserSettings(user.uid); startDataListener(user.uid); } else { await signInAnonymously(auth); } 
+            if(user) { currentUser = user; window.updateUserUI(user); window.loadUserSettings(user.uid); startDataListener(user.uid); window.switchPage('home'); } 
+            else { await signInAnonymously(auth); } 
         });
     } catch (err) { console.error("Init Error", err); }
 }

@@ -1,0 +1,26 @@
+<div class="space-y-2 animate-[fadeIn_0.3s_ease-out]">
+    <div class="sticky top-0 bg-[#000] pt-1 pb-3 z-10 space-y-3 shadow-lg -mx-4 px-4 md:mx-0 md:px-0 md:bg-transparent md:shadow-none">
+        <div class="relative">
+            <span class="material-icons absolute left-3 top-3.5 text-gray-400 text-xl">search</span>
+            <input type="text" id="stock-search" oninput="window.portfolioService.filterStocks()" placeholder="搜尋代號或名稱..." class="w-full bg-[#121212] border border-[#333] text-gray-100 pl-11 pr-4 py-3 rounded-lg text-base focus:border-gold outline-none">
+        </div>
+        <div class="flex justify-between items-center px-1 relative z-20">
+            <div class="relative">
+                <button onclick="window.portfolioService.toggleFilterMenu()" class="flex items-center gap-1 text-sm bg-[#1A1A1A] border border-[#333] text-gray-300 px-4 py-2 rounded-lg hover:border-gold hover:text-gold shadow-sm">
+                    <span class="material-icons text-base">filter_list</span><span id="current-filter-label">全部市場</span><span class="material-icons text-xs ml-1">arrow_drop_down</span>
+                </button>
+                <div id="filter-menu" class="hidden absolute top-full mt-2 left-0 custom-dropdown"><button onclick="window.portfolioService.setMarketFilter('ALL')" class="custom-dropdown-item">全部市場</button><button onclick="window.portfolioService.setMarketFilter('TW')" class="custom-dropdown-item">🇹🇼 台股</button><button onclick="window.portfolioService.setMarketFilter('US')" class="custom-dropdown-item">🇺🇸 美股</button><button onclick="window.portfolioService.setMarketFilter('JP')" class="custom-dropdown-item">🇯🇵 日股</button></div>
+                <div id="filter-overlay" onclick="window.portfolioService.toggleFilterMenu()" class="hidden fixed inset-0 z-40"></div>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="relative">
+                    <button onclick="window.portfolioService.toggleSortMenu()" class="flex items-center gap-1 text-sm bg-[#1A1A1A] border border-[#333] text-gray-300 px-4 py-2 rounded-l-lg border-r-0 hover:border-gold hover:text-gold shadow-sm"><span class="material-icons text-base">sort</span><span id="current-sort-field-label">損益</span></button>
+                    <div id="sort-menu" class="hidden absolute top-full mt-2 right-0 custom-dropdown"><button onclick="window.portfolioService.setSortField('gain')" class="custom-dropdown-item">損益</button><button onclick="window.portfolioService.setSortField('weight')" class="custom-dropdown-item">佔比</button><button onclick="window.portfolioService.setSortField('expReturn')" class="custom-dropdown-item">預期報酬</button><button onclick="window.portfolioService.setSortField('symbol')" class="custom-dropdown-item">股號</button></div>
+                    <div id="sort-overlay" onclick="window.portfolioService.toggleSortMenu()" class="hidden fixed inset-0 z-40"></div>
+                </div>
+                <button onclick="window.portfolioService.toggleSortOrder()" class="flex items-center justify-center text-sm bg-[#1A1A1A] border border-[#333] text-gray-300 px-3 py-2 rounded-r-lg hover:border-gold hover:text-gold shadow-sm"><span id="sort-arrow-icon" class="material-icons text-base">arrow_downward</span></button>
+            </div>
+        </div>
+    </div>
+    <div id="stock-list-container" class="md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 pb-24"></div>
+</div>

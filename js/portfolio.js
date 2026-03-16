@@ -1,8 +1,6 @@
 /**
- * [VER] v5.2.1 [2026-02-23]
- * [DESC] 
- * 1. 優化庫存詳情溫度計標籤，導入智慧邊緣對齊與不換行設定，修復文字跑位問題。
- * 2. 修正庫存詳情預期報酬率預設值，無資料時顯示 -- 而非 0%，避免誤導。
+ * [VER] v2.0.0 [2026-03-16]
+ * [DESC] 配合 SPA 架構，加入圖表與列表渲染防呆機制 (Safe Checks)
  */
 window.portfolioService = (function() {
     let allPortfolioData = [];
@@ -20,6 +18,9 @@ window.portfolioService = (function() {
     }
 
     function renderChart(vals, labels) {
+        // [加入防呆保護]：如果畫面上沒有圓餅圖容器 (例如切換到其他分頁了)，就直接中止執行
+        if (!document.getElementById('portfolio-chart')) return;
+        
         const colors=['#D4AF37','#B4941F','#756010','#4B5563','#1F2937']; let grad="conic-gradient(", curr=0, leg="";
         if (vals.length === 0) { document.getElementById('portfolio-chart').style.background = '#222'; document.getElementById('sector-legend').innerHTML = '<div class="text-xs text-gray-600">無數據</div>'; document.getElementById('chart-center-text').innerText = "0%"; return; }
         vals.forEach((v,i)=>{ const c=colors[i]||colors[colors.length-1]; grad+=`${c} ${curr}% ${curr+v}%, `; curr+=v; leg+=`<div class="flex items-center justify-between text-xs mb-1"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full" style="background:${c}"></div><span class="text-gray-400 truncate w-24">${labels[i]}</span></div><span class="text-gray-400 font-mono">${v}%</span></div>`; });
@@ -27,7 +28,10 @@ window.portfolioService = (function() {
     }
 
     function filterStocks() {
-        const q = document.getElementById('stock-search').value.toLowerCase();
+        // [加入防呆保護]：如果畫面上沒有搜尋框，給予空字串避免報錯
+        const searchInput = document.getElementById('stock-search');
+        const q = searchInput ? searchInput.value.toLowerCase() : '';
+        
         let f = allPortfolioData.filter(i => { const m = (currentFilter === 'ALL') || (i.market === currentFilter); return m && (String(i.symbol).toLowerCase().includes(q) || String(i.name||'').toLowerCase().includes(q)); });
         f.sort((a, b) => {
             if (currentSort.field === 'symbol') return currentSort.order === 'desc' ? -String(a.symbol).localeCompare(String(b.symbol),undefined,{numeric:true}) : String(a.symbol).localeCompare(String(b.symbol),undefined,{numeric:true});
@@ -38,6 +42,9 @@ window.portfolioService = (function() {
 
     function renderStockList(list) {
         const c = document.getElementById('stock-list-container');
+        // [加入防呆保護]：如果畫面上沒有列表容器 (例如切換到其他分頁了)，就直接中止執行
+        if (!c) return;
+        
         if(!list.length) { c.innerHTML="<p class='text-center text-gray-600 text-sm py-16 uppercase tracking-widest'>No Positions Found</p>"; return; }
         let html = "";
         list.forEach(item => {
@@ -64,10 +71,9 @@ window.portfolioService = (function() {
         if (cheap > 0 && pricey > 0) {
             thermSection.classList.remove('hidden'); document.getElementById('val-cheap').innerText = fmt(cheap); document.getElementById('val-pricey').innerText = fmt(pricey); let pct = 0; let badgeText = "現價"; let badgeColor = "bg-[#D4AF37] text-black"; if (price <= cheap) { pct = 0; badgeText = "低於淑價"; badgeColor = "bg-green-600 text-white"; } else if (price >= pricey) { pct = 100; badgeText = "高於貴價"; badgeColor = "bg-red-600 text-white"; } else { pct = ((price - cheap) / (pricey - cheap)) * 100; pct = Math.max(0, Math.min(100, pct)); } document.getElementById('therm-indicator-line').style.left = pct + "%"; document.getElementById('detail-price-text').style.left = pct + "%"; document.getElementById('detail-price-text').innerText = fmt(price); const label = document.getElementById('therm-current-label'); label.style.left = pct + "%"; label.innerText = badgeText; 
             
-            // 智慧邊緣對齊邏輯
-            let alignClass = "-translate-x-1/2"; // 預位置中
-            if (pct <= 5) alignClass = "translate-x-0"; // 靠左邊界
-            else if (pct >= 95) alignClass = "-translate-x-full"; // 靠右邊界
+            let alignClass = "-translate-x-1/2"; 
+            if (pct <= 5) alignClass = "translate-x-0"; 
+            else if (pct >= 95) alignClass = "-translate-x-full"; 
             
             label.className = `absolute text-[11px] font-black px-2 py-0.5 rounded shadow-lg z-20 transform ${alignClass} top-0 whitespace-nowrap ${badgeColor}`;
         } else { thermSection.classList.add('hidden'); }
