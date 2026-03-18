@@ -75,17 +75,22 @@ window.updateUserUI = function(user) {
         if(btnLogin) btnLogin.classList.add('hidden'); if(userMenu) userMenu.classList.remove('hidden');
         if(user.photoURL) { const img = document.getElementById('header-avatar-img'); img.src = user.photoURL; img.classList.remove('hidden'); }
         document.getElementById('menu-user-name').innerText = user.displayName || user.email || "User";
-    
-        // [DESC] 新增特定信箱 (watting.reg@gmail.com) 的管理者選單解鎖邏輯
+        
+        /* * [VER] v6.1.1 [2026-03-18]
+         * [DESC] 升級管理者權限為「白名單陣列機制」，支援多組管理員帳號
+         */
         const btnAdmin = document.getElementById('btn-admin-panel');
         if (btnAdmin) {
-            if (user.email === 'watting.reg@gmail.com') {
-                btnAdmin.classList.remove('hidden'); // 信箱符合，顯示按鈕
+            // 在這裡設定您的管理者白名單 (未來要新增，加在陣列裡即可)
+            const adminEmails = ['watting.reg@gmail.com', 'watting@gmail.com'];
+            
+            // 檢查登入的信箱是否包含在名單內
+            if (adminEmails.includes(user.email)) {
+                btnAdmin.classList.remove('hidden'); // 信箱在白名單內，顯示按鈕
             } else {
-                btnAdmin.classList.add('hidden');    // 信箱不符，強制隱藏
+                btnAdmin.classList.add('hidden');    // 不在白名單內，強制隱藏
             }
         }
-    
     }
 };
 window.toggleUserMenu = function() { document.getElementById('user-menu-dropdown').classList.toggle('hidden'); document.getElementById('user-menu-overlay').classList.toggle('hidden'); };
