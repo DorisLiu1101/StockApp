@@ -149,9 +149,11 @@ window.switchPage = async function(p) {
 };
 
 window.navToPage = function(p) {
-    let currentPage = 'home';
-    const activeNav = document.querySelector('.bottom-nav-item.active');
-    if (activeNav) currentPage = activeNav.id.replace('nav-', '');
+    /* * [VER] v6.1.2 [2026-03-18]
+     * [DESC] 修復從隱藏頁面 (如 admin) 切換回首頁時，導覽列狀態誤判導致無反應的 Bug
+     */
+    // [修復核心] 改為直接讀取底層的歷史狀態，而非依賴 UI 按鈕的高亮狀態
+    let currentPage = (history.state && history.state.page) ? history.state.page : 'home';
 
     if (p === currentPage) return; 
 
