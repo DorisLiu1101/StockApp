@@ -1,5 +1,6 @@
 /**
- * [DESC] 實作動態 HTML 載入架構 (SPA)，加入防呆渲染保護與底部導覽列重構
+ * [VER] v1.1 [2026-03-22]
+ * [DESC] 完整修復版：整合 SPA 動態路由、多管理員白名單、與中央 GAS API 引擎
  */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -9,17 +10,17 @@ let firebaseConfig = { apiKey: "AIzaSyCG3akQbcQvm1khoNyJ0S5xmwNftruo2D8", authDo
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 let db, auth, currentUser;
 
-/**
- * [DESC] 導入單一 GAS 多租戶架構，設置全域中央 API 網址
- */
+// 全域狀態與中央 API 網址
 window.appState = { 
     API_URL: "https://script.google.com/macros/s/AKfycbxVmt4TZ8WuKRrkNd1YjXXG6ErnsRU61hjbbfAoWg0z1E98s0F1pBO_NXUR9Nf_gqGW/exec", 
     currentDetailSymbol: "", 
     currentDetailMarket: "", 
     cachedSummary: null 
 };
+
 const REPORT_FOLDER_URL = "https://drive.google.com/drive/folders/1GdtSyWHYhwZ8JnugPGzgBhIRwXKScIZR";
 
+// 歷史狀態與返回鍵保護機制
 window.pushModalState = function(modalName) { history.pushState({ modal: modalName }, ''); };
 window.addEventListener('popstate', (e) => {
     if (document.getElementById('system-modal') && !document.getElementById('system-modal').classList.contains('hidden')) { window.closeSystemModal(true); }
@@ -30,8 +31,8 @@ window.addEventListener('popstate', (e) => {
     else { const targetPage = (e.state && e.state.page) ? e.state.page : 'home'; window.switchPage(targetPage); }
 });
 
+// 中央 API 雲端資料同步引擎 (背景執行)
 window.syncSheetData = async function() {
-    // [改版核心]：必須確認有抓到 Google 登入的 Email 才能發送請求
     if (!auth || !currentUser || !currentUser.email) return;
     try { 
         const res = await fetch(window.appState.API_URL, { 
@@ -45,22 +46,20 @@ window.syncSheetData = async function() {
     } catch(e) { console.error("背景同步失敗:", e.message); }
 };
 
+// 中央 API 雲端資料同步引擎 (手動點擊)
 window.manualSync = async function() {
     if (!auth || !currentUser || !currentUser.email) return window.showAlert("無法取得使用者信箱，請重新登入。");
     const icon = document.getElementById('sync-icon'), text = document.getElementById('sync-text');
     if(icon) icon.classList.add('animate-spin', 'text-gold'); if(text) { text.innerText = "雲端資料融合中..."; text.classList.add('text-gold'); }
     try { 
-        // [改版核心]：發送 POST 請求給中央大腦，並表明自己的身分 (Email)
         const res = await fetch(window.appState.API_URL, { 
             method: 'POST', 
             body: JSON.stringify({ action: 'get_portfolio', email: currentUser.email }) 
         }); 
         const data = await res.json(); 
         
-        // 若後端回報失敗 (例如 Email 不在白名單內)，則丟出錯誤
         if(!data.success) throw new Error(data.message);
         
-        // 將 GAS 算好的 JSON 寫入 Firebase 快取，UI 就會自動更新！
         await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'portfolio', 'summary'), data, {merge:true}); 
         if(window.toggleUserMenu) window.toggleUserMenu(); 
         window.showAlert("✅ 成功從中央資料庫合併並載入最新行情與庫存！", "同步完成");
@@ -71,6 +70,7 @@ window.manualSync = async function() {
     }
 };
 
+// Firebase 即時資料監聽
 function startDataListener(uid) {
     onSnapshot(doc(db, 'artifacts', appId, 'users', uid, 'portfolio', 'summary'), (snap) => {
         if(snap.exists()) {
@@ -83,6 +83,7 @@ function startDataListener(uid) {
     });
 }
 
+// 總覽畫面更新
 window.updateHomeUI = function() {
     const d = window.appState.cachedSummary;
     if(!d) return;
@@ -93,35 +94,34 @@ window.updateHomeUI = function() {
     const cl = document.getElementById('cash-level'); if(cl) cl.innerText=(d.cashLevel||0)+"%";
 };
 
+// 使用者登入狀態與介面更新 (含管理者白名單機制)
 window.updateUserUI = function(user) {
     const btnLogin = document.getElementById('btn-login'), userMenu = document.getElementById('user-menu-container');
-    if (user.isAnonymous) { if(btnLogin) btnLogin.classList.remove('hidden'); if(userMenu) userMenu.classList.add('hidden'); } else {
-        if(btnLogin) btnLogin.classList.add('hidden'); if(userMenu) userMenu.classList.remove('hidden');
+    if (user.isAnonymous) { 
+        if(btnLogin) btnLogin.classList.remove('hidden'); 
+        if(userMenu) userMenu.classList.add('hidden'); 
+    } else {
+        if(btnLogin) btnLogin.classList.add('hidden'); 
+        if(userMenu) userMenu.classList.remove('hidden');
         if(user.photoURL) { const img = document.getElementById('header-avatar-img'); img.src = user.photoURL; img.classList.remove('hidden'); }
         document.getElementById('menu-user-name').innerText = user.displayName || user.email || "User";
         
-        /* * [VER] v6.1.1 [2026-03-18]
-         * [DESC] 升級管理者權限為「白名單陣列機制」，支援多組管理員帳號
-         */
+        // 管理者權限解鎖機制
         const btnAdmin = document.getElementById('btn-admin-panel');
         if (btnAdmin) {
-            // 在這裡設定您的管理者白名單 (未來要新增，加在陣列裡即可)
             const adminEmails = ['watting.reg@gmail.com', 'watting@gmail.com'];
-            
-            // 檢查登入的信箱是否包含在名單內
             if (adminEmails.includes(user.email)) {
-                btnAdmin.classList.remove('hidden'); // 信箱在白名單內，顯示按鈕
+                btnAdmin.classList.remove('hidden');
             } else {
-                btnAdmin.classList.add('hidden');    // 不在白名單內，強制隱藏
+                btnAdmin.classList.add('hidden');
             }
         }
     }
 };
+
+// 選單與視窗操作
 window.toggleUserMenu = function() { document.getElementById('user-menu-dropdown').classList.toggle('hidden'); document.getElementById('user-menu-overlay').classList.toggle('hidden'); };
-window.loadUserSettings = async function(uid) { 
-    try { const snap = await getDoc(doc(db, 'artifacts', appId, 'users', uid, 'settings', 'config')); 
-    if(snap.exists()) { window.appState.userScriptUrl = snap.data().scriptUrl; document.getElementById('script-url-input').value = window.appState.userScriptUrl; document.getElementById('settings-check-icon').classList.remove('hidden'); } } catch(e){} 
-};
+window.loadUserSettings = async function(uid) { /* 舊版 URL 抓取機制已作廢，保留空函式防呆 */ };
 
 let _modalResolver = null;
 window.showAlert = function(msg, title="系統提示", showDriveBtn=false) { 
@@ -130,23 +130,16 @@ window.showAlert = function(msg, title="系統提示", showDriveBtn=false) {
 window.closeSystemModal = function(fromPop = false) { document.getElementById('system-modal').classList.add('hidden'); if (_modalResolver) { _modalResolver(); _modalResolver = null; } if(fromPop !== true) history.back(); };
 window.openSettings = function() { window.pushModalState('settings'); document.getElementById('settings-modal').classList.add('open'); window.toggleUserMenu(); };
 window.closeSettings = function(fromPop = false) { document.getElementById('settings-modal').classList.remove('open'); if(fromPop !== true) history.back(); };
-window.saveSettings = async function() {
-    const btn = document.getElementById('btn-save-settings'), statusDiv = document.getElementById('settings-status'), urlInput = document.getElementById('script-url-input'), url = urlInput.value.trim();
-    if(!url.startsWith('http')) return window.showAlert("網址格式錯誤");
-    btn.disabled = true; statusDiv.innerText = "連線驗證中..."; statusDiv.className = "text-center text-xs h-4 font-mono text-gold"; 
-    try { await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'config'), {scriptUrl:url}, {merge:true}); window.appState.userScriptUrl = url; const res = await fetch(url); const data = await res.json(); await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'portfolio', 'summary'), data, {merge:true}); statusDiv.innerText = "同步完成 ✅"; statusDiv.className = "text-center text-xs h-4 font-mono text-green-500"; setTimeout(() => { btn.disabled = false; window.closeSettings(); }, 800); } 
-    catch (e) { statusDiv.innerText = "同步失敗"; statusDiv.className = "text-center text-xs h-4 font-mono text-red-500"; btn.disabled = false; }
-};
+window.saveSettings = async function() { window.showAlert("目前已採用中央 API 架構，不需再手動綁定網址。", "設定停用"); window.closeSettings(); };
 window.openHelp = function() { window.showAlert("說明功能建構中"); };
 window.loginGoogle = async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){window.showAlert("登入失敗：" + e.message);}};
-window.logout = async()=>{try{await signOut(auth); window.showAlert("已登出");}catch(e){}};
+window.logout = async()=>{try{await signOut(auth); window.showAlert("已登出"); window.location.reload();}catch(e){}};
 
 // 動態路由核心邏輯 (Dynamic Fetch)
 window.switchPage = async function(p) { 
     const container = document.getElementById('app-main-container');
     if(!container) return;
     
-    // 顯示載入動畫
     container.innerHTML = '<div class="flex flex-col justify-center items-center h-[60vh]"><span class="material-icons animate-spin text-gold text-4xl mb-4">sync</span><span class="text-gray-500 font-mono text-sm tracking-widest">載入畫面中...</span></div>';
 
     try {
@@ -155,14 +148,12 @@ window.switchPage = async function(p) {
         const html = await res.text();
         container.innerHTML = html;
 
-        // 更新底部導覽列狀態
         document.querySelectorAll('.bottom-nav-item').forEach(el=>el.classList.remove('active', 'text-gold'));
         const nav = document.getElementById('nav-'+p);
         if(nav) nav.classList.add('active', 'text-gold');
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // 觸發各頁面的專屬渲染保護邏輯
         if (p === 'home') { window.updateHomeUI(); if(window.portfolioService) window.portfolioService.updateHomeChart('ALL'); }
         if (p === 'list' && window.portfolioService) window.portfolioService.filterStocks();
         if (p === 'pick' && window.pickService && window.pickService.forceRender) window.pickService.forceRender();
@@ -172,13 +163,9 @@ window.switchPage = async function(p) {
     }
 };
 
+// 處理底部導覽列跳轉
 window.navToPage = function(p) {
-    /* * [VER] v6.1.2 [2026-03-18]
-     * [DESC] 修復從隱藏頁面 (如 admin) 切換回首頁時，導覽列狀態誤判導致無反應的 Bug
-     */
-    // [修復核心] 改為直接讀取底層的歷史狀態，而非依賴 UI 按鈕的高亮狀態
     let currentPage = (history.state && history.state.page) ? history.state.page : 'home';
-
     if (p === currentPage) return; 
 
     if (p === 'home') { history.pushState({ page: 'home' }, ''); } 
@@ -190,14 +177,22 @@ window.navToPage = function(p) {
 };
 
 history.replaceState({ page: 'home' }, '');
+
+// 初始化與登入判定
 async function initApp() {
     try {
         const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
         auth = getAuth(app); db = getFirestore(app);
         try { await setPersistence(auth, browserLocalPersistence); } catch (e) {}
         onAuthStateChanged(auth, async (user) => { 
-            if(user) { currentUser = user; window.updateUserUI(user); window.loadUserSettings(user.uid); startDataListener(user.uid); window.switchPage('home'); } 
-            else { await signInAnonymously(auth); } 
+            if(user) { 
+                currentUser = user; 
+                window.updateUserUI(user); 
+                startDataListener(user.uid); 
+                window.switchPage('home'); 
+            } else { 
+                await signInAnonymously(auth); 
+            } 
         });
     } catch (err) { console.error("Init Error", err); }
 }
