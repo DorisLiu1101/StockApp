@@ -1,5 +1,4 @@
 /**
- * [VER] v2.0.0 [2026-03-16]
  * [DESC] 實作動態 HTML 載入架構 (SPA)，加入防呆渲染保護與底部導覽列重構
  */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -10,7 +9,15 @@ let firebaseConfig = { apiKey: "AIzaSyCG3akQbcQvm1khoNyJ0S5xmwNftruo2D8", authDo
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 let db, auth, currentUser;
 
-window.appState = { userScriptUrl: "", currentDetailSymbol: "", currentDetailMarket: "", cachedSummary: null };
+/
+ * [DESC] 導入單一 GAS 多租戶架構，設置全域中央 API 網址
+ */
+window.appState = { 
+    API_URL: "https://script.google.com/macros/s/AKfycbxVmt4TZ8WuKRrkNd1YjXXG6ErnsRU61hjbbfAoWg0z1E98s0F1pBO_NXUR9Nf_gqGW/exec", 
+    currentDetailSymbol: "", 
+    currentDetailMarket: "", 
+    cachedSummary: null 
+};
 const REPORT_FOLDER_URL = "https://drive.google.com/drive/folders/1GdtSyWHYhwZ8JnugPGzgBhIRwXKScIZR";
 
 window.pushModalState = function(modalName) { history.pushState({ modal: modalName }, ''); };
@@ -24,24 +31,41 @@ window.addEventListener('popstate', (e) => {
 });
 
 window.syncSheetData = async function() {
-    if (!auth || !currentUser) return window.showAlert("系統尚未就緒，請重新整理。");
-    if(!window.appState.userScriptUrl) return window.openSettings();
+    // [改版核心]：必須確認有抓到 Google 登入的 Email 才能發送請求
+    if (!auth || !currentUser || !currentUser.email) return;
     try { 
-        const res=await fetch(window.appState.userScriptUrl); const data=await res.json(); 
-        await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'portfolio', 'summary'), data, {merge:true}); 
-    } catch(e) { window.showAlert("同步失敗: "+e.message); }
+        const res = await fetch(window.appState.API_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ action: 'get_portfolio', email: currentUser.email }) 
+        }); 
+        const data = await res.json(); 
+        if(data.success) {
+            await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'portfolio', 'summary'), data, {merge:true}); 
+        }
+    } catch(e) { console.error("背景同步失敗:", e.message); }
 };
 
 window.manualSync = async function() {
-    if (!auth || !currentUser) return window.showAlert("系統尚未就緒，請重新整理。");
-    if (!window.appState.userScriptUrl) return window.openSettings();
+    if (!auth || !currentUser || !currentUser.email) return window.showAlert("無法取得使用者信箱，請重新登入。");
     const icon = document.getElementById('sync-icon'), text = document.getElementById('sync-text');
-    if(icon) icon.classList.add('animate-spin', 'text-gold'); if(text) { text.innerText = "資料同步中..."; text.classList.add('text-gold'); }
+    if(icon) icon.classList.add('animate-spin', 'text-gold'); if(text) { text.innerText = "雲端資料融合中..."; text.classList.add('text-gold'); }
     try { 
-        const res = await fetch(window.appState.userScriptUrl); const data = await res.json(); 
+        // [改版核心]：發送 POST 請求給中央大腦，並表明自己的身分 (Email)
+        const res = await fetch(window.appState.API_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ action: 'get_portfolio', email: currentUser.email }) 
+        }); 
+        const data = await res.json(); 
+        
+        // 若後端回報失敗 (例如 Email 不在白名單內)，則丟出錯誤
+        if(!data.success) throw new Error(data.message);
+        
+        // 將 GAS 算好的 JSON 寫入 Firebase 快取，UI 就會自動更新！
         await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'portfolio', 'summary'), data, {merge:true}); 
-        window.toggleUserMenu(); window.showAlert("✅ 已成功從 Google 試算表抓取最新資料！", "同步完成");
-    } catch(e) { window.showAlert("同步失敗: " + e.message); 
+        if(window.toggleUserMenu) window.toggleUserMenu(); 
+        window.showAlert("✅ 成功從中央資料庫合併並載入最新行情與庫存！", "同步完成");
+    } catch(e) { 
+        window.showAlert("同步失敗: " + e.message); 
     } finally {
         if(icon) icon.classList.remove('animate-spin', 'text-gold'); if(text) { text.innerText = "立即同步"; text.classList.remove('text-gold'); }
     }
