@@ -1,8 +1,6 @@
-/**
- * [VER] v2.1.1 [2026-03-22]
- * [DESC] 配合 SPA 架構，加入圖表與列表渲染防呆機制 (Safe Checks)
- */
-window.portfolioService = (function() {
+/* [VER] v2.1.2 [2026-03-22] [DESC] 根據市場別動態更新現價的幣別標籤 */
+
+    window.portfolioService = (function() {
     let allPortfolioData = [];
     let currentStock = null;
     let currentFilter = 'ALL', currentChartFilter = 'ALL', currentSort = { field: 'gain', order: 'desc' };
@@ -71,6 +69,11 @@ window.portfolioService = (function() {
         document.getElementById('detail-qty').innerText = fmt(stock.qty); document.getElementById('detail-cost').innerText = fmt(stock.cost); const costOrg = stock.cost * stock.qty; document.getElementById('detail-exp-return-grid').innerText = (stock.expReturn !== "" && stock.expReturn != null) ? stock.expReturn + "%" : "--"; document.getElementById('detail-cost-twd-primary').innerText = prefix + fmt(Math.round(costOrg)); const costTWD = stock.marketValue - stock.gain; document.getElementById('detail-cost-twd-secondary').innerText = "NT$ " + fmt(Math.round(costTWD)); const mktOrg = stock.price * stock.qty; document.getElementById('detail-market-primary').innerText = prefix + fmt(Math.round(mktOrg)); document.getElementById('detail-market-secondary').innerText = "NT$ " + fmt(stock.marketValue); const gainOrg = stock.gainOrg || ((stock.price - stock.cost) * stock.qty); document.getElementById('detail-gain-primary').innerText = (gainOrg >= 0 ? "+" : "") + fmt(Math.round(gainOrg)); document.getElementById('detail-gain-primary').className = `text-val-md ${gainOrg >= 0 ? 'text-[#EF4444]' : 'text-[#22C55E]'}`; document.getElementById('detail-gain-secondary').innerText = (isGain ? "+NT$ " : "NT$ ") + fmt(Math.round(stock.gain)); document.getElementById('detail-gain-secondary').className = `text-[13px] font-bold font-mono mt-1.5 ${isGain ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
         
         const elDetailCurrentPrice = document.getElementById('detail-current-price'); if (elDetailCurrentPrice) elDetailCurrentPrice.innerText = fmt(Number(stock.price) || 0);
+        const elCurrentPriceTitle = document.getElementById('label-current-price-title');
+        if (elCurrentPriceTitle) {
+            elCurrentPriceTitle.innerText = `現價${market === 'JP' ? '¥' : '$'}`;
+        }
+        
         const elDetailEps = document.getElementById('detail-eps'); if (elDetailEps) elDetailEps.innerText = stock.eps ? stock.eps : 'N/A';
         const babanRadio = document.querySelector('input[name="val_method"][value="baban"]'); if(babanRadio) { babanRadio.checked = true; const peArea = document.getElementById('pe-settings-area'); if(peArea) peArea.style.display = 'none'; }
         renderValuationBar();

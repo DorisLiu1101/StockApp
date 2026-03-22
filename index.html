@@ -93,16 +93,18 @@
     
  <!-- 四格溫度計-->
  <div class="mt-4 bg-[#2A2A2A] p-4 rounded-xl border border-gray-700 shadow-inner mb-6">
-    <div class="flex items-center justify-between mb-2">
+    <div class="flex items-start justify-between mb-1">
         <div class="flex flex-col pr-4 border-r border-gray-700 w-24 flex-shrink-0">
-            <span class="text-[11px] text-gray-400 tracking-wider mb-1">現價</span>
-            <div class="flex items-baseline gap-1"><span class="text-sm text-gray-400">$</span><span id="detail-current-price" class="text-2xl font-bold text-[#D4AF37] font-mono leading-none">--</span></div>
+            <div class="h-4 flex items-center mb-1">
+                <span id="label-current-price-title" class="text-[11px] text-gray-400 tracking-wider">現價$</span>
+            </div>
+            <div class="flex items-baseline"><span id="detail-current-price" class="text-3xl font-bold text-[#D4AF37] font-mono leading-none">--</span></div>
         </div>
         
-        <div class="flex-1 ml-4 relative py-5">
-            <div class="absolute w-full top-0 text-[11px] font-bold text-gray-400">
-                <span class="absolute text-green-500 transform -translate-x-1/2" style="left: 25%;">淑</span>
-                <span class="absolute text-red-500 transform -translate-x-1/2" style="left: 75%;">貴</span>
+        <div class="flex-1 ml-4 relative flex flex-col pt-[1px]">
+            <div class="h-4 relative w-full mb-1 text-[11px] font-bold text-gray-400">
+                <span class="absolute transform -translate-x-1/2" style="left: 25%;">淑</span>
+                <span class="absolute transform -translate-x-1/2" style="left: 75%;">貴</span>
             </div>
             
             <div class="flex h-3.5 w-full gap-[2px] bg-black rounded-sm overflow-hidden my-1">
@@ -112,7 +114,7 @@
                 <div id="bar-4" class="flex-1 bg-gray-800 transition-all duration-300"></div>
             </div>
             
-            <div class="absolute w-full bottom-0 text-[11px] font-mono text-gray-400">
+            <div class="relative w-full mt-1.5 h-4 text-[12.5px] font-mono text-gray-400">
                 <span id="label-cheap-val" class="absolute transform -translate-x-1/2 text-center" style="left: 25%;">--</span>
                 <span id="label-pricey-val" class="absolute transform -translate-x-1/2 text-center" style="left: 75%;">--</span>
             </div>
