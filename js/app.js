@@ -1,16 +1,13 @@
 /**
- * [VER] v2.0 [2026-03-22]
- * [DESC] 架構大翻新：徹底拔除 Firebase Firestore 資料庫，改用 LocalStorage 極速快取，並實作登入自動同步。
+ * [VER] v2.1.0 [2026-03-22]
+ * [DESC] 導入「聰明自動對時引擎」：結合 Visibility API，實現背景省電與喚醒即刻刷新。
  */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-// [瘦身核心 1]：只保留 Auth (登入) 模組，徹底刪除 Firestore 資料庫的 import
 import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 let firebaseConfig = { apiKey: "AIzaSyCG3akQbcQvm1khoNyJ0S5xmwNftruo2D8", authDomain: "investment-dashboard-741c3.firebaseapp.com", projectId: "investment-dashboard-741c3", storageBucket: "investment-dashboard-741c3.firebasestorage.app", messagingSenderId: "542046198044", appId: "1:542046198044:web:e3949cae05a0c8a14cc2d9" };
-// [瘦身核心 2]：移除了 db 變數
 let auth, currentUser;
 
-// 全域狀態與中央 API 網址
 window.appState = { 
     API_URL: "https://script.google.com/macros/s/AKfycbxVmt4TZ8WuKRrkNd1YjXXG6ErnsRU61hjbbfAoWg0z1E98s0F1pBO_NXUR9Nf_gqGW/exec", 
     currentDetailSymbol: "", 
@@ -30,7 +27,7 @@ window.addEventListener('popstate', (e) => {
     else { const targetPage = (e.state && e.state.page) ? e.state.page : 'home'; window.switchPage(targetPage); }
 });
 
-// [新增]：共用的畫面渲染函式，拿到資料就直接畫到畫面上！
+// 共用的畫面渲染函式
 function applyDataToUI(data) {
     window.appState.cachedSummary = data; 
     window.updateHomeUI();
@@ -48,13 +45,52 @@ window.syncSheetData = async function() {
         }); 
         const data = await res.json(); 
         if(data.success) {
-            // [瘦身核心 3]：將 GAS 算好的資料存入手機瀏覽器的 LocalStorage，取代 Firebase
             localStorage.setItem('weGoodCache_' + currentUser.email, JSON.stringify(data));
-            // 直接渲染畫面
             applyDataToUI(data);
         }
     } catch(e) { console.error("背景同步失敗:", e.message); }
 };
+
+// ==========================================
+// 🚀 [新增] 聰明自動對時引擎 (Smart Auto-Sync Engine)
+// ==========================================
+window.autoSyncTimer = null;
+const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 分鐘 (300,000 毫秒)
+
+function startAutoSync() {
+    if (!auth || !currentUser || !currentUser.email) return;
+    stopAutoSync(); // 避免重複啟動
+    window.autoSyncTimer = setInterval(() => {
+        console.log("⏳ [引擎] 5分鐘排程觸發，背景更新資料...");
+        window.syncSheetData();
+    }, SYNC_INTERVAL_MS);
+}
+
+function stopAutoSync() {
+    if (window.autoSyncTimer) {
+        clearInterval(window.autoSyncTimer);
+        window.autoSyncTimer = null;
+        console.log("💤 [引擎] 計時器已暫停");
+    }
+}
+
+// 監聽手機/電腦螢幕的「可見度變化」
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+        // 使用者把畫面切回來了！立刻拉取最新資料，並重新啟動計時器
+        console.log("👀 [引擎] 偵測到畫面喚醒，立刻對時！");
+        if (auth && currentUser) {
+            window.syncSheetData();
+            startAutoSync();
+        }
+    } else {
+        // 使用者切換到別的 App 或縮小網頁，暫停計時器省電
+        console.log("🙈 [引擎] 偵測到畫面隱藏，暫停背景消耗");
+        stopAutoSync();
+    }
+});
+// ==========================================
+
 
 // 中央 API 雲端資料同步引擎 (手動點擊)
 window.manualSync = async function() {
@@ -70,7 +106,6 @@ window.manualSync = async function() {
         
         if(!data.success) throw new Error(data.message);
         
-        // 存入 LocalStorage 並直接渲染畫面
         localStorage.setItem('weGoodCache_' + currentUser.email, JSON.stringify(data));
         applyDataToUI(data);
 
@@ -94,7 +129,7 @@ window.updateHomeUI = function() {
     const cl = document.getElementById('cash-level'); if(cl) cl.innerText=(d.cashLevel||0)+"%";
 };
 
-// 使用者登入狀態與介面更新 (含管理者白名單機制)
+// 使用者登入狀態與介面更新
 window.updateUserUI = function(user) {
     const btnLogin = document.getElementById('btn-login'), userMenu = document.getElementById('user-menu-container');
     if (user.isAnonymous) { 
@@ -106,7 +141,6 @@ window.updateUserUI = function(user) {
         if(user.photoURL) { const img = document.getElementById('header-avatar-img'); img.src = user.photoURL; img.classList.remove('hidden'); }
         document.getElementById('menu-user-name').innerText = user.displayName || user.email || "User";
         
-        // 管理者權限解鎖機制
         const btnAdmin = document.getElementById('btn-admin-panel');
         if (btnAdmin) {
             const adminEmails = ['watting.reg@gmail.com', 'watting@gmail.com'];
@@ -119,9 +153,8 @@ window.updateUserUI = function(user) {
     }
 };
 
-// 選單與視窗操作
 window.toggleUserMenu = function() { document.getElementById('user-menu-dropdown').classList.toggle('hidden'); document.getElementById('user-menu-overlay').classList.toggle('hidden'); };
-window.loadUserSettings = async function(uid) { /* 舊版 URL 抓取機制已作廢 */ };
+window.loadUserSettings = async function(uid) {};
 
 let _modalResolver = null;
 window.showAlert = function(msg, title="系統提示", showDriveBtn=false) { 
@@ -130,7 +163,8 @@ window.showAlert = function(msg, title="系統提示", showDriveBtn=false) {
 window.closeSystemModal = function(fromPop = false) { document.getElementById('system-modal').classList.add('hidden'); if (_modalResolver) { _modalResolver(); _modalResolver = null; } if(fromPop !== true) history.back(); };
 window.openHelp = function() { window.showAlert("說明功能建構中"); };
 window.loginGoogle = async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){window.showAlert("登入失敗：" + e.message);}};
-window.logout = async()=>{try{await signOut(auth); window.showAlert("已登出"); window.location.reload();}catch(e){}};
+// 登出時順便關閉自動對時引擎
+window.logout = async()=>{try{stopAutoSync(); await signOut(auth); window.showAlert("已登出"); window.location.reload();}catch(e){}};
 
 // 動態路由核心邏輯 (Dynamic Fetch)
 window.switchPage = async function(p) { 
@@ -179,7 +213,6 @@ async function initApp() {
     try {
         const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
         auth = getAuth(app); 
-        // 刪除 db 的初始化
         
         try { await setPersistence(auth, browserLocalPersistence); } catch (e) {}
         onAuthStateChanged(auth, async (user) => { 
@@ -187,7 +220,6 @@ async function initApp() {
                 currentUser = user; 
                 window.updateUserUI(user); 
                 
-                // [體驗優化]：登入時先去本機 LocalStorage 找找看有沒有上次的快取，有的話瞬間畫出來！
                 const cachedData = localStorage.getItem('weGoodCache_' + user.email);
                 if (cachedData) {
                     try { applyDataToUI(JSON.parse(cachedData)); } catch(e){}
@@ -195,8 +227,9 @@ async function initApp() {
 
                 window.switchPage('home'); 
                 
-                // [登入自動載入]：不論有沒有快取，都在背景自動去 GAS 拉取最新資料更新
+                // [啟動] 登入後拉取資料，並開啟自動對時引擎
                 window.syncSheetData();
+                startAutoSync();
                 
             } else { 
                 await signInAnonymously(auth); 
