@@ -1,5 +1,5 @@
 /**
- * [VER] v2.1.0 [2026-03-16]
+ * [VER] v2.1.1 [2026-03-22]
  * [DESC] 配合 SPA 架構，加入圖表與列表渲染防呆機制 (Safe Checks)
  */
 window.portfolioService = (function() {
@@ -94,15 +94,46 @@ window.portfolioService = (function() {
         if(cheapInput) cheapInput.addEventListener('input', (e) => { localStorage.setItem('pe_cheap_mult', e.target.value); renderValuationBar(); });
         if(priceyInput) priceyInput.addEventListener('input', (e) => { localStorage.setItem('pe_pricey_mult', e.target.value); renderValuationBar(); });
     }
-    function renderValuationBar() {
-        if (!currentStock) return; const stock = currentStock; const price = Number(stock.price) || 0; const method = document.querySelector('input[name="val_method"]:checked')?.value || 'baban';
-        let cheap = 0, pricey = 0;
-        if (method === 'baban') { cheap = Number(stock.cheap) || 0; pricey = Number(stock.pricey) || 0; } else { const eps = Number(stock.eps); const cheapMult = Number(document.getElementById('pe-cheap-input')?.value || 12); const priceyMult = Number(document.getElementById('pe-pricey-input')?.value || 30); if (isNaN(eps) || eps <= 0) { document.getElementById('label-cheap-price').innerHTML = `無<br>EPS`; document.getElementById('label-pricey-price').innerHTML = `無<br>EPS`; resetBars(); return; } cheap = eps * cheapMult; pricey = eps * priceyMult; }
-        document.getElementById('label-cheap-price').innerHTML = `淑<br>${cheap.toFixed(1)}`; document.getElementById('label-pricey-price').innerHTML = `貴<br>${pricey.toFixed(1)}`;
-        if (cheap === 0 && pricey === 0) { resetBars(); return; }
-        const mid = (cheap + pricey) / 2; resetBars();
-        if (price < cheap) { document.getElementById('bar-1').className = 'flex-1 bg-green-500 transition-all duration-300 shadow-[0_0_8px_rgba(34,197,94,0.7)]'; } else if (price < mid) { document.getElementById('bar-2').className = 'flex-1 bg-[#84cc16] transition-all duration-300 shadow-[0_0_8px_rgba(132,204,22,0.7)]'; } else if (price < pricey) { document.getElementById('bar-3').className = 'flex-1 bg-orange-400 transition-all duration-300 shadow-[0_0_8px_rgba(251,146,60,0.7)]'; } else { document.getElementById('bar-4').className = 'flex-1 bg-red-500 transition-all duration-300 shadow-[0_0_8px_rgba(239,68,68,0.7)]'; }
+    
+/* [VER] v2.1.1 [2026-03-22]
+  [DESC] 配合 HTML 結構更新，將估價文字寫入到分離的 label-cheap-val 與 label-pricey-val 節點中，不再混雜文字標籤。
+*/
+function renderValuationBar() {
+    if (!currentStock) return; const stock = currentStock; const price = Number(stock.price) || 0; const method = document.querySelector('input[name="val_method"]:checked')?.value || 'baban';
+    let cheap = 0, pricey = 0;
+    
+    if (method === 'baban') { 
+        cheap = Number(stock.cheap) || 0; pricey = Number(stock.pricey) || 0; 
+    } else { 
+        const eps = Number(stock.eps); const cheapMult = Number(document.getElementById('pe-cheap-input')?.value || 12); const priceyMult = Number(document.getElementById('pe-pricey-input')?.value || 30); 
+        if (isNaN(eps) || eps <= 0) { 
+            document.getElementById('label-cheap-val').innerText = `無EPS`; 
+            document.getElementById('label-pricey-val').innerText = `無EPS`; 
+            resetBars(); 
+            return; 
+        } 
+        cheap = eps * cheapMult; pricey = eps * priceyMult; 
     }
+    
+    // 將純數值寫入新的 DOM 節點
+    document.getElementById('label-cheap-val').innerText = cheap.toFixed(1); 
+    document.getElementById('label-pricey-val').innerText = pricey.toFixed(1);
+    
+    if (cheap === 0 && pricey === 0) { resetBars(); return; }
+    
+    const mid = (cheap + pricey) / 2; resetBars();
+    
+    if (price < cheap) { 
+        document.getElementById('bar-1').className = 'flex-1 bg-green-500 transition-all duration-300 shadow-[0_0_8px_rgba(34,197,94,0.7)]'; 
+    } else if (price < mid) { 
+        document.getElementById('bar-2').className = 'flex-1 bg-[#84cc16] transition-all duration-300 shadow-[0_0_8px_rgba(132,204,22,0.7)]'; 
+    } else if (price < pricey) { 
+        document.getElementById('bar-3').className = 'flex-1 bg-orange-400 transition-all duration-300 shadow-[0_0_8px_rgba(251,146,60,0.7)]'; 
+    } else { 
+        document.getElementById('bar-4').className = 'flex-1 bg-red-500 transition-all duration-300 shadow-[0_0_8px_rgba(239,68,68,0.7)]'; 
+    }
+}
+
     function resetBars() { for(let i=1; i<=4; i++) { const el = document.getElementById(`bar-${i}`); if(el) el.className = 'flex-1 bg-gray-800 transition-all duration-300'; } }
     
     function editStockName() {
