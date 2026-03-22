@@ -9,7 +9,7 @@ let firebaseConfig = { apiKey: "AIzaSyCG3akQbcQvm1khoNyJ0S5xmwNftruo2D8", authDo
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 let db, auth, currentUser;
 
-/
+/**
  * [DESC] 導入單一 GAS 多租戶架構，設置全域中央 API 網址
  */
 window.appState = { 
