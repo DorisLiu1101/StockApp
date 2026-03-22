@@ -1,9 +1,10 @@
 /**
- * [VER] v2.0.0 [2026-03-16]
+ * [VER] v2.1.0 [2026-03-16]
  * [DESC] 配合 SPA 架構，加入圖表與列表渲染防呆機制 (Safe Checks)
  */
 window.portfolioService = (function() {
     let allPortfolioData = [];
+    let currentStock = null;
     let currentFilter = 'ALL', currentChartFilter = 'ALL', currentSort = { field: 'gain', order: 'desc' };
 
     function setPortfolioData(data) { allPortfolioData = data; filterStocks(); updateHomeChart('ALL'); }
@@ -58,6 +59,7 @@ window.portfolioService = (function() {
     function openStockDetail(market, symbol) {
         if(window.pushModalState) window.pushModalState('detail');
         const stock = allPortfolioData.find(s => s.market === market && s.symbol === symbol); if(!stock) return window.showAlert("無此持股資料");
+        currentStock = stock;
         if(window.appState) { window.appState.currentDetailSymbol = symbol; window.appState.currentDetailMarket = market; }
         const fmt = (n) => n.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1}); const isGain = stock.gain >= 0;
         const mktTag = document.getElementById('detail-market-tag'); mktTag.innerText = market;
@@ -67,16 +69,12 @@ window.portfolioService = (function() {
         const roiEl = document.getElementById('detail-roi'); roiEl.innerText = (isGain ? "+" : "") + stock.gainPct + "%"; roiEl.className = `text-2xl font-bold tracking-tighter leading-none ${isGain ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
         const prefix = market === 'US' ? '$ ' : (market === 'JP' ? '¥ ' : '$ ');
         document.getElementById('detail-qty').innerText = fmt(stock.qty); document.getElementById('detail-cost').innerText = fmt(stock.cost); const costOrg = stock.cost * stock.qty; document.getElementById('detail-exp-return-grid').innerText = (stock.expReturn !== "" && stock.expReturn != null) ? stock.expReturn + "%" : "--"; document.getElementById('detail-cost-twd-primary').innerText = prefix + fmt(Math.round(costOrg)); const costTWD = stock.marketValue - stock.gain; document.getElementById('detail-cost-twd-secondary').innerText = "NT$ " + fmt(Math.round(costTWD)); const mktOrg = stock.price * stock.qty; document.getElementById('detail-market-primary').innerText = prefix + fmt(Math.round(mktOrg)); document.getElementById('detail-market-secondary').innerText = "NT$ " + fmt(stock.marketValue); const gainOrg = stock.gainOrg || ((stock.price - stock.cost) * stock.qty); document.getElementById('detail-gain-primary').innerText = (gainOrg >= 0 ? "+" : "") + fmt(Math.round(gainOrg)); document.getElementById('detail-gain-primary').className = `text-val-md ${gainOrg >= 0 ? 'text-[#EF4444]' : 'text-[#22C55E]'}`; document.getElementById('detail-gain-secondary').innerText = (isGain ? "+NT$ " : "NT$ ") + fmt(Math.round(stock.gain)); document.getElementById('detail-gain-secondary').className = `text-[13px] font-bold font-mono mt-1.5 ${isGain ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
-        const price = Number(stock.price) || 0; const cheap = Number(stock.cheap) || 0; const pricey = Number(stock.pricey) || 0; const thermSection = document.getElementById('thermometer-section');
-        if (cheap > 0 && pricey > 0) {
-            thermSection.classList.remove('hidden'); document.getElementById('val-cheap').innerText = fmt(cheap); document.getElementById('val-pricey').innerText = fmt(pricey); let pct = 0; let badgeText = "現價"; let badgeColor = "bg-[#D4AF37] text-black"; if (price <= cheap) { pct = 0; badgeText = "低於淑價"; badgeColor = "bg-green-600 text-white"; } else if (price >= pricey) { pct = 100; badgeText = "高於貴價"; badgeColor = "bg-red-600 text-white"; } else { pct = ((price - cheap) / (pricey - cheap)) * 100; pct = Math.max(0, Math.min(100, pct)); } document.getElementById('therm-indicator-line').style.left = pct + "%"; document.getElementById('detail-price-text').style.left = pct + "%"; document.getElementById('detail-price-text').innerText = fmt(price); const label = document.getElementById('therm-current-label'); label.style.left = pct + "%"; label.innerText = badgeText; 
-            
-            let alignClass = "-translate-x-1/2"; 
-            if (pct <= 5) alignClass = "translate-x-0"; 
-            else if (pct >= 95) alignClass = "-translate-x-full"; 
-            
-            label.className = `absolute text-[11px] font-black px-2 py-0.5 rounded shadow-lg z-20 transform ${alignClass} top-0 whitespace-nowrap ${badgeColor}`;
-        } else { thermSection.classList.add('hidden'); }
+        
+        const elDetailCurrentPrice = document.getElementById('detail-current-price'); if (elDetailCurrentPrice) elDetailCurrentPrice.innerText = fmt(Number(stock.price) || 0);
+        const elDetailEps = document.getElementById('detail-eps'); if (elDetailEps) elDetailEps.innerText = stock.eps ? stock.eps : 'N/A';
+        const babanRadio = document.querySelector('input[name="val_method"][value="baban"]'); if(babanRadio) { babanRadio.checked = true; const peArea = document.getElementById('pe-settings-area'); if(peArea) peArea.style.display = 'none'; }
+        renderValuationBar();
+
         const editBtn = document.getElementById('btn-header-edit'); if(editBtn) editBtn.onclick = (e) => { e.stopPropagation(); window.txService.openTransactionModal(market, symbol); };
         document.getElementById('report-frame').srcdoc = ""; document.getElementById('report-content').classList.add('hidden'); document.getElementById('report-loading').classList.add('hidden'); document.getElementById('detail-modal').classList.add('open');
     }
@@ -88,6 +86,25 @@ window.portfolioService = (function() {
     function setSortField(f) { currentSort.field=f; document.getElementById('current-sort-field-label').innerText={'gain':'損益','weight':'佔比','expReturn':'預期報酬','symbol':'股號'}[f]||f; toggleSortMenu(); filterStocks(); }
     function toggleSortOrder() { currentSort.order=currentSort.order==='desc'?'asc':'desc'; document.getElementById('sort-arrow-icon').innerText=currentSort.order==='desc'?'arrow_downward':'arrow_upward'; filterStocks(); }
 
+    function initValuationEvents() {
+        const savedCheap = localStorage.getItem('pe_cheap_mult') || 12; const savedPricey = localStorage.getItem('pe_pricey_mult') || 30;
+        const cheapInput = document.getElementById('pe-cheap-input'); const priceyInput = document.getElementById('pe-pricey-input');
+        if(cheapInput) cheapInput.value = savedCheap; if(priceyInput) priceyInput.value = savedPricey;
+        document.querySelectorAll('input[name="val_method"]').forEach(radio => { radio.addEventListener('change', (e) => { const peArea = document.getElementById('pe-settings-area'); if(peArea) peArea.style.display = (e.target.value === 'pe') ? 'flex' : 'none'; renderValuationBar(); }); });
+        if(cheapInput) cheapInput.addEventListener('input', (e) => { localStorage.setItem('pe_cheap_mult', e.target.value); renderValuationBar(); });
+        if(priceyInput) priceyInput.addEventListener('input', (e) => { localStorage.setItem('pe_pricey_mult', e.target.value); renderValuationBar(); });
+    }
+    function renderValuationBar() {
+        if (!currentStock) return; const stock = currentStock; const price = Number(stock.price) || 0; const method = document.querySelector('input[name="val_method"]:checked')?.value || 'baban';
+        let cheap = 0, pricey = 0;
+        if (method === 'baban') { cheap = Number(stock.cheap) || 0; pricey = Number(stock.pricey) || 0; } else { const eps = Number(stock.eps); const cheapMult = Number(document.getElementById('pe-cheap-input')?.value || 12); const priceyMult = Number(document.getElementById('pe-pricey-input')?.value || 30); if (isNaN(eps) || eps <= 0) { document.getElementById('label-cheap-price').innerHTML = `無<br>EPS`; document.getElementById('label-pricey-price').innerHTML = `無<br>EPS`; resetBars(); return; } cheap = eps * cheapMult; pricey = eps * priceyMult; }
+        document.getElementById('label-cheap-price').innerHTML = `淑<br>${cheap.toFixed(1)}`; document.getElementById('label-pricey-price').innerHTML = `貴<br>${pricey.toFixed(1)}`;
+        if (cheap === 0 && pricey === 0) { resetBars(); return; }
+        const mid = (cheap + pricey) / 2; resetBars();
+        if (price < cheap) { document.getElementById('bar-1').className = 'flex-1 bg-green-500 transition-all duration-300 shadow-[0_0_8px_rgba(34,197,94,0.7)]'; } else if (price < mid) { document.getElementById('bar-2').className = 'flex-1 bg-[#84cc16] transition-all duration-300 shadow-[0_0_8px_rgba(132,204,22,0.7)]'; } else if (price < pricey) { document.getElementById('bar-3').className = 'flex-1 bg-orange-400 transition-all duration-300 shadow-[0_0_8px_rgba(251,146,60,0.7)]'; } else { document.getElementById('bar-4').className = 'flex-1 bg-red-500 transition-all duration-300 shadow-[0_0_8px_rgba(239,68,68,0.7)]'; }
+    }
+    function resetBars() { for(let i=1; i<=4; i++) { const el = document.getElementById(`bar-${i}`); if(el) el.className = 'flex-1 bg-gray-800 transition-all duration-300'; } }
+    
     function editStockName() {
         const symbol = window.appState.currentDetailSymbol, market = window.appState.currentDetailMarket;
         const nameEl = document.getElementById('detail-name'); if (nameEl.querySelector('input')) return; 
@@ -103,5 +120,7 @@ window.portfolioService = (function() {
         try { const res = await fetch(window.appState.userScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'edit_name', data: { market: window.appState.currentDetailMarket, symbol: window.appState.currentDetailSymbol, newName: newName } }) }); const json = await res.json(); if(json.success) { nameEl.innerText = newName; if(window.syncSheetData) window.syncSheetData(); } else { throw new Error(json.message); } } catch(e) { window.showAlert("更新失敗: " + e.message); nameEl.innerText = oldName; } 
     }
 
-    return { setPortfolioData, getPortfolioData, updateHomeChart, renderChart, filterStocks, toggleFilterMenu, setMarketFilter, toggleSortMenu, setSortField, toggleSortOrder, openStockDetail, closeStockDetail, editStockName, cancelInlineName, saveInlineName };
+    return { setPortfolioData, getPortfolioData, updateHomeChart, renderChart, filterStocks, toggleFilterMenu, setMarketFilter, toggleSortMenu, setSortField, toggleSortOrder, openStockDetail, closeStockDetail, editStockName, cancelInlineName, saveInlineName, initValuationEvents, renderValuationBar, resetBars };
 })();
+
+setTimeout(() => { if(window.portfolioService.initValuationEvents) window.portfolioService.initValuationEvents(); }, 1000);
