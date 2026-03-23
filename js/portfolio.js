@@ -1,11 +1,12 @@
-/* * [VER] v2.3.0 [2026-03-24] 
- * [DESC] 實作 EPS 季度/歷年/股利三聯式折疊表格，並動態計算平均殖利率 
+/* [VER] v2.5.0 [2026-03-24] 
+ * [DESC] 實作真實日曆基準法 (季度過濾)、空值顯示為淺灰雙底線、展開更多功能，並強制抓取「前一年度」配息頻率進行字典轉換 
  */
 
 window.portfolioService = (function() {
     let allPortfolioData = [];
     let currentStock = null;
     let currentFilter = 'ALL', currentChartFilter = 'ALL', currentSort = { field: 'gain', order: 'desc' };
+    let isQuarterExpanded = false;
 
     function setPortfolioData(data) { allPortfolioData = data; filterStocks(); updateHomeChart('ALL'); }
     function getPortfolioData() { return allPortfolioData; }
@@ -50,7 +51,6 @@ window.portfolioService = (function() {
         c.innerHTML = html;
     }
 
-    // ====== 更新：三聯式視圖切換 ======
     function toggleEpsView(view) {
         const btnQ = document.getElementById('btn-eps-quarter');
         const btnY = document.getElementById('btn-eps-year');
@@ -69,6 +69,23 @@ window.portfolioService = (function() {
         if(viewQ) viewQ.classList.toggle('hidden', view !== 'quarter');
         if(viewY) viewY.classList.toggle('hidden', view !== 'year');
         if(viewD) viewD.classList.toggle('hidden', view !== 'dividend');
+    }
+
+    function toggleMoreQuarters() {
+        isQuarterExpanded = !isQuarterExpanded;
+        const rows = document.querySelectorAll('.hidden-q-row');
+        const btn = document.getElementById('btn-toggle-quarters');
+        
+        rows.forEach(r => {
+            if (isQuarterExpanded) r.classList.remove('hidden');
+            else r.classList.add('hidden');
+        });
+        
+        if (btn) {
+            btn.innerHTML = isQuarterExpanded ? '收合歷史季度 ▴' : '展開更多歷史季度 ▾';
+            btn.classList.toggle('text-[#D4AF37]', isQuarterExpanded);
+            btn.classList.toggle('text-gray-400', !isQuarterExpanded);
+        }
     }
 
     function renderEpsTables(stock) {
@@ -94,14 +111,16 @@ window.portfolioService = (function() {
             return 'text-gray-400';
         };
 
+        const nullBadge = '<span class="text-gray-600 font-mono text-center w-full block">--</span>';
+
         // 1. 歷年表現 (年資料)
         if(tbodyY) {
             let yearHtml = '';
             if (ttmRecord && ttmRecord.EPS !== 'N/A') {
-                yearHtml += `<tr class="border-b border-gray-800/50 bg-[#D4AF37]/5"><td class="py-2.5 font-mono text-gray-300 font-bold text-center">TTM</td><td class="py-2.5 text-center font-mono font-bold text-white">${Number(ttmRecord.EPS).toFixed(2)}</td><td class="py-2.5 text-center font-mono text-gray-500">--</td><td class="py-2.5 text-center font-mono text-gray-400">${ttmRecord.ROE !== 'N/A' ? (Number(ttmRecord.ROE) * 100).toFixed(2) + '%' : '--'}</td></tr>`;
+                yearHtml += `<tr class="border-b border-gray-800/50 bg-[#D4AF37]/5"><td class="py-2.5 font-mono text-gray-300 font-bold text-center">TTM</td><td class="py-2.5 text-center font-mono font-bold text-white">${Number(ttmRecord.EPS).toFixed(2)}</td><td class="py-2.5 text-center font-mono text-gray-500">--</td><td class="py-2.5 text-center font-mono text-gray-400">${ttmRecord.ROE !== 'N/A' ? (Number(ttmRecord.ROE) * 100).toFixed(2) + '%' : nullBadge}</td></tr>`;
             }
             records.forEach((r, index) => {
-                let yoyHtml = '--';
+                let yoyHtml = nullBadge;
                 if (r.EPS !== 'N/A' && index + 1 < records.length && records[index + 1].EPS !== 'N/A') {
                     let prevEps = Number(records[index + 1].EPS), curEps = Number(r.EPS);
                     if (prevEps !== 0 && !isNaN(prevEps) && !isNaN(curEps)) {
@@ -109,8 +128,8 @@ window.portfolioService = (function() {
                         yoyHtml = `<span class="${getColorClass(yoy)}">${yoy > 0 ? '+' : ''}${yoy.toFixed(2)}%</span>`;
                     }
                 }
-                let epsStr = r.EPS === 'N/A' ? '<span class="text-gray-600">N/A</span>' : Number(r.EPS).toFixed(2);
-                let roeStr = r.ROE === 'N/A' ? '--' : (Number(r.ROE) * 100).toFixed(2) + '%';
+                let epsStr = r.EPS === 'N/A' ? nullBadge : Number(r.EPS).toFixed(2);
+                let roeStr = r.ROE === 'N/A' ? nullBadge : (Number(r.ROE) * 100).toFixed(2) + '%';
                 yearHtml += `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
                     <td class="py-2.5 font-mono text-gray-400 text-center">${r.Year}</td>
                     <td class="py-2.5 text-center font-mono text-gray-300">${epsStr}</td>
@@ -131,11 +150,22 @@ window.portfolioService = (function() {
                 if(r.EPS_Q2 !== undefined && r.EPS_Q2 !== "") quartersData.push({ qStr: `${y} Q2`, eps: r.EPS_Q2, year: y, q: 2 });
                 if(r.EPS_Q1 !== undefined && r.EPS_Q1 !== "") quartersData.push({ qStr: `${y} Q1`, eps: r.EPS_Q1, year: y, q: 1 });
             });
+
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentQ = Math.ceil((now.getMonth() + 1) / 3);
+
+            quartersData = quartersData.filter(qData => {
+                if (qData.year > currentYear) return false;
+                if (qData.year === currentYear && qData.q > currentQ) return false;
+                return true;
+            });
+
             quartersData.sort((a, b) => b.year - a.year || b.q - a.q);
 
             let quarterHtml = '';
             quartersData.forEach((qData, index) => {
-                let yoyHtml = '--';
+                let yoyHtml = nullBadge;
                 if (qData.eps !== 'N/A') {
                     let prevQ = quartersData.find(old => old.year === qData.year - 1 && old.q === qData.q);
                     if (prevQ && prevQ.eps !== 'N/A') {
@@ -146,28 +176,52 @@ window.portfolioService = (function() {
                         }
                     }
                 }
-                let epsVal = qData.eps === 'N/A' ? '<span class="text-gray-600">N/A</span>' : Number(qData.eps).toFixed(2);
-                quarterHtml += `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+                
+                let epsVal = qData.eps === 'N/A' ? nullBadge : Number(qData.eps).toFixed(2);
+                let hiddenClass = index >= 8 ? 'hidden-q-row hidden' : '';
+
+                quarterHtml += `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 ${hiddenClass}">
                     <td class="py-2.5 font-mono text-gray-400 text-center">${qData.qStr}</td>
                     <td class="py-2.5 text-center font-mono text-gray-300">${epsVal}</td>
                     <td class="py-2.5 text-center font-mono">${yoyHtml}</td>
                 </tr>`;
             });
+
+            if (quartersData.length > 8) {
+                quarterHtml += `<tr id="quarter-toggle-row">
+                    <td colspan="3" class="text-center py-3 border-b-0">
+                        <button id="btn-toggle-quarters" onclick="window.portfolioService.toggleMoreQuarters()" class="text-[11px] text-gray-400 hover:text-[#D4AF37] tracking-widest w-full py-2 bg-[#1A1A1A] rounded-lg border border-gray-800/60 transition-colors shadow-sm focus:outline-none active:scale-95">
+                            展開更多歷史季度 ▾
+                        </button>
+                    </td>
+                </tr>`;
+            }
+
             tbodyQ.innerHTML = quarterHtml || '<tr><td colspan="3" class="text-center py-4 text-gray-500 text-xs">無季度資料</td></tr>';
+            isQuarterExpanded = false; 
         }
 
-        // 3. 股利政策 (平均殖利率與歷年配息)
+        // 3. 股利政策 (強制抓取前一年度配息頻率與字典轉換，並加入殖利率欄位)
         if(tbodyD) {
             let validYields = records.filter(r => r.CashYield !== 'N/A' && r.CashYield !== undefined && r.CashYield !== null).map(r => Number(r.CashYield));
             let avg3y = validYields.slice(0, 3).reduce((a,b)=>a+b, 0) / Math.min(validYields.length, 3);
             let avg5y = validYields.slice(0, 5).reduce((a,b)=>a+b, 0) / Math.min(validYields.length, 5);
             
-            let divFreq = records.length > 0 && records[0].DivFreq !== 'N/A' ? records[0].DivFreq : '--';
-            if(divFreq == 1) divFreq = "年配(1)";
-            else if(divFreq == 2) divFreq = "半年配(2)";
-            else if(divFreq == 4) divFreq = "季配(4)";
-            else if(divFreq == 12) divFreq = "月配(12)";
-            else if(divFreq !== '--') divFreq = `次數: ${divFreq}`;
+            // 強制尋找前一年度
+            const nowYear = new Date().getFullYear();
+            const prevYear = nowYear - 1;
+            const prevYearRecord = records.find(r => Number(r.Year) === prevYear);
+            
+            let divFreq = '--';
+            if (prevYearRecord && prevYearRecord.DivFreq !== 'N/A' && prevYearRecord.DivFreq !== undefined && prevYearRecord.DivFreq !== null && prevYearRecord.DivFreq !== '') {
+                let freqNum = Number(prevYearRecord.DivFreq);
+                if (freqNum === 1) divFreq = "年配";
+                else if (freqNum === 2) divFreq = "半年配";
+                else if (freqNum === 4) divFreq = "季配";
+                else if (freqNum === 6) divFreq = "雙月配";
+                else if (freqNum === 12) divFreq = "月配";
+                else if (!isNaN(freqNum)) divFreq = String(freqNum);
+            }
 
             document.getElementById('div-freq-val').innerText = divFreq;
             document.getElementById('div-yield-3y').innerText = isNaN(avg3y) || validYields.length === 0 ? '--' : (avg3y * 100).toFixed(2) + '%';
@@ -175,21 +229,33 @@ window.portfolioService = (function() {
 
             let divHtml = '';
             if (ttmRecord && ttmRecord.CashDiv !== 'N/A') {
-                let pr = ttmRecord.PayoutRatio === 'N/A' ? '--' : (Number(ttmRecord.PayoutRatio) * 100).toFixed(2) + '%';
-                divHtml += `<tr class="border-b border-gray-800/50 bg-[#D4AF37]/5"><td class="py-2.5 font-mono text-gray-300 font-bold text-center">TTM</td><td class="py-2.5 text-center font-mono font-bold text-[#D4AF37]">${Number(ttmRecord.CashDiv).toFixed(2)}</td><td class="py-2.5 text-center font-mono text-gray-300">${ttmRecord.EPS !== 'N/A' ? Number(ttmRecord.EPS).toFixed(2) : '--'}</td><td class="py-2.5 text-center font-mono text-gray-400">${pr}</td></tr>`;
+                let pr = ttmRecord.PayoutRatio === 'N/A' ? nullBadge : (Number(ttmRecord.PayoutRatio) * 100).toFixed(2) + '%';
+                let yieldStr = ttmRecord.CashYield === 'N/A' ? nullBadge : (Number(ttmRecord.CashYield) * 100).toFixed(2) + '%';
+                
+                divHtml += `<tr class="border-b border-gray-800/50 bg-[#D4AF37]/5">
+                    <td class="py-2.5 font-mono text-gray-300 font-bold text-center">TTM</td>
+                    <td class="py-2.5 text-center font-mono font-bold text-[#D4AF37]">${Number(ttmRecord.CashDiv).toFixed(2)}</td>
+                    <td class="py-2.5 text-center font-mono text-gray-300">${yieldStr}</td>
+                    <td class="py-2.5 text-center font-mono text-gray-300">${ttmRecord.EPS !== 'N/A' ? Number(ttmRecord.EPS).toFixed(2) : nullBadge}</td>
+                    <td class="py-2.5 text-center font-mono text-gray-400">${pr}</td>
+                </tr>`;
             }
             records.slice(0, 6).forEach(r => {
-                let divStr = r.CashDiv === 'N/A' ? '<span class="text-gray-600">N/A</span>' : Number(r.CashDiv).toFixed(2);
-                let epsStr = r.EPS === 'N/A' ? '--' : Number(r.EPS).toFixed(2);
-                let prStr = r.PayoutRatio === 'N/A' ? '--' : (Number(r.PayoutRatio) * 100).toFixed(2) + '%';
+                let divStr = r.CashDiv === 'N/A' ? nullBadge : Number(r.CashDiv).toFixed(2);
+                let yieldStr = r.CashYield === 'N/A' ? nullBadge : (Number(r.CashYield) * 100).toFixed(2) + '%';
+                let epsStr = r.EPS === 'N/A' ? nullBadge : Number(r.EPS).toFixed(2);
+                let prStr = r.PayoutRatio === 'N/A' ? nullBadge : (Number(r.PayoutRatio) * 100).toFixed(2) + '%';
+                
                 divHtml += `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
                     <td class="py-2.5 font-mono text-gray-400 text-center">${r.Year}</td>
                     <td class="py-2.5 text-center font-mono text-[#D4AF37] opacity-90">${divStr}</td>
+                    <td class="py-2.5 text-center font-mono text-gray-400">${yieldStr}</td>
                     <td class="py-2.5 text-center font-mono text-gray-300">${epsStr}</td>
                     <td class="py-2.5 text-center font-mono text-gray-400">${prStr}</td>
                 </tr>`;
             });
-            tbodyD.innerHTML = divHtml || '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs">無歷年配息資料</td></tr>';
+            // 注意：colspan 改為 5
+            tbodyD.innerHTML = divHtml || '<tr><td colspan="5" class="text-center py-4 text-gray-500 text-xs">無歷年配息資料</td></tr>';
         }
         
         toggleEpsView('quarter');
@@ -279,7 +345,7 @@ window.portfolioService = (function() {
         try { const res = await fetch(window.appState.userScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'edit_name', data: { market: window.appState.currentDetailMarket, symbol: window.appState.currentDetailSymbol, newName: newName } }) }); const json = await res.json(); if(json.success) { nameEl.innerText = newName; if(window.syncSheetData) window.syncSheetData(); } else { throw new Error(json.message); } } catch(e) { window.showAlert("更新失敗: " + e.message); nameEl.innerText = oldName; } 
     }
 
-    return { setPortfolioData, getPortfolioData, updateHomeChart, renderChart, filterStocks, toggleFilterMenu, setMarketFilter, toggleSortMenu, setSortField, toggleSortOrder, openStockDetail, closeStockDetail, editStockName, cancelInlineName, saveInlineName, initValuationEvents, renderValuationBar, resetBars, toggleEpsView };
+    return { setPortfolioData, getPortfolioData, updateHomeChart, renderChart, filterStocks, toggleFilterMenu, setMarketFilter, toggleSortMenu, setSortField, toggleSortOrder, openStockDetail, closeStockDetail, editStockName, cancelInlineName, saveInlineName, initValuationEvents, renderValuationBar, resetBars, toggleEpsView, toggleMoreQuarters };
 })();
 
 setTimeout(() => { if(window.portfolioService.initValuationEvents) window.portfolioService.initValuationEvents(); }, 1000);
