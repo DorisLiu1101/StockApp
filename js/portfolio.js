@@ -1,6 +1,8 @@
-/* [VER] v2.1.2 [2026-03-22] [DESC] 根據市場別動態更新現價的幣別標籤 */
+/* * [VER] v2.3.0 [2026-03-24] 
+ * [DESC] 實作 EPS 季度/歷年/股利三聯式折疊表格，並動態計算平均殖利率 
+ */
 
-    window.portfolioService = (function() {
+window.portfolioService = (function() {
     let allPortfolioData = [];
     let currentStock = null;
     let currentFilter = 'ALL', currentChartFilter = 'ALL', currentSort = { field: 'gain', order: 'desc' };
@@ -17,9 +19,7 @@
     }
 
     function renderChart(vals, labels) {
-        // [加入防呆保護]：如果畫面上沒有圓餅圖容器 (例如切換到其他分頁了)，就直接中止執行
         if (!document.getElementById('portfolio-chart')) return;
-        
         const colors=['#D4AF37','#B4941F','#756010','#4B5563','#1F2937']; let grad="conic-gradient(", curr=0, leg="";
         if (vals.length === 0) { document.getElementById('portfolio-chart').style.background = '#222'; document.getElementById('sector-legend').innerHTML = '<div class="text-xs text-gray-600">無數據</div>'; document.getElementById('chart-center-text').innerText = "0%"; return; }
         vals.forEach((v,i)=>{ const c=colors[i]||colors[colors.length-1]; grad+=`${c} ${curr}% ${curr+v}%, `; curr+=v; leg+=`<div class="flex items-center justify-between text-xs mb-1"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full" style="background:${c}"></div><span class="text-gray-400 truncate w-24">${labels[i]}</span></div><span class="text-gray-400 font-mono">${v}%</span></div>`; });
@@ -27,10 +27,8 @@
     }
 
     function filterStocks() {
-        // [加入防呆保護]：如果畫面上沒有搜尋框，給予空字串避免報錯
         const searchInput = document.getElementById('stock-search');
         const q = searchInput ? searchInput.value.toLowerCase() : '';
-        
         let f = allPortfolioData.filter(i => { const m = (currentFilter === 'ALL') || (i.market === currentFilter); return m && (String(i.symbol).toLowerCase().includes(q) || String(i.name||'').toLowerCase().includes(q)); });
         f.sort((a, b) => {
             if (currentSort.field === 'symbol') return currentSort.order === 'desc' ? -String(a.symbol).localeCompare(String(b.symbol),undefined,{numeric:true}) : String(a.symbol).localeCompare(String(b.symbol),undefined,{numeric:true});
@@ -41,9 +39,7 @@
 
     function renderStockList(list) {
         const c = document.getElementById('stock-list-container');
-        // [加入防呆保護]：如果畫面上沒有列表容器 (例如切換到其他分頁了)，就直接中止執行
         if (!c) return;
-        
         if(!list.length) { c.innerHTML="<p class='text-center text-gray-600 text-sm py-16 uppercase tracking-widest'>No Positions Found</p>"; return; }
         let html = "";
         list.forEach(item => {
@@ -52,6 +48,151 @@
             html += `<div onclick="window.portfolioService.openStockDetail('${item.market}', '${item.symbol}')" class="app-card py-[5px] px-[10px] flex flex-col justify-center cursor-pointer hover:bg-[#1A1A1A] transition-all my-[10px] mx-[5px] active:scale-[0.98] shadow-md h-full"><div class="flex justify-between items-center mb-1"><div class="flex items-center gap-2 min-w-0 flex-1 mr-2 overflow-hidden"><span class="text-xs px-1.5 py-0.5 rounded border font-bold uppercase min-w-[30px] text-center flex-shrink-0 ${badgeClass}">${item.market}</span><span class="text-[20px] font-bold text-white font-mono tracking-wide flex-shrink-0">${item.symbol}</span><span class="text-[18px] text-gray-400 font-light truncate">${item.name || ''}</span></div><div class="text-[18px] font-bold text-gray-100 font-mono tracking-tight flex-shrink-0">${fmt(item.price)}</div></div><div class="flex justify-between items-center"><div class="text-[18px] text-gray-500 font-mono">${fmt(item.qty)} sh</div><div class="text-[18px] font-bold ${isGain?'text-[#E57373]':'text-[#4DB6AC]'} font-mono">${(isGain?'+':'')}${item.gainPct}% <span class="text-[18px] opacity-80 ml-1">(${gainAmt})</span></div></div></div>`;
         });
         c.innerHTML = html;
+    }
+
+    // ====== 更新：三聯式視圖切換 ======
+    function toggleEpsView(view) {
+        const btnQ = document.getElementById('btn-eps-quarter');
+        const btnY = document.getElementById('btn-eps-year');
+        const btnD = document.getElementById('btn-eps-dividend');
+        const viewQ = document.getElementById('eps-quarter-view');
+        const viewY = document.getElementById('eps-year-view');
+        const viewD = document.getElementById('eps-dividend-view');
+        
+        const activeClass = "px-3 py-1.5 rounded-md text-[11px] font-bold transition-all bg-gray-700 text-white shadow-sm";
+        const inactiveClass = "px-3 py-1.5 rounded-md text-[11px] font-bold transition-all text-gray-400 hover:text-gray-200";
+
+        if(btnQ) btnQ.className = view === 'quarter' ? activeClass : inactiveClass;
+        if(btnY) btnY.className = view === 'year' ? activeClass : inactiveClass;
+        if(btnD) btnD.className = view === 'dividend' ? activeClass : inactiveClass;
+
+        if(viewQ) viewQ.classList.toggle('hidden', view !== 'quarter');
+        if(viewY) viewY.classList.toggle('hidden', view !== 'year');
+        if(viewD) viewD.classList.toggle('hidden', view !== 'dividend');
+    }
+
+    function renderEpsTables(stock) {
+        const tbodyQ = document.getElementById('eps-quarter-tbody');
+        const tbodyY = document.getElementById('eps-year-tbody');
+        const tbodyD = document.getElementById('eps-dividend-tbody');
+        
+        if (!stock.records || !Array.isArray(stock.records) || stock.records.length === 0) {
+            if(tbodyQ) tbodyQ.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500 text-xs">尚無歷史財報資料</td></tr>';
+            if(tbodyY) tbodyY.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs">尚無歷史財報資料</td></tr>';
+            if(tbodyD) tbodyD.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs">尚無歷年配息資料</td></tr>';
+            return;
+        }
+
+        let records = [...stock.records].filter(r => r.Year && r.Year !== 'TTM');
+        records.sort((a, b) => Number(b.Year) - Number(a.Year)); 
+        const ttmRecord = stock.records.find(r => r.Year === 'TTM');
+        const market = stock.market || 'TW';
+
+        const getColorClass = (val) => {
+            if (val > 0) return market === 'US' ? 'text-[#22c55e]' : 'text-[#ef4444]';
+            if (val < 0) return market === 'US' ? 'text-[#ef4444]' : 'text-[#22c55e]';
+            return 'text-gray-400';
+        };
+
+        // 1. 歷年表現 (年資料)
+        if(tbodyY) {
+            let yearHtml = '';
+            if (ttmRecord && ttmRecord.EPS !== 'N/A') {
+                yearHtml += `<tr class="border-b border-gray-800/50 bg-[#D4AF37]/5"><td class="py-2.5 font-mono text-gray-300 font-bold text-center">TTM</td><td class="py-2.5 text-center font-mono font-bold text-white">${Number(ttmRecord.EPS).toFixed(2)}</td><td class="py-2.5 text-center font-mono text-gray-500">--</td><td class="py-2.5 text-center font-mono text-gray-400">${ttmRecord.ROE !== 'N/A' ? (Number(ttmRecord.ROE) * 100).toFixed(2) + '%' : '--'}</td></tr>`;
+            }
+            records.forEach((r, index) => {
+                let yoyHtml = '--';
+                if (r.EPS !== 'N/A' && index + 1 < records.length && records[index + 1].EPS !== 'N/A') {
+                    let prevEps = Number(records[index + 1].EPS), curEps = Number(r.EPS);
+                    if (prevEps !== 0 && !isNaN(prevEps) && !isNaN(curEps)) {
+                        let yoy = ((curEps - prevEps) / Math.abs(prevEps)) * 100;
+                        yoyHtml = `<span class="${getColorClass(yoy)}">${yoy > 0 ? '+' : ''}${yoy.toFixed(2)}%</span>`;
+                    }
+                }
+                let epsStr = r.EPS === 'N/A' ? '<span class="text-gray-600">N/A</span>' : Number(r.EPS).toFixed(2);
+                let roeStr = r.ROE === 'N/A' ? '--' : (Number(r.ROE) * 100).toFixed(2) + '%';
+                yearHtml += `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+                    <td class="py-2.5 font-mono text-gray-400 text-center">${r.Year}</td>
+                    <td class="py-2.5 text-center font-mono text-gray-300">${epsStr}</td>
+                    <td class="py-2.5 text-center font-mono">${yoyHtml}</td>
+                    <td class="py-2.5 text-center font-mono text-gray-500">${roeStr}</td>
+                </tr>`;
+            });
+            tbodyY.innerHTML = yearHtml || '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs">無歷年資料</td></tr>';
+        }
+
+        // 2. 季度動能 (季資料)
+        if(tbodyQ) {
+            let quartersData = [];
+            records.forEach(r => {
+                let y = Number(r.Year);
+                if(r.EPS_Q4 !== undefined && r.EPS_Q4 !== "") quartersData.push({ qStr: `${y} Q4`, eps: r.EPS_Q4, year: y, q: 4 });
+                if(r.EPS_Q3 !== undefined && r.EPS_Q3 !== "") quartersData.push({ qStr: `${y} Q3`, eps: r.EPS_Q3, year: y, q: 3 });
+                if(r.EPS_Q2 !== undefined && r.EPS_Q2 !== "") quartersData.push({ qStr: `${y} Q2`, eps: r.EPS_Q2, year: y, q: 2 });
+                if(r.EPS_Q1 !== undefined && r.EPS_Q1 !== "") quartersData.push({ qStr: `${y} Q1`, eps: r.EPS_Q1, year: y, q: 1 });
+            });
+            quartersData.sort((a, b) => b.year - a.year || b.q - a.q);
+
+            let quarterHtml = '';
+            quartersData.forEach((qData, index) => {
+                let yoyHtml = '--';
+                if (qData.eps !== 'N/A') {
+                    let prevQ = quartersData.find(old => old.year === qData.year - 1 && old.q === qData.q);
+                    if (prevQ && prevQ.eps !== 'N/A') {
+                        let curEps = Number(qData.eps), prevEps = Number(prevQ.eps);
+                        if (prevEps !== 0 && !isNaN(curEps) && !isNaN(prevEps)) {
+                            let yoy = ((curEps - prevEps) / Math.abs(prevEps)) * 100;
+                            yoyHtml = `<span class="${getColorClass(yoy)}">${yoy > 0 ? '+' : ''}${yoy.toFixed(2)}%</span>`;
+                        }
+                    }
+                }
+                let epsVal = qData.eps === 'N/A' ? '<span class="text-gray-600">N/A</span>' : Number(qData.eps).toFixed(2);
+                quarterHtml += `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+                    <td class="py-2.5 font-mono text-gray-400 text-center">${qData.qStr}</td>
+                    <td class="py-2.5 text-center font-mono text-gray-300">${epsVal}</td>
+                    <td class="py-2.5 text-center font-mono">${yoyHtml}</td>
+                </tr>`;
+            });
+            tbodyQ.innerHTML = quarterHtml || '<tr><td colspan="3" class="text-center py-4 text-gray-500 text-xs">無季度資料</td></tr>';
+        }
+
+        // 3. 股利政策 (平均殖利率與歷年配息)
+        if(tbodyD) {
+            let validYields = records.filter(r => r.CashYield !== 'N/A' && r.CashYield !== undefined && r.CashYield !== null).map(r => Number(r.CashYield));
+            let avg3y = validYields.slice(0, 3).reduce((a,b)=>a+b, 0) / Math.min(validYields.length, 3);
+            let avg5y = validYields.slice(0, 5).reduce((a,b)=>a+b, 0) / Math.min(validYields.length, 5);
+            
+            let divFreq = records.length > 0 && records[0].DivFreq !== 'N/A' ? records[0].DivFreq : '--';
+            if(divFreq == 1) divFreq = "年配(1)";
+            else if(divFreq == 2) divFreq = "半年配(2)";
+            else if(divFreq == 4) divFreq = "季配(4)";
+            else if(divFreq == 12) divFreq = "月配(12)";
+            else if(divFreq !== '--') divFreq = `次數: ${divFreq}`;
+
+            document.getElementById('div-freq-val').innerText = divFreq;
+            document.getElementById('div-yield-3y').innerText = isNaN(avg3y) || validYields.length === 0 ? '--' : (avg3y * 100).toFixed(2) + '%';
+            document.getElementById('div-yield-5y').innerText = isNaN(avg5y) || validYields.length === 0 ? '--' : (avg5y * 100).toFixed(2) + '%';
+
+            let divHtml = '';
+            if (ttmRecord && ttmRecord.CashDiv !== 'N/A') {
+                let pr = ttmRecord.PayoutRatio === 'N/A' ? '--' : (Number(ttmRecord.PayoutRatio) * 100).toFixed(2) + '%';
+                divHtml += `<tr class="border-b border-gray-800/50 bg-[#D4AF37]/5"><td class="py-2.5 font-mono text-gray-300 font-bold text-center">TTM</td><td class="py-2.5 text-center font-mono font-bold text-[#D4AF37]">${Number(ttmRecord.CashDiv).toFixed(2)}</td><td class="py-2.5 text-center font-mono text-gray-300">${ttmRecord.EPS !== 'N/A' ? Number(ttmRecord.EPS).toFixed(2) : '--'}</td><td class="py-2.5 text-center font-mono text-gray-400">${pr}</td></tr>`;
+            }
+            records.slice(0, 6).forEach(r => {
+                let divStr = r.CashDiv === 'N/A' ? '<span class="text-gray-600">N/A</span>' : Number(r.CashDiv).toFixed(2);
+                let epsStr = r.EPS === 'N/A' ? '--' : Number(r.EPS).toFixed(2);
+                let prStr = r.PayoutRatio === 'N/A' ? '--' : (Number(r.PayoutRatio) * 100).toFixed(2) + '%';
+                divHtml += `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+                    <td class="py-2.5 font-mono text-gray-400 text-center">${r.Year}</td>
+                    <td class="py-2.5 text-center font-mono text-[#D4AF37] opacity-90">${divStr}</td>
+                    <td class="py-2.5 text-center font-mono text-gray-300">${epsStr}</td>
+                    <td class="py-2.5 text-center font-mono text-gray-400">${prStr}</td>
+                </tr>`;
+            });
+            tbodyD.innerHTML = divHtml || '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs">無歷年配息資料</td></tr>';
+        }
+        
+        toggleEpsView('quarter');
     }
 
     function openStockDetail(market, symbol) {
@@ -70,13 +211,13 @@
         
         const elDetailCurrentPrice = document.getElementById('detail-current-price'); if (elDetailCurrentPrice) elDetailCurrentPrice.innerText = fmt(Number(stock.price) || 0);
         const elCurrentPriceTitle = document.getElementById('label-current-price-title');
-        if (elCurrentPriceTitle) {
-            elCurrentPriceTitle.innerText = `現價${market === 'JP' ? '¥' : '$'}`;
-        }
+        if (elCurrentPriceTitle) { elCurrentPriceTitle.innerText = `現價${market === 'JP' ? '¥' : '$'}`; }
         
         const elDetailEps = document.getElementById('detail-eps'); if (elDetailEps) elDetailEps.innerText = stock.eps ? stock.eps : 'N/A';
         const babanRadio = document.querySelector('input[name="val_method"][value="baban"]'); if(babanRadio) { babanRadio.checked = true; const peArea = document.getElementById('pe-settings-area'); if(peArea) peArea.style.display = 'none'; }
+        
         renderValuationBar();
+        renderEpsTables(stock);
 
         const editBtn = document.getElementById('btn-header-edit'); if(editBtn) editBtn.onclick = (e) => { e.stopPropagation(); window.txService.openTransactionModal(market, symbol); };
         document.getElementById('report-frame').srcdoc = ""; document.getElementById('report-content').classList.add('hidden'); document.getElementById('report-loading').classList.add('hidden'); document.getElementById('detail-modal').classList.add('open');
@@ -98,44 +239,28 @@
         if(priceyInput) priceyInput.addEventListener('input', (e) => { localStorage.setItem('pe_pricey_mult', e.target.value); renderValuationBar(); });
     }
     
-/* [VER] v2.1.1 [2026-03-22]
-  [DESC] 配合 HTML 結構更新，將估價文字寫入到分離的 label-cheap-val 與 label-pricey-val 節點中，不再混雜文字標籤。
-*/
-function renderValuationBar() {
-    if (!currentStock) return; const stock = currentStock; const price = Number(stock.price) || 0; const method = document.querySelector('input[name="val_method"]:checked')?.value || 'baban';
-    let cheap = 0, pricey = 0;
-    
-    if (method === 'baban') { 
-        cheap = Number(stock.cheap) || 0; pricey = Number(stock.pricey) || 0; 
-    } else { 
-        const eps = Number(stock.eps); const cheapMult = Number(document.getElementById('pe-cheap-input')?.value || 12); const priceyMult = Number(document.getElementById('pe-pricey-input')?.value || 30); 
-        if (isNaN(eps) || eps <= 0) { 
-            document.getElementById('label-cheap-val').innerText = `無EPS`; 
-            document.getElementById('label-pricey-val').innerText = `無EPS`; 
-            resetBars(); 
-            return; 
-        } 
-        cheap = eps * cheapMult; pricey = eps * priceyMult; 
+    function renderValuationBar() {
+        if (!currentStock) return; const stock = currentStock; const price = Number(stock.price) || 0; const method = document.querySelector('input[name="val_method"]:checked')?.value || 'baban';
+        let cheap = 0, pricey = 0;
+        
+        if (method === 'baban') { 
+            cheap = Number(stock.cheap) || 0; pricey = Number(stock.pricey) || 0; 
+        } else { 
+            const eps = Number(stock.eps); const cheapMult = Number(document.getElementById('pe-cheap-input')?.value || 12); const priceyMult = Number(document.getElementById('pe-pricey-input')?.value || 30); 
+            if (isNaN(eps) || eps <= 0) { document.getElementById('label-cheap-val').innerText = `無EPS`; document.getElementById('label-pricey-val').innerText = `無EPS`; resetBars(); return; } 
+            cheap = eps * cheapMult; pricey = eps * priceyMult; 
+        }
+        
+        document.getElementById('label-cheap-val').innerText = cheap.toFixed(1); 
+        document.getElementById('label-pricey-val').innerText = pricey.toFixed(1);
+        if (cheap === 0 && pricey === 0) { resetBars(); return; }
+        
+        const mid = (cheap + pricey) / 2; resetBars();
+        if (price < cheap) { document.getElementById('bar-1').className = 'flex-1 bg-green-500 transition-all duration-300 shadow-[0_0_8px_rgba(34,197,94,0.7)]'; } 
+        else if (price < mid) { document.getElementById('bar-2').className = 'flex-1 bg-[#84cc16] transition-all duration-300 shadow-[0_0_8px_rgba(132,204,22,0.7)]'; } 
+        else if (price < pricey) { document.getElementById('bar-3').className = 'flex-1 bg-orange-400 transition-all duration-300 shadow-[0_0_8px_rgba(251,146,60,0.7)]'; } 
+        else { document.getElementById('bar-4').className = 'flex-1 bg-red-500 transition-all duration-300 shadow-[0_0_8px_rgba(239,68,68,0.7)]'; }
     }
-    
-    // 將純數值寫入新的 DOM 節點
-    document.getElementById('label-cheap-val').innerText = cheap.toFixed(1); 
-    document.getElementById('label-pricey-val').innerText = pricey.toFixed(1);
-    
-    if (cheap === 0 && pricey === 0) { resetBars(); return; }
-    
-    const mid = (cheap + pricey) / 2; resetBars();
-    
-    if (price < cheap) { 
-        document.getElementById('bar-1').className = 'flex-1 bg-green-500 transition-all duration-300 shadow-[0_0_8px_rgba(34,197,94,0.7)]'; 
-    } else if (price < mid) { 
-        document.getElementById('bar-2').className = 'flex-1 bg-[#84cc16] transition-all duration-300 shadow-[0_0_8px_rgba(132,204,22,0.7)]'; 
-    } else if (price < pricey) { 
-        document.getElementById('bar-3').className = 'flex-1 bg-orange-400 transition-all duration-300 shadow-[0_0_8px_rgba(251,146,60,0.7)]'; 
-    } else { 
-        document.getElementById('bar-4').className = 'flex-1 bg-red-500 transition-all duration-300 shadow-[0_0_8px_rgba(239,68,68,0.7)]'; 
-    }
-}
 
     function resetBars() { for(let i=1; i<=4; i++) { const el = document.getElementById(`bar-${i}`); if(el) el.className = 'flex-1 bg-gray-800 transition-all duration-300'; } }
     
@@ -154,7 +279,7 @@ function renderValuationBar() {
         try { const res = await fetch(window.appState.userScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'edit_name', data: { market: window.appState.currentDetailMarket, symbol: window.appState.currentDetailSymbol, newName: newName } }) }); const json = await res.json(); if(json.success) { nameEl.innerText = newName; if(window.syncSheetData) window.syncSheetData(); } else { throw new Error(json.message); } } catch(e) { window.showAlert("更新失敗: " + e.message); nameEl.innerText = oldName; } 
     }
 
-    return { setPortfolioData, getPortfolioData, updateHomeChart, renderChart, filterStocks, toggleFilterMenu, setMarketFilter, toggleSortMenu, setSortField, toggleSortOrder, openStockDetail, closeStockDetail, editStockName, cancelInlineName, saveInlineName, initValuationEvents, renderValuationBar, resetBars };
+    return { setPortfolioData, getPortfolioData, updateHomeChart, renderChart, filterStocks, toggleFilterMenu, setMarketFilter, toggleSortMenu, setSortField, toggleSortOrder, openStockDetail, closeStockDetail, editStockName, cancelInlineName, saveInlineName, initValuationEvents, renderValuationBar, resetBars, toggleEpsView };
 })();
 
 setTimeout(() => { if(window.portfolioService.initValuationEvents) window.portfolioService.initValuationEvents(); }, 1000);

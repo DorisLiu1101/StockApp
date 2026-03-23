@@ -1,4 +1,7 @@
-<!--[VER] v2.1.1 [2026-03-22] -->
+<!--
+> [VER] v2.3.0 [2026-03-24]
+> [DESC] 新增 EPS 獲利追蹤折疊區塊與膠囊切換開關 UI
+ -->
 
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -144,7 +147,90 @@
     </div>
 </div>
 
+<!--獲利與配息追蹤-三聯式膠囊開關與股利政策視圖-->
+<div class="mt-4 mb-6">
+    <details class="group marker:hidden">
+        <summary class="flex justify-center items-center p-2 cursor-pointer select-none focus:outline-none border-b border-gray-800/60 pb-3">
+            <div class="flex items-center gap-2">
+                <span class="material-icons text-[#D4AF37] text-[18px]">insights</span>
+                <span class="text-sm font-bold text-gray-200 tracking-wider">獲利與配息追蹤</span>
+            </div>
+            <span class="material-icons text-gray-500 group-open:rotate-180 transition-transform duration-300 ml-2">expand_more</span>
+        </summary>
+        
+        <div class="pt-2">
+            <div class="flex justify-center bg-[#111] p-1 rounded-lg w-fit mx-auto my-4 border border-gray-800">
+                <button id="btn-eps-quarter" onclick="window.portfolioService.toggleEpsView('quarter')" class="px-3 py-1.5 rounded-md text-[11px] font-bold transition-all bg-gray-700 text-white shadow-sm">季度動能</button>
+                <button id="btn-eps-year" onclick="window.portfolioService.toggleEpsView('year')" class="px-3 py-1.5 rounded-md text-[11px] font-bold transition-all text-gray-400 hover:text-gray-200">歷年表現</button>
+                <button id="btn-eps-dividend" onclick="window.portfolioService.toggleEpsView('dividend')" class="px-3 py-1.5 rounded-md text-[11px] font-bold transition-all text-gray-400 hover:text-gray-200">股利政策</button>
+            </div>
+
+            <div id="eps-quarter-view" class="overflow-x-auto pb-2 hide-scrollbar">
+                <table class="w-full text-center text-sm whitespace-nowrap min-w-[280px]">
+                    <thead>
+                        <tr class="text-gray-400 text-[11px] border-b border-gray-800/60">
+                            <th class="pb-2 font-medium text-center">季度</th>
+                            <th class="pb-2 font-medium text-center">EPS(元)</th>
+                            <th class="pb-2 font-medium text-center">年增率</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eps-quarter-tbody" class="text-gray-200 text-[13px]">
+                        </tbody>
+                </table>
+            </div>
+
+            <div id="eps-year-view" class="hidden overflow-x-auto pb-2 hide-scrollbar">
+                <table class="w-full text-center text-sm whitespace-nowrap min-w-[280px]">
+                    <thead>
+                        <tr class="text-gray-400 text-[11px] border-b border-gray-800/60">
+                            <th class="pb-2 font-medium text-center">年份</th>
+                            <th class="pb-2 font-medium text-center">EPS(元)</th>
+                            <th class="pb-2 font-medium text-center">年增率</th>
+                            <th class="pb-2 font-medium text-center">ROE</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eps-year-tbody" class="text-gray-200 text-[13px]">
+                        </tbody>
+                </table>
+            </div>
+
+            <div id="eps-dividend-view" class="hidden pb-2">
+                <div class="grid grid-cols-3 gap-2 mb-4 px-2">
+                    <div class="flex flex-col items-center justify-center bg-[#1A1A1A] rounded-lg p-2 border border-gray-800/60">
+                        <span class="text-[10px] text-gray-400 mb-1">配息頻率</span>
+                        <span id="div-freq-val" class="text-[13px] font-bold text-white">--</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center bg-[#1A1A1A] rounded-lg p-2 border border-gray-800/60">
+                        <span class="text-[10px] text-gray-400 mb-1">近三年殖利率</span>
+                        <span id="div-yield-3y" class="text-[13px] font-bold text-[#D4AF37] font-mono">--</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center bg-[#1A1A1A] rounded-lg p-2 border border-gray-800/60">
+                        <span class="text-[10px] text-gray-400 mb-1">近五年殖利率</span>
+                        <span id="div-yield-5y" class="text-[13px] font-bold text-[#D4AF37] font-mono">--</span>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto hide-scrollbar">
+                    <table class="w-full text-center text-sm whitespace-nowrap min-w-[280px]">
+                        <thead>
+                            <tr class="text-gray-400 text-[11px] border-b border-gray-800/60">
+                                <th class="pb-2 font-medium text-center">年份</th>
+                                <th class="pb-2 font-medium text-center">現金股利</th>
+                                <th class="pb-2 font-medium text-center">EPS(元)</th>
+                                <th class="pb-2 font-medium text-center">配息率</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eps-dividend-tbody" class="text-gray-200 text-[13px]">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </details>
+</div>
     
+
+
     <div class="mb-12"><div class="flex flex-wrap justify-between items-center gap-y-3 mb-4 w-full"><div class="flex items-center gap-4"><button onclick="window.reportService.loadReport('')" class="px-4 py-2 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black text-[#D4AF37] text-[12px] font-bold tracking-widest rounded border border-[#D4AF37]/30 flex items-center gap-2"><span class="material-icons text-base">search</span> 讀取報告</button><div class="text-[12px] text-gray-400 font-mono">報告日期：<span id="detail-report-date">--</span><span id="debug-symbol" class="hidden">--</span></div></div><button onclick="window.reportService.generateAndSaveReport('')" class="w-9 h-9 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black text-[#D4AF37] rounded border border-[#D4AF37]/30 flex items-center justify-center"><span class="material-icons text-lg">sync</span></button></div><div id="report-section" class="rounded-xl overflow-hidden relative min-h-[0px]"><div id="report-loading" class="hidden flex-col items-center py-10"><span class="material-icons animate-spin text-[#D4AF37] mb-3 text-4xl">sync</span><p id="report-loading-text" class="text-[13px] text-gray-500 tracking-[0.3em] font-bold">PROCESSING...</p></div><div id="report-content" class="w-full hidden bg-transparent"><iframe id="report-frame" class="w-full border-none block" scrolling="no"></iframe></div></div></div></div></div>
     <div id="favorite-detail-modal" class="modal-fullscreen fixed inset-0 z-[55] bg-[#000] flex flex-col"><div class="flex-1 overflow-y-auto p-5 pb-10 hide-scrollbar"><div class="relative mb-6 pt-4"><button onclick="window.pickService.closeFavoriteDetail()" class="absolute -top-1 -right-2 p-2 text-gray-500 hover:text-white z-10 focus:outline-none"><span class="material-icons text-2xl">close</span></button><div class="flex items-center gap-2 mb-2 pr-8"><span id="fav-detail-market" class="text-[13.5px] px-2 py-0.5 rounded font-bold uppercase tracking-tighter">TAG</span></div><div class="flex justify-between items-center border-b border-gray-800 pb-5"><div class="flex items-center gap-2 overflow-hidden"><h2 id="fav-detail-symbol" class="text-2xl font-bold text-white font-mono leading-none flex-shrink-0">--</h2><h2 id="fav-detail-name" class="text-2xl font-bold text-[#E5E7EB] truncate leading-none">--</h2><button onclick="window.pickService.editFavoriteName()" class="text-gray-500 hover:text-[#D4AF37] p-1 flex items-center"><span class="material-icons text-base">edit</span></button></div><div class="flex items-baseline gap-1.5 flex-shrink-0"><span class="text-[11px] text-gray-500 font-bold tracking-wider">ExpRE</span><div id="fav-detail-exp-top" class="text-2xl font-bold tracking-tighter leading-none text-white font-mono">--%</div></div></div></div><div id="fav-thermometer-section" class="mb-10 pt-2 hidden"><div class="flex items-center justify-between gap-6"><div class="flex flex-col items-center"><span class="text-label-grey mb-2 text-green-500 font-bold">淑價</span><span id="fav-val-cheap" class="text-xl font-mono font-bold text-green-500 leading-none">--</span></div><div class="flex-1 relative h-20 flex flex-col justify-center"><div id="fav-therm-pointer-top" class="absolute top-0 w-full h-6"><div id="fav-therm-current-label" class="absolute bg-[#D4AF37] text-black text-[11px] font-black px-2 py-0.5 rounded shadow-lg z-20 transform -translate-x-1/2 top-0">現價</div></div><div class="therm-track w-full relative"><div id="fav-therm-indicator-line" class="therm-indicator-line"></div></div><div id="fav-therm-pointer-bottom" class="absolute bottom-0 w-full h-6"><div id="fav-detail-price-text" class="absolute bottom-0 transform -translate-x-1/2 text-white font-mono font-bold text-xl text-center w-24 leading-none">--</div></div></div><div class="flex flex-col items-center"><span class="text-label-grey mb-2 text-red-500 font-bold">貴價</span><span id="fav-val-pricey" class="text-xl font-mono font-bold text-red-500 leading-none">--</span></div></div></div><div class="flex gap-3 mb-10 mt-2"><button onclick="window.pickService.removeFavorite()" class="flex-1 bg-[#1A1A1A] text-red-400 border border-[#333] py-2.5 rounded-lg font-bold tracking-widest flex items-center justify-center gap-2 text-sm hover:border-red-800 transition"><span class="material-icons text-base">delete_outline</span> 移除收藏</button><button onclick="window.txService.openTransactionModal(window.appState.currentDetailMarket, window.appState.currentDetailSymbol)" class="flex-1 bg-gold text-black py-2.5 rounded-lg font-bold tracking-widest flex items-center justify-center gap-2 text-sm shadow-lg hover:bg-[#FFE082] transition"><span class="material-icons text-base">add_shopping_cart</span> 建立庫存</button></div><div class="mb-12"><div class="flex flex-wrap justify-between items-center gap-y-3 mb-4 w-full border-t border-gray-800 pt-6"><div class="flex items-center gap-4"><button onclick="window.reportService.loadReport('fav-')" class="px-4 py-2 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black transition-all text-[#D4AF37] text-[12px] font-bold tracking-widest rounded border border-[#D4AF37]/30 flex items-center gap-2 shadow-lg focus:outline-none"><span class="material-icons text-base">search</span> 讀取報告</button><div class="text-[12px] text-gray-400 font-mono">報告日期：<span id="fav-detail-date">--</span></div></div><button onclick="window.reportService.generateAndSaveReport('fav-')" class="w-9 h-9 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black transition-all text-[#D4AF37] rounded border border-[#D4AF37]/30 flex items-center justify-center shadow-lg focus:outline-none active:scale-95"><span class="material-icons text-lg">sync</span></button></div><div id="fav-report-section" class="rounded-xl overflow-hidden relative min-h-[0px]"><div id="fav-report-loading" class="hidden flex-col items-center py-10"><span class="material-icons animate-spin text-[#D4AF37] mb-3 text-4xl">sync</span><p id="fav-report-loading-text" class="text-[13px] text-gray-500 tracking-[0.3em] font-bold">PROCESSING...</p></div><div id="fav-report-content" class="w-full hidden bg-transparent"><iframe id="fav-report-frame" class="w-full border-none block" scrolling="no"></iframe></div></div></div></div></div>
     
