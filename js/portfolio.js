@@ -1,4 +1,4 @@
-/* [VER] v2.5.0 [2026-03-24] 
+/* [VER] v2.6.0 [2026-03-25] 
  * [DESC] 實作真實日曆基準法 (季度過濾)、空值顯示為淺灰雙底線、展開更多功能，並強制抓取「前一年度」配息頻率進行字典轉換 
  */
 
@@ -42,11 +42,42 @@ window.portfolioService = (function() {
         const c = document.getElementById('stock-list-container');
         if (!c) return;
         if(!list.length) { c.innerHTML="<p class='text-center text-gray-600 text-sm py-16 uppercase tracking-widest'>No Positions Found</p>"; return; }
+        
         let html = "";
         list.forEach(item => {
-            const isGain = item.gain >= 0; const fmt = (n) => n.toLocaleString(); const gainAmt = (isGain ? "+" : "") + fmt(Math.round(item.gain));
+            // 🛡️ [新增防呆機制] 安全的數字格式化工具
+            const safeFmt = (n) => {
+                // 如果是 null、undefined、空字串或根本不是數字，一律優雅回傳 '--'，絕不崩潰
+                if (n === null || n === undefined || n === '' || isNaN(Number(n))) return '--';
+                return Number(n).toLocaleString();
+            };
+
+            // 針對損益 (Gain) 進行防呆處理
+            const isGain = Number(item.gain) >= 0; 
+            const gainAmtStr = (item.gain === null || item.gain === undefined || isNaN(Number(item.gain))) 
+                ? '--' 
+                : (isGain ? "+" : "") + safeFmt(Math.round(Number(item.gain)));
+            
+            const gainPctStr = (item.gainPct === null || item.gainPct === undefined || item.gainPct === '') 
+                ? '--%' 
+                : (isGain ? '+' : '') + item.gainPct + '%';
+
             let badgeClass = item.market === 'TW' ? "bg-blue-950 text-blue-300 border-blue-800" : (item.market === 'US' ? "bg-yellow-950 text-yellow-300 border-yellow-800" : "bg-red-950 text-red-300 border-red-800");
-            html += `<div onclick="window.portfolioService.openStockDetail('${item.market}', '${item.symbol}')" class="app-card py-[5px] px-[10px] flex flex-col justify-center cursor-pointer hover:bg-[#1A1A1A] transition-all my-[10px] mx-[5px] active:scale-[0.98] shadow-md h-full"><div class="flex justify-between items-center mb-1"><div class="flex items-center gap-2 min-w-0 flex-1 mr-2 overflow-hidden"><span class="text-xs px-1.5 py-0.5 rounded border font-bold uppercase min-w-[30px] text-center flex-shrink-0 ${badgeClass}">${item.market}</span><span class="text-[20px] font-bold text-white font-mono tracking-wide flex-shrink-0">${item.symbol}</span><span class="text-[18px] text-gray-400 font-light truncate">${item.name || ''}</span></div><div class="text-[18px] font-bold text-gray-100 font-mono tracking-tight flex-shrink-0">${fmt(item.price)}</div></div><div class="flex justify-between items-center"><div class="text-[18px] text-gray-500 font-mono">${fmt(item.qty)} sh</div><div class="text-[18px] font-bold ${isGain?'text-[#E57373]':'text-[#4DB6AC]'} font-mono">${(isGain?'+':'')}${item.gainPct}% <span class="text-[18px] opacity-80 ml-1">(${gainAmt})</span></div></div></div>`;
+            
+            html += `<div onclick="window.portfolioService.openStockDetail('${item.market}', '${item.symbol}')" class="app-card py-[5px] px-[10px] flex flex-col justify-center cursor-pointer hover:bg-[#1A1A1A] transition-all my-[10px] mx-[5px] active:scale-[0.98] shadow-md h-full">
+                <div class="flex justify-between items-center mb-1">
+                    <div class="flex items-center gap-2 min-w-0 flex-1 mr-2 overflow-hidden">
+                        <span class="text-xs px-1.5 py-0.5 rounded border font-bold uppercase min-w-[30px] text-center flex-shrink-0 ${badgeClass}">${item.market}</span>
+                        <span class="text-[20px] font-bold text-white font-mono tracking-wide flex-shrink-0">${item.symbol}</span>
+                        <span class="text-[18px] text-gray-400 font-light truncate">${item.name || '--'}</span>
+                    </div>
+                    <div class="text-[18px] font-bold text-gray-100 font-mono tracking-tight flex-shrink-0">${safeFmt(item.price)}</div>
+                </div>
+                <div class="flex justify-between items-center">
+                    <div class="text-[18px] text-gray-500 font-mono">${safeFmt(item.qty)} sh</div>
+                    <div class="text-[18px] font-bold ${isGain ? 'text-[#E57373]' : 'text-[#4DB6AC]'} font-mono">${gainPctStr} <span class="text-[18px] opacity-80 ml-1">(${gainAmtStr})</span></div>
+                </div>
+            </div>`;
         });
         c.innerHTML = html;
     }
