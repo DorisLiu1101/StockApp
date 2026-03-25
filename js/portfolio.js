@@ -129,14 +129,14 @@ window.portfolioService = (function() {
         if(loadingDiv) loadingDiv.classList.remove('hidden');
         if(contentDiv) { contentDiv.classList.add('hidden'); contentDiv.innerHTML = ''; }
 
-        if (!window.appState || !window.appState.userScriptUrl) {
+        if (!window.appState || !window.appState.API_URL) {
             if(loadingDiv) loadingDiv.classList.add('hidden');
             if(contentDiv) { contentDiv.innerHTML = '<p class="text-center text-xs text-red-400 py-6">請先至設定綁定 API 網址</p>'; contentDiv.classList.remove('hidden'); }
             return;
         }
 
         try {
-            const res = await fetch(window.appState.userScriptUrl, { 
+            const res = await fetch(window.appState.API_URL, { 
                 method: 'POST', 
                 body: JSON.stringify({ action: 'get_basic_info', data: { market: market, symbol: symbol } }) 
             });
@@ -498,9 +498,10 @@ window.portfolioService = (function() {
     async function saveInlineName(oldName) { 
         const newName = document.getElementById('inline-name-input').value.trim(); const nameEl = document.getElementById('detail-name'); 
         if (!newName || newName === oldName) { nameEl.innerText = oldName; return; } 
-        if (!window.appState.userScriptUrl) { window.showAlert("請先設定 URL"); nameEl.innerText = oldName; return; } 
+        if (!window.appState.API_URL) { window.showAlert("請先設定 URL"); nameEl.innerText = oldName; return; } 
         nameEl.innerHTML = `<span class="text-sm text-gray-400 animate-pulse font-mono tracking-widest">Saving...</span>`; 
-        try { const res = await fetch(window.appState.userScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'edit_name', data: { market: window.appState.currentDetailMarket, symbol: window.appState.currentDetailSymbol, newName: newName } }) }); const json = await res.json(); if(json.success) { nameEl.innerText = newName; if(window.syncSheetData) window.syncSheetData(); } else { throw new Error(json.message); } } catch(e) { window.showAlert("更新失敗: " + e.message); nameEl.innerText = oldName; } 
+        try { const res = await fetch(window.appState.API_URL, { method: 'POST', body: JSON.stringify({ action: 'edit_name', data: { market: window.appState.currentDetailMarket, symbol: window.appState.currentDetailSymbol, newName: newName } }) }); const json = await res.json();
+        if(json.success) { nameEl.innerText = newName; if(window.syncSheetData) window.syncSheetData(); } else { throw new Error(json.message); } } catch(e) { window.showAlert("更新失敗: " + e.message); nameEl.innerText = oldName; } 
     }
 
     return { setPortfolioData, getPortfolioData, updateHomeChart, renderChart, filterStocks, toggleFilterMenu, setMarketFilter, toggleSortMenu, setSortField, toggleSortOrder, openStockDetail, closeStockDetail, editStockName, cancelInlineName, saveInlineName, initValuationEvents, renderValuationBar, resetBars, toggleEpsView, toggleMoreQuarters };

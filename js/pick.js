@@ -64,7 +64,7 @@ window.pickService = (function() {
     async function addFavorite() {
         const market = document.getElementById('pick-market').value; const symbolInput = document.getElementById('pick-symbol'); const symbol = symbolInput.value.trim().toUpperCase();
         if (!symbol) return window.showAlert("請輸入股號");
-        const scriptUrl = window.appState ? window.appState.userScriptUrl : "";
+        const scriptUrl = window.appState ? window.appState.API_URL : "";
         if (!scriptUrl) return window.showAlert("請先於設定中綁定 API 網址");
 
         window.showAlert("正在寫入共用資料庫...", "處理中");
@@ -149,10 +149,10 @@ window.pickService = (function() {
     async function saveInlineFavName(oldName) { 
         const newName = document.getElementById('fav-inline-name-input').value.trim(); const nameEl = document.getElementById('fav-detail-name'); 
         if (!newName || newName === oldName) { nameEl.innerText = oldName || '--'; return; } 
-        if (!window.appState.userScriptUrl) { window.showAlert("請先設定 URL"); nameEl.innerText = oldName || '--'; return; } 
+        if (!window.appState.API_URL) { window.showAlert("請先設定 URL"); nameEl.innerText = oldName || '--'; return; } 
         nameEl.innerHTML = `<span class="text-sm text-gray-400 animate-pulse font-mono tracking-widest">Saving...</span>`; 
         try { 
-            const res = await fetch(window.appState.userScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'edit_fav_name', data: { market: window.appState.currentDetailMarket, symbol: window.appState.currentDetailSymbol, newName: newName } }) }); 
+            const res = await fetch(window.appState.API_URL, { method: 'POST', body: JSON.stringify({ action: 'edit_fav_name', data: { market: window.appState.currentDetailMarket, symbol: window.appState.currentDetailSymbol, newName: newName } }) }); 
             const json = await res.json(); 
             if(json.success) { 
                 nameEl.innerText = newName; 

@@ -54,7 +54,7 @@ window.txService = (function() {
         const sB = document.getElementById('btn-tx-submit'); const sD = document.getElementById('tx-status');
         sB.disabled = true; sB.innerText = "同步中...";
         try {
-            const res = await fetch(window.appState.userScriptUrl, { method: 'POST', body: JSON.stringify({ action: 'add', data: { market: m, symbol: s, price: Number(p), qty: qty, name: name } }) });
+            const res = await fetch(window.appState.API_URL, { method: 'POST', body: JSON.stringify({ action: 'add', data: { market: m, symbol: s, price: Number(p), qty: qty, name: name } }) });
             const json = await res.json();
             if (json.success) { sD.innerHTML = '<span class="text-green-500">新增完成 ✅</span>'; if(window.syncSheetData) await window.syncSheetData(); sB.disabled = false; sB.innerText = "確認新增"; } else { throw new Error(json.message); }
         } catch (e) { window.showAlert("錯誤：" + e.message); sB.disabled = false; sB.innerText = "確認新增"; }

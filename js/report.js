@@ -8,7 +8,7 @@ window.reportService = (function() {
     async function generateAndSaveReport(prefix = '') {
         const symbol = window.appState.currentDetailSymbol;
         const market = window.appState.currentDetailMarket;
-        const scriptUrl = window.appState.userScriptUrl;
+        const scriptUrl = window.appState.API_URL;
 
         if (!symbol || symbol === '--') return window.showAlert('請先選擇一檔股票！');
         if (!scriptUrl) return window.showAlert('請先至設定頁面綁定 API 網址！');
@@ -87,7 +87,7 @@ window.reportService = (function() {
 
     async function loadReport(prefix = '') {
         const symbol = window.appState.currentDetailSymbol;
-        const scriptUrl = window.appState.userScriptUrl;
+        const scriptUrl = window.appState.API_URL;
         if (!symbol || symbol === '--' || !scriptUrl) return;
         
         const loadingDiv = document.getElementById(prefix + 'report-loading');
