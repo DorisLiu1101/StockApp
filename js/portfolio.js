@@ -217,9 +217,9 @@ window.portfolioService = (function() {
             quarterStr = yq.length === 6 ? yq.substring(0, 4) + 'Q' + parseInt(yq.substring(4, 6), 10) : yq;
         }
 
-        // 用來產生 `(!)` 標籤的輔助函數
-        const infoIcon = (key, title) => `<span onclick="window.portfolioService.showInfoSheet('${key}', '${title}')" class="inline-flex items-center justify-center w-[14px] h-[14px] ml-1.5 bg-gray-700/80 text-gray-300 rounded-full text-[9px] font-bold cursor-pointer active:scale-90 transition-transform">!</span>`;
-
+        // 用來產生 `ⓘ` 標籤的輔助函數 (原生空心高質感寫法)
+        const infoIcon = (key, title) => `<span onclick="window.portfolioService.showInfoSheet('${key}', '${title}')" class="material-icons text-[15px] ml-1 text-gray-500 hover:text-gray-300 cursor-pointer active:scale-90 transition-colors align-middle">info_outline</span>`;
+        
         contentDiv.innerHTML = `
             <div class="space-y-6 px-1">
                 <div>
@@ -491,6 +491,10 @@ window.portfolioService = (function() {
         const elDetailEps = document.getElementById('detail-eps'); if (elDetailEps) elDetailEps.innerText = stock.eps ? stock.eps : 'N/A';
         const babanRadio = document.querySelector('input[name="val_method"][value="baban"]'); if(babanRadio) { babanRadio.checked = true; const peArea = document.getElementById('pe-settings-area'); if(peArea) peArea.style.display = 'none'; }
         
+        // 強制重置本益比設定為預設值 12 與 3
+        const cheapInput = document.getElementById('pe-cheap-input'); if(cheapInput) cheapInput.value = 12;
+        const priceyInput = document.getElementById('pe-pricey-input'); if(priceyInput) priceyInput.value = 30;
+
         renderValuationBar();
         renderEpsTables(stock);
 
@@ -514,12 +518,21 @@ window.portfolioService = (function() {
     function toggleSortOrder() { currentSort.order=currentSort.order==='desc'?'asc':'desc'; document.getElementById('sort-arrow-icon').innerText=currentSort.order==='desc'?'arrow_downward':'arrow_upward'; filterStocks(); }
 
     function initValuationEvents() {
-        const savedCheap = localStorage.getItem('pe_cheap_mult') || 12; const savedPricey = localStorage.getItem('pe_pricey_mult') || 30;
+        // 直接設定為 12 與 30，不再去 localStorage 撈取舊記憶
         const cheapInput = document.getElementById('pe-cheap-input'); const priceyInput = document.getElementById('pe-pricey-input');
-        if(cheapInput) cheapInput.value = savedCheap; if(priceyInput) priceyInput.value = savedPricey;
-        document.querySelectorAll('input[name="val_method"]').forEach(radio => { radio.addEventListener('change', (e) => { const peArea = document.getElementById('pe-settings-area'); if(peArea) peArea.style.display = (e.target.value === 'pe') ? 'flex' : 'none'; renderValuationBar(); }); });
-        if(cheapInput) cheapInput.addEventListener('input', (e) => { localStorage.setItem('pe_cheap_mult', e.target.value); renderValuationBar(); });
-        if(priceyInput) priceyInput.addEventListener('input', (e) => { localStorage.setItem('pe_pricey_mult', e.target.value); renderValuationBar(); });
+        if(cheapInput) cheapInput.value = 12; if(priceyInput) priceyInput.value = 30;
+        
+        document.querySelectorAll('input[name="val_method"]').forEach(radio => { 
+            radio.addEventListener('change', (e) => { 
+                const peArea = document.getElementById('pe-settings-area'); 
+                if(peArea) peArea.style.display = (e.target.value === 'pe') ? 'flex' : 'none'; 
+                renderValuationBar(); 
+            }); 
+        });
+        
+        // 監聽使用者輸入，即時重繪圖表 (但不把數值存入記憶體)
+        if(cheapInput) cheapInput.addEventListener('input', (e) => { renderValuationBar(); });
+        if(priceyInput) priceyInput.addEventListener('input', (e) => { renderValuationBar(); });
     }
     
     function renderValuationBar() {
@@ -563,7 +576,7 @@ window.portfolioService = (function() {
         if(json.success) { nameEl.innerText = newName; if(window.syncSheetData) window.syncSheetData(); } else { throw new Error(json.message); } } catch(e) { window.showAlert("更新失敗: " + e.message); nameEl.innerText = oldName; } 
     }
 
-    return { setPortfolioData, getPortfolioData, updateHomeChart, renderChart, filterStocks, toggleFilterMenu, setMarketFilter, toggleSortMenu, setSortField, toggleSortOrder, openStockDetail, closeStockDetail, editStockName, cancelInlineName, saveInlineName, initValuationEvents, renderValuationBar, resetBars, toggleEpsView, toggleMoreQuarters };
+    return { setPortfolioData, getPortfolioData, updateHomeChart, renderChart, filterStocks, toggleFilterMenu, setMarketFilter, toggleSortMenu, setSortField, toggleSortOrder, openStockDetail, closeStockDetail, editStockName, cancelInlineName, saveInlineName, initValuationEvents, renderValuationBar, resetBars, toggleEpsView, toggleMoreQuarters, showInfoSheet, closeInfoSheet };
 })();
 
 setTimeout(() => { if(window.portfolioService.initValuationEvents) window.portfolioService.initValuationEvents(); }, 1000);
