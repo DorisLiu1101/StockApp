@@ -54,6 +54,17 @@
         .therm-track { height: 8px; background: linear-gradient(90deg, #22C55E 0%, #EAB308 50%, #EF4444 100%); border-radius: 4px; position: relative; width: 100%; }
         .therm-indicator-line { position: absolute; top: -10px; bottom: -10px; width: 2.5px; background-color: #FFF; box-shadow: 0 0 6px rgba(0,0,0,1); transform: translateX(-50%); z-index: 10; transition: left 0.5s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* 移除數字輸入框 (type="number") 的預設箭頭 */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
     </style>
 </head>
 <body>
