@@ -591,14 +591,17 @@ window.portfolioService = (function() {
     }
 
     async function savePosition() {
-        const newQty = document.getElementById('inline-qty-input').value; 
-        const newCost = document.getElementById('inline-cost-input').value; 
+        const qtyInput = document.getElementById('inline-qty-input');
+        const costInput = document.getElementById('inline-cost-input');
         const btnContainer = document.getElementById('btn-header-edit-container');
+        
+        if (!qtyInput || !costInput) return;
+        const newQty = qtyInput.value; 
+        const newCost = costInput.value; 
         
         if (newQty === "" || newCost === "") return window.showAlert("股數與成本不可為空"); 
         if (!window.appState.API_URL) return window.showAlert("請先設定 URL"); 
         
-        // 確保精準抓到市場與股號
         const m = window.appState.currentDetailMarket;
         const s = window.appState.currentDetailSymbol;
         if (!m || !s) return window.showAlert("系統遺失個股代號，請重新整理");
@@ -610,7 +613,7 @@ window.portfolioService = (function() {
                 method: 'POST', 
                 body: JSON.stringify({ 
                     action: 'edit_position', 
-                    email: window.appState.email, // 帶上身分驗證信箱
+                    email: window.appState.email, 
                     data: { 
                         market: m, 
                         symbol: s, 
@@ -623,7 +626,6 @@ window.portfolioService = (function() {
             const json = await res.json();
             if(json.success) { 
                 if(window.syncSheetData) await window.syncSheetData(); 
-                // 儲存成功後，原地重新讀取卡片資料，畫面不跳轉
                 openStockDetail(m, s); 
             } else {
                 throw new Error(json.message); 
