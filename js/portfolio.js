@@ -562,30 +562,76 @@ window.portfolioService = (function() {
     function resetBars() { for(let i=1; i<=4; i++) { const el = document.getElementById(`bar-${i}`); if(el) el.className = 'flex-1 bg-gray-800 transition-all duration-300'; } }
     
     function editPosition() {
-        const qtyEl = document.getElementById('detail-qty'); const costEl = document.getElementById('detail-cost'); const btnContainer = document.getElementById('btn-header-edit-container');
-        if (!currentStock || qtyEl.querySelector('input')) return; 
-        const currentQty = currentStock.qty || 0; const currentCost = currentStock.cost || 0;
+        const qtyEl = document.getElementById('detail-qty'); 
+        const costEl = document.getElementById('detail-cost'); 
+        const btnContainer = document.getElementById('btn-header-edit-container');
+        
+        // 防呆：如果找不到畫面元素，或是已經變成輸入框了，就中斷
+        if (!qtyEl || !costEl || qtyEl.querySelector('input')) return; 
+        
+        // 🌟【無敵防呆法】直接從畫面上抓取目前的數字，去掉千位數逗號，完全不依賴底層變數
+        let currentQty = qtyEl.innerText.replace(/,/g, '').trim();
+        let currentCost = costEl.innerText.replace(/,/g, '').trim();
+        
+        // 如果抓不到或遇到破折號，預設為 0
+        if (isNaN(currentQty) || currentQty === '' || currentQty === '--') currentQty = 0;
+        if (isNaN(currentCost) || currentCost === '' || currentCost === '--') currentCost = 0;
+
         qtyEl.innerHTML = `<input type="number" id="inline-qty-input" value="${currentQty}" class="bg-[#1A1A1A] border border-[#D4AF37] rounded px-1 py-0.5 text-[18px] text-[#D4AF37] w-full max-w-[80px] text-center focus:outline-none shadow-inner font-mono">`;
         costEl.innerHTML = `<input type="number" id="inline-cost-input" value="${currentCost}" class="bg-[#1A1A1A] border border-[#D4AF37] rounded px-1 py-0.5 text-[18px] text-[#D4AF37] w-full max-w-[80px] text-center focus:outline-none shadow-inner font-mono">`;
+        
         btnContainer.innerHTML = `<div class="flex gap-2"><button onclick="window.portfolioService.savePosition()" class="text-green-500 hover:text-green-400 p-1 bg-[#2A2A2A] rounded border border-green-900/50 flex items-center"><span class="material-icons text-sm">check</span></button><button onclick="window.portfolioService.cancelPositionEdit()" class="text-red-500 hover:text-red-400 p-1 bg-[#2A2A2A] rounded border border-red-900/50 flex items-center"><span class="material-icons text-sm">close</span></button></div>`;
     }
 
-    function cancelPositionEdit() { if(currentStock) openStockDetail(currentStock.market, currentStock.symbol); }
+    function cancelPositionEdit() { 
+        // 放棄修改，用全域變數重繪卡片
+        if (window.appState && window.appState.currentDetailMarket) {
+            openStockDetail(window.appState.currentDetailMarket, window.appState.currentDetailSymbol); 
+        }
+    }
 
     async function savePosition() {
-        const newQty = document.getElementById('inline-qty-input').value; const newCost = document.getElementById('inline-cost-input').value; const btnContainer = document.getElementById('btn-header-edit-container');
-        if (newQty === "" || newCost === "") return window.showAlert("股數與成本不可為空"); if (!window.appState.API_URL) return window.showAlert("請先設定 URL"); 
+        const newQty = document.getElementById('inline-qty-input').value; 
+        const newCost = document.getElementById('inline-cost-input').value; 
+        const btnContainer = document.getElementById('btn-header-edit-container');
+        
+        if (newQty === "" || newCost === "") return window.showAlert("股數與成本不可為空"); 
+        if (!window.appState.API_URL) return window.showAlert("請先設定 URL"); 
+        
+        // 確保精準抓到市場與股號
+        const m = window.appState.currentDetailMarket;
+        const s = window.appState.currentDetailSymbol;
+        if (!m || !s) return window.showAlert("系統遺失個股代號，請重新整理");
+
         btnContainer.innerHTML = `<span class="text-[10px] text-[#D4AF37] animate-pulse font-mono tracking-widest mt-1">儲存中...</span>`;
+        
         try { 
-            const res = await fetch(window.appState.API_URL, { method: 'POST', body: JSON.stringify({ action: 'edit_position', data: { market: currentStock.market, symbol: currentStock.symbol, qty: Number(newQty), cost: Number(newCost) } }) }); 
+            const res = await fetch(window.appState.API_URL, { 
+                method: 'POST', 
+                body: JSON.stringify({ 
+                    action: 'edit_position', 
+                    email: window.appState.email, // 帶上身分驗證信箱
+                    data: { 
+                        market: m, 
+                        symbol: s, 
+                        qty: Number(newQty), 
+                        cost: Number(newCost) 
+                    } 
+                }) 
+            }); 
+            
             const json = await res.json();
             if(json.success) { 
                 if(window.syncSheetData) await window.syncSheetData(); 
-                const updatedStock = getPortfolioData().find(s => s.market === currentStock.market && s.symbol === currentStock.symbol);
-                if(updatedStock) currentStock = updatedStock;
-                openStockDetail(currentStock.market, currentStock.symbol); // 重新渲染且停留在卡片
-            } else throw new Error(json.message); 
-        } catch(e) { window.showAlert("更新失敗: " + e.message); cancelPositionEdit(); } 
+                // 儲存成功後，原地重新讀取卡片資料，畫面不跳轉
+                openStockDetail(m, s); 
+            } else {
+                throw new Error(json.message); 
+            }
+        } catch(e) { 
+            window.showAlert("更新失敗: " + e.message); 
+            cancelPositionEdit(); 
+        } 
     }
 
     function editStockName() {
