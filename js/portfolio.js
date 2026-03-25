@@ -161,11 +161,29 @@ window.portfolioService = (function() {
         }
     }
 
-    // 🌟 [修正位置] 將預先載入相關函數移出 renderEpsTables 的作用域外
+    // 🌟 [新增] 帶入快取機制的基本資料載入函數
     async function prefetchBasicInfo(market, symbol) {
         const contentDiv = document.getElementById('basic-info-content');
         const loadingDiv = document.getElementById('basic-info-loading');
         
+        // 設定專屬快取 Key
+        const cacheKey = `weGood_basic_${market}_${symbol}`;
+        
+        // 1. 嘗試讀取本地快取
+        const cachedStr = localStorage.getItem(cacheKey);
+        if (cachedStr) {
+            try {
+                const cacheObj = JSON.parse(cachedStr);
+                // 檢查是否超過 30 天 (30天 = 2592000000 毫秒)，未過期則直接使用
+                if (Date.now() - cacheObj.timestamp < 2592000000) {
+                    if (loadingDiv) loadingDiv.classList.add('hidden');
+                    renderBasicInfoUI(cacheObj.data, cacheObj.dateStr);
+                    return; // 🎯 命中快取，光速渲染並結束！
+                }
+            } catch(e) { console.warn("快取解析失敗", e); }
+        }
+
+        // 若無快取或已過期，顯示載入動畫並去後端抓取
         if(loadingDiv) loadingDiv.classList.remove('hidden');
         if(contentDiv) { contentDiv.classList.add('hidden'); contentDiv.innerHTML = ''; }
 
@@ -183,9 +201,19 @@ window.portfolioService = (function() {
             const json = await res.json();
             
             if(loadingDiv) loadingDiv.classList.add('hidden');
-            // 替換為這段 (加入顯示真實的錯誤訊息)：
             if (json.success && json.data) {
-                renderBasicInfoUI(json.data);
+                // 2. 寫入本地快取 (打上時間戳記)
+                const d = new Date();
+                const dateStr = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+                try {
+                    localStorage.setItem(cacheKey, JSON.stringify({
+                        data: json.data,
+                        timestamp: Date.now(),
+                        dateStr: dateStr
+                    }));
+                } catch(e) { console.warn("寫入快取失敗", e); }
+
+                renderBasicInfoUI(json.data, dateStr);
             } else {
                 let errorMsg = json.message || '查無此股票資料';
                 if(contentDiv) { contentDiv.innerHTML = `<div class="text-center py-6"><p class="text-xs md:text-sm text-gray-500 mb-1">無法顯示基本資料</p><p class="text-[10px] text-red-400/70 font-mono tracking-widest">${errorMsg}</p></div>`; contentDiv.classList.remove('hidden'); }
@@ -196,7 +224,8 @@ window.portfolioService = (function() {
         }
     }
 
-    function renderBasicInfoUI(rawData) {
+    // 🌟 接收更新日期參數並渲染的 UI 函數
+    function renderBasicInfoUI(rawData, updateDate = '') {
         const contentDiv = document.getElementById('basic-info-content');
         if (!contentDiv) return;
 
@@ -217,9 +246,11 @@ window.portfolioService = (function() {
             quarterStr = yq.length === 6 ? yq.substring(0, 4) + 'Q' + parseInt(yq.substring(4, 6), 10) : yq;
         }
 
-        // 用來產生 `ⓘ` 標籤的輔助函數 (原生空心高質感寫法)
         const infoIcon = (key, title) => `<span onclick="window.portfolioService.showInfoSheet('${key}', '${title}')" class="material-icons text-[15px] ml-1 text-gray-500 hover:text-gray-300 cursor-pointer active:scale-90 transition-colors align-middle">info_outline</span>`;
         
+        // 低調的日期標籤 HTML
+        const dateHtml = updateDate ? `<div class="text-center text-[10px] md:text-[12px] text-gray-600 font-mono mt-8 mb-2 tracking-widest">Last Update: ${updateDate}</div>` : '';
+
         contentDiv.innerHTML = `
             <div class="space-y-6 px-1">
                 <div>
@@ -274,6 +305,7 @@ window.portfolioService = (function() {
                     </div>
                 </div>
             </div>
+            ${dateHtml}
         `;
         contentDiv.classList.remove('hidden');
     }
@@ -606,6 +638,10 @@ window.portfolioService = (function() {
         const s = window.appState.currentDetailSymbol;
         if (!m || !s) return window.showAlert("系統遺失個股代號，請重新整理");
 
+        // 🌟 檢查是否成功拿到信箱鑰匙
+        const userEmail = window.appState.userEmail;
+        if (!userEmail) return window.showAlert("遺失使用者信箱，請重新整理網頁");
+
         btnContainer.innerHTML = `<span class="text-[10px] text-[#D4AF37] animate-pulse font-mono tracking-widest mt-1">儲存中...</span>`;
         
         try { 
@@ -613,7 +649,7 @@ window.portfolioService = (function() {
                 method: 'POST', 
                 body: JSON.stringify({ 
                     action: 'edit_position', 
-                    email: window.appState.email, 
+                    email: userEmail, // 🌟 關鍵：將信箱鑰匙一起送給後端驗證！
                     data: { 
                         market: m, 
                         symbol: s, 

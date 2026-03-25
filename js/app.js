@@ -218,6 +218,7 @@ async function initApp() {
         onAuthStateChanged(auth, async (user) => { 
             if(user) { 
                 currentUser = user; 
+                window.appState.userEmail = user.email; // 🌟 關鍵：將信箱鑰匙交給全域變數
                 window.updateUserUI(user); 
                 
                 const cachedData = localStorage.getItem('weGoodCache_' + user.email);
