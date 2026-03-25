@@ -247,13 +247,31 @@ window.portfolioService = (function() {
         // 1. 歷年表現 (年資料)
         if(tbodyY) {
             let yearHtml = '';
+            const currentYearStr = String(new Date().getFullYear());
+            
             if (ttmRecord && ttmRecord.EPS !== 'N/A') {
-                yearHtml += `<tr class="border-b border-gray-800/50 bg-[#D4AF37]/5"><td class="py-2.5 font-mono text-gray-300 font-bold text-center">TTM</td><td class="py-2.5 text-center font-mono font-bold text-white">${Number(ttmRecord.EPS).toFixed(2)}</td><td class="py-2.5 text-center font-mono text-gray-500">--</td><td class="py-2.5 text-center font-mono text-gray-400">${ttmRecord.ROE !== 'N/A' ? (Number(ttmRecord.ROE) * 100).toFixed(2) + '%' : nullBadge}</td></tr>`;
+                let ttmYoyHtml = nullBadge;
+                // TTM 抓取去年完整年度來做對比
+                const lastYearRecord = records.find(r => String(r.Year) === String(new Date().getFullYear() - 1));
+                if (lastYearRecord && lastYearRecord.EPS !== 'N/A') {
+                    let curEps = Number(ttmRecord.EPS), prevEps = Number(lastYearRecord.EPS);
+                    if (prevEps !== 0 && !isNaN(curEps) && !isNaN(prevEps)) {
+                        let yoy = ((curEps - prevEps) / Math.abs(prevEps)) * 100;
+                        ttmYoyHtml = `<span class="${getColorClass(yoy)}">${yoy > 0 ? '+' : ''}${yoy.toFixed(2)}%</span>`;
+                    }
+                }
+                yearHtml += `<tr class="border-b border-gray-800/50 bg-[#D4AF37]/5"><td class="py-2.5 font-mono text-gray-300 font-bold text-center">TTM</td><td class="py-2.5 text-center font-mono font-bold text-white">${Number(ttmRecord.EPS).toFixed(2)}</td><td class="py-2.5 text-center font-mono">${ttmYoyHtml}</td><td class="py-2.5 text-center font-mono text-gray-400">${ttmRecord.ROE !== 'N/A' ? (Number(ttmRecord.ROE) * 100).toFixed(2) + '%' : nullBadge}</td></tr>`;
             }
+            
             records.forEach((r, index) => {
+                if (String(r.Year) === currentYearStr) return; // 隱藏未過完的今年
+
                 let yoyHtml = nullBadge;
-                if (r.EPS !== 'N/A' && index + 1 < records.length && records[index + 1].EPS !== 'N/A') {
-                    let prevEps = Number(records[index + 1].EPS), curEps = Number(r.EPS);
+                // 尋找下一個非今年的有效年份來計算年增率
+                let nextRecord = records.slice(index + 1).find(nr => String(nr.Year) !== currentYearStr && nr.EPS !== 'N/A');
+                
+                if (r.EPS !== 'N/A' && nextRecord) {
+                    let prevEps = Number(nextRecord.EPS), curEps = Number(r.EPS);
                     if (prevEps !== 0 && !isNaN(prevEps) && !isNaN(curEps)) {
                         let yoy = ((curEps - prevEps) / Math.abs(prevEps)) * 100;
                         yoyHtml = `<span class="${getColorClass(yoy)}">${yoy > 0 ? '+' : ''}${yoy.toFixed(2)}%</span>`;
@@ -370,7 +388,10 @@ window.portfolioService = (function() {
                     <td class="py-2.5 text-center font-mono text-gray-400">${pr}</td>
                 </tr>`;
             }
-            records.slice(0, 6).forEach(r => {
+            
+            // 將原本的 records.slice(0, 6).forEach 替換為以下這行 (加入 filter 過濾今年)：
+            records.filter(r => String(r.Year) !== String(new Date().getFullYear())).slice(0, 6).forEach(r => {
+                
                 let divStr = r.CashDiv === 'N/A' ? nullBadge : Number(r.CashDiv).toFixed(2);
                 let yieldStr = r.CashYield === 'N/A' ? nullBadge : (Number(r.CashYield) * 100).toFixed(2) + '%';
                 let epsStr = r.EPS === 'N/A' ? nullBadge : Number(r.EPS).toFixed(2);
