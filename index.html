@@ -1,5 +1,6 @@
 <!--
-> [VER] v2.3.0 [2026-03-24]
+> [VER] v2.4.0 [2026-03-25]
+> [DESC] 於膠囊切換選單中新增「基本資料」按鈕與專屬展示區塊
 > [DESC] 新增 EPS 獲利追蹤折疊區塊與膠囊切換開關 UI
  -->
 
@@ -160,6 +161,7 @@
         
         <div class="pt-2">
             <div class="flex justify-center bg-[#111] p-1 rounded-lg w-fit mx-auto my-4 border border-gray-800">
+                <button id="btn-eps-basic" onclick="window.portfolioService.toggleEpsView('basic')" class="px-3 py-1.5 rounded-md text-[11px] font-bold transition-all text-gray-400 hover:text-gray-200">基本資料</button>
                 <button id="btn-eps-quarter" onclick="window.portfolioService.toggleEpsView('quarter')" class="px-3 py-1.5 rounded-md text-[11px] font-bold transition-all bg-gray-700 text-white shadow-sm">季度動能</button>
                 <button id="btn-eps-year" onclick="window.portfolioService.toggleEpsView('year')" class="px-3 py-1.5 rounded-md text-[11px] font-bold transition-all text-gray-400 hover:text-gray-200">歷年表現</button>
                 <button id="btn-eps-dividend" onclick="window.portfolioService.toggleEpsView('dividend')" class="px-3 py-1.5 rounded-md text-[11px] font-bold transition-all text-gray-400 hover:text-gray-200">股利政策</button>
@@ -229,6 +231,17 @@
                 </div>
             </div>
         </div>
+
+        <!--資本資料頁爬取提示-->
+        <div id="eps-basic-view" class="hidden pb-2 px-2 animate-[fadeIn_0.3s_ease-out]">
+    <div id="basic-info-loading" class="flex justify-center items-center py-8 text-gray-500">
+        <span class="material-icons animate-spin text-lg mr-2">sync</span>
+        <span class="text-xs tracking-widest font-mono">資料預先載入中...</span>
+    </div>
+    <div id="basic-info-content" class="hidden space-y-5 pb-4">
+        </div>
+</div>
+
     </details>
 </div>
     

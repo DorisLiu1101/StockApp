@@ -1,5 +1,7 @@
-/* [VER] v2.6.0 [2026-03-25] 
- * [DESC] 實作真實日曆基準法 (季度過濾)、空值顯示為淺灰雙底線、展開更多功能，並強制抓取「前一年度」配息頻率進行字典轉換 
+/* 
+ [VER] v2.7.0 [2026-03-25]
+ [DESC] 實作基本資料 API 欄位精準對接，並加入折疊區塊與預設膠囊狀態的初始化機制
+ [DESC] 實作真實日曆基準法 (季度過濾)、空值顯示為淺灰雙底線、展開更多功能，並強制抓取「前一年度」配息頻率進行字典轉換 
  */
 
 window.portfolioService = (function() {
@@ -83,9 +85,12 @@ window.portfolioService = (function() {
     }
 
     function toggleEpsView(view) {
+        const btnB = document.getElementById('btn-eps-basic');
         const btnQ = document.getElementById('btn-eps-quarter');
         const btnY = document.getElementById('btn-eps-year');
         const btnD = document.getElementById('btn-eps-dividend');
+        
+        const viewB = document.getElementById('eps-basic-view');
         const viewQ = document.getElementById('eps-quarter-view');
         const viewY = document.getElementById('eps-year-view');
         const viewD = document.getElementById('eps-dividend-view');
@@ -93,10 +98,12 @@ window.portfolioService = (function() {
         const activeClass = "px-3 py-1.5 rounded-md text-[11px] font-bold transition-all bg-gray-700 text-white shadow-sm";
         const inactiveClass = "px-3 py-1.5 rounded-md text-[11px] font-bold transition-all text-gray-400 hover:text-gray-200";
 
+        if(btnB) btnB.className = view === 'basic' ? activeClass : inactiveClass;
         if(btnQ) btnQ.className = view === 'quarter' ? activeClass : inactiveClass;
         if(btnY) btnY.className = view === 'year' ? activeClass : inactiveClass;
         if(btnD) btnD.className = view === 'dividend' ? activeClass : inactiveClass;
 
+        if(viewB) viewB.classList.toggle('hidden', view !== 'basic');
         if(viewQ) viewQ.classList.toggle('hidden', view !== 'quarter');
         if(viewY) viewY.classList.toggle('hidden', view !== 'year');
         if(viewD) viewD.classList.toggle('hidden', view !== 'dividend');
@@ -143,6 +150,111 @@ window.portfolioService = (function() {
         };
 
         const nullBadge = '<span class="text-gray-600 font-mono text-center w-full block">--</span>';
+
+        async function prefetchBasicInfo(market, symbol) {
+        const contentDiv = document.getElementById('basic-info-content');
+        const loadingDiv = document.getElementById('basic-info-loading');
+        
+        // 初始化狀態
+        if(loadingDiv) loadingDiv.classList.remove('hidden');
+        if(contentDiv) { contentDiv.classList.add('hidden'); contentDiv.innerHTML = ''; }
+
+        if (!window.appState || !window.appState.userScriptUrl) {
+            if(loadingDiv) loadingDiv.classList.add('hidden');
+            if(contentDiv) { contentDiv.innerHTML = '<p class="text-center text-xs text-red-400 py-6">請先至設定綁定 API 網址</p>'; contentDiv.classList.remove('hidden'); }
+            return;
+        }
+
+        try {
+            // 向 GAS 後端發送請求
+            const res = await fetch(window.appState.userScriptUrl, { 
+                method: 'POST', 
+                body: JSON.stringify({ action: 'get_basic_info', data: { market: market, symbol: symbol } }) 
+            });
+            const json = await res.json();
+            
+            if(loadingDiv) loadingDiv.classList.add('hidden');
+            if (json.success && json.data) {
+                renderBasicInfoUI(json.data);
+            } else {
+                if(contentDiv) { contentDiv.innerHTML = '<p class="text-center text-xs text-gray-500 py-6">此個股尚無基本資料</p>'; contentDiv.classList.remove('hidden'); }
+            }
+        } catch (e) {
+            if(loadingDiv) loadingDiv.classList.add('hidden');
+            if(contentDiv) { contentDiv.innerHTML = '<p class="text-center text-xs text-red-400 py-6">資料載入失敗</p>'; contentDiv.classList.remove('hidden'); }
+        }
+    }
+
+    function renderBasicInfoUI(rawData) {
+        const contentDiv = document.getElementById('basic-info-content');
+        if (!contentDiv) return;
+
+        // 相容處理：確保抓到正確的資料層級 (防護 GAS 回傳原始 nstock 結構或解開後的物件)
+        const data = (rawData && rawData.data && Array.isArray(rawData.data)) ? rawData.data[0] : rawData;
+        if (!data || !data["股票代號"]) {
+            contentDiv.innerHTML = '<p class="text-center text-xs text-red-400 py-6">資料格式解析異常或查無資料</p>';
+            contentDiv.classList.remove('hidden');
+            return;
+        }
+
+        // 1. 字典轉換 [Dictionary]：上市上櫃數字轉文字
+        const marketTypeMap = { "1": "上市", "2": "上櫃", "3": "興櫃", "4": "創櫃", "5": "公開發行" };
+        const marketType = marketTypeMap[data["上市上櫃"]] || data["上市上櫃"] || '--';
+
+        // 2. 字串處理 [String Manipulation]：年季轉換 (例如 "202504" -> "2025Q4")
+        let quarterStr = '--';
+        const recentQuarter = data["近一季"];
+        if (recentQuarter && recentQuarter["年季"]) {
+            const yq = String(recentQuarter["年季"]);
+            if (yq.length === 6) {
+                quarterStr = yq.substring(0, 4) + 'Q' + parseInt(yq.substring(4, 6), 10); 
+            } else {
+                quarterStr = yq;
+            }
+        }
+
+        // 3. UI 渲染：精準對接真實 JSON 欄位
+        contentDiv.innerHTML = `
+            <div>
+                <h4 class="text-[12px] text-[#D4AF37] font-bold border-l-2 border-[#D4AF37] pl-2 mb-2">基本資訊</h4>
+                <div class="grid grid-cols-2 gap-2 text-[13px]">
+                    <div class="bg-[#1A1A1A] p-2 rounded border border-gray-800/60 flex flex-col justify-center"><span class="text-gray-500 text-[11px] block mb-0.5">產業</span><span class="text-gray-200 font-bold truncate">${data["產業名稱"] || '--'}</span></div>
+                    <div class="bg-[#1A1A1A] p-2 rounded border border-gray-800/60 flex flex-col justify-center"><span class="text-gray-500 text-[11px] block mb-0.5">上市/上櫃</span><span class="text-gray-200 font-bold">${marketType}</span></div>
+                    <div class="bg-[#1A1A1A] p-2 rounded border border-gray-800/60 flex flex-col justify-center"><span class="text-gray-500 text-[11px] block mb-0.5">掛牌年數</span><span class="text-gray-200 font-bold">${data["掛牌年數"] ? data["掛牌年數"] + ' 年' : '--'}</span></div>
+                    <div class="bg-[#1A1A1A] p-2 rounded border border-gray-800/60 flex flex-col justify-center"><span class="text-gray-500 text-[11px] block mb-0.5">市值</span><span class="text-gray-200 font-bold">${data["總市值(億)"] ? data["總市值(億)"] + ' 億' : '--'}</span></div>
+                    <div class="bg-[#1A1A1A] p-2 rounded border border-gray-800/60 flex flex-col justify-center"><span class="text-gray-500 text-[11px] block mb-0.5">股本</span><span class="text-gray-200 font-bold">${data["交易所公告股本(億)"] ? data["交易所公告股本(億)"] + ' 億' : '--'}</span></div>
+                    <div class="col-span-2 bg-[#1A1A1A] p-2 rounded border border-gray-800/60"><span class="text-gray-500 text-[11px] block mb-0.5">經營項目</span><span class="text-gray-300 text-[12px] leading-relaxed break-words">${data["經營項目"] || '--'}</span></div>
+                </div>
+            </div>
+            <div>
+                <h4 class="text-[12px] text-[#D4AF37] font-bold border-l-2 border-[#D4AF37] pl-2 mb-2 mt-3">基本數據 (近四季)</h4>
+                <div class="grid grid-cols-2 gap-2 text-[13px]">
+                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">公告每股淨值</span><span class="text-gray-200 font-mono font-bold">${data["公告每股淨值(元)"] || '--'}</span></div>
+                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">股價淨值比</span><span class="text-gray-200 font-mono font-bold">${data["股價淨值比"] || '--'}</span></div>
+                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">本益比</span><span class="text-gray-200 font-mono font-bold">${data["本益比(近四季)"] || '--'}</span></div>
+                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">EPS</span><span class="text-gray-200 font-mono font-bold">${data["公告基本每股盈餘(近四季)"] || '--'}</span></div>
+                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">ROE</span><span class="text-gray-200 font-mono font-bold">${data["ROE(近四季)"] ? data["ROE(近四季)"] + '%' : '--'}</span></div>
+                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">ROA</span><span class="text-gray-200 font-mono font-bold">${data["ROA(近四季)"] ? data["ROA(近四季)"] + '%' : '--'}</span></div>
+                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center col-span-2"><span class="text-gray-500 text-[12px]">現金股利殖利率</span><span class="text-[#D4AF37] font-mono font-bold">${data["現金股利殖利率(%)"] ? data["現金股利殖利率(%)"] + '%' : '--'}</span></div>
+                </div>
+            </div>
+            <div>
+                <h4 class="text-[12px] text-[#D4AF37] font-bold border-l-2 border-[#D4AF37] pl-2 mb-2 mt-3">財務資料 (${quarterStr})</h4>
+                <div class="grid grid-cols-2 gap-2 text-[13px]">
+                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">ROE</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["ROE"] ? recentQuarter["ROE"] + '%' : '--'}</span></div>
+                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">ROA</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["ROA"] ? recentQuarter["ROA"] + '%' : '--'}</span></div>
+                    <div class="bg-transparent border-0 p-0 col-span-2 grid grid-cols-3 gap-2">
+                        <div class="bg-[#1A1A1A] py-2 rounded border border-gray-800/60 flex flex-col items-center justify-center"><span class="text-gray-500 text-[11px] mb-0.5">毛利率</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季毛利率(％)"] ? recentQuarter["單季毛利率(％)"] + '%' : '--'}</span></div>
+                        <div class="bg-[#1A1A1A] py-2 rounded border border-gray-800/60 flex flex-col items-center justify-center"><span class="text-gray-500 text-[11px] mb-0.5">營益率</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季營業利益率(％)"] ? recentQuarter["單季營業利益率(％)"] + '%' : '--'}</span></div>
+                        <div class="bg-[#1A1A1A] py-2 rounded border border-gray-800/60 flex flex-col items-center justify-center"><span class="text-gray-500 text-[11px] mb-0.5">淨利率</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季稅後淨利率(％)"] ? recentQuarter["單季稅後淨利率(％)"] + '%' : '--'}</span></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        contentDiv.classList.remove('hidden');
+    }
+
+
 
         // 1. 歷年表現 (年資料)
         if(tbodyY) {
@@ -289,7 +401,8 @@ window.portfolioService = (function() {
             tbodyD.innerHTML = divHtml || '<tr><td colspan="5" class="text-center py-4 text-gray-500 text-xs">無歷年配息資料</td></tr>';
         }
         
-        toggleEpsView('quarter');
+        //預設啟動的膠囊按鈕
+        toggleEpsView('year');
     }
 
     function openStockDetail(market, symbol) {
@@ -317,7 +430,13 @@ window.portfolioService = (function() {
         renderEpsTables(stock);
 
         const editBtn = document.getElementById('btn-header-edit'); if(editBtn) editBtn.onclick = (e) => { e.stopPropagation(); window.txService.openTransactionModal(market, symbol); };
-        document.getElementById('report-frame').srcdoc = ""; document.getElementById('report-content').classList.add('hidden'); document.getElementById('report-loading').classList.add('hidden'); document.getElementById('detail-modal').classList.add('open');
+        document.getElementById('report-frame').srcdoc = ""; document.getElementById('report-content').classList.add('hidden'); document.getElementById('report-loading').classList.add('hidden'); 
+        const detailsBlock = document.querySelector('#detail-modal details');
+        if (detailsBlock) detailsBlock.removeAttribute('open'); // 強制收合折疊區塊
+        prefetchBasicInfo(market, symbol); // 觸發背景預先載入基本資料        
+        // 確保函數的最後一行維持開啟彈窗：
+        document.getElementById('detail-modal').classList.add('open');
+
     }
     function closeStockDetail(fromPop = false) { document.getElementById('detail-modal').classList.remove('open'); document.getElementById('report-frame').srcdoc = ""; if(fromPop !== true && typeof history.back === 'function') history.back(); }
 
