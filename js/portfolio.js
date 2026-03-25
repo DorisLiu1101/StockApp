@@ -79,6 +79,46 @@ window.portfolioService = (function() {
         c.innerHTML = html;
     }
 
+// 名詞解釋字典
+    const tooltips = {
+        'PB': 'P/B < 1 股價低於帳面價值（折價），P/B > 1 則為高於（溢價）。\n\n股價淨值比 (Price-to-Book Ratio, P/B Ratio) 是衡量股價相對於每股淨值高低的指標，公式為「每股股價 / 每股淨值」。該指標常用於評估股票是否被高估或低估，特別適合用於景氣循環股或金融業。',
+        'PE': '本益比（Price-to-Earnings Ratio, P/E）是衡量股票價值和回本速度的指標。\n\n計算公式為「股價 ÷ 每股盈餘 (EPS)」，代表投資人為了每1元獲利願意付出的價格（倍數），數字越低通常代表股票越便宜、回本越快，但需注意成長性。',
+        'ROE': '股東權益報酬率（Return On Equity, ROE）是衡量上市公司利用股東投入資金產生純利能力的核心指標，通常以百分比表示。\n\nROE 越高，代表公司為股東賺錢的效率越高、獲利能力越強。該指標是巴菲特等長期投資者常用的指標，主要用於同產業間的比較。',
+        'ROA': 'ROA（Return on Assets，資產報酬率）是衡量企業運用「總資產」創造淨利潤的效率指標，反映公司利用負債與股東權益的總體獲利能力。\n\nROA 越高，代表公司運用資產賺錢的效率越好。常用於同業比較，特別是資本密集型產業。',
+        'GM': '毛利率（Gross Profit Margin）是衡量企業獲利能力的基礎指標，代表每單位營收扣除直接生產成本後，留下多少比例的利潤。\n\n高毛利率通常表示公司具有強大的成本控制力、獨特技術或產品競爭力。',
+        'OPM': '營業利益率（Operating Margin，簡稱營益率）是衡量企業「本業」獲利能力的關鍵指標，計算為本業獲利佔營收的百分比。\n\n此比率越高，代表公司營運效率越好、成本控管能力越強。',
+        'NPM': '淨利率（Net Profit Margin）是衡量公司最終獲利能力的關鍵指標，指稅後淨利占營業收入的百分比。\n\n代表每1元營收中，實際賺到的淨錢。數值越高，表示公司控制成本、費用及稅務的能力越佳，獲利能力越強。'
+    };
+
+    function showInfoSheet(key, title) {
+        const overlay = document.getElementById('sheet-overlay');
+        const panel = document.getElementById('sheet-panel');
+        const container = document.getElementById('info-bottom-sheet');
+        
+        document.getElementById('sheet-title').innerText = title;
+        // 將換行符號轉為 HTML 的 <br> 以維持段落排版
+        document.getElementById('sheet-desc').innerHTML = tooltips[key].replace(/\n/g, '<br>');
+        
+        container.classList.remove('hidden');
+        // 強制瀏覽器重繪 (Reflow) 以觸發動畫
+        void container.offsetWidth; 
+        overlay.classList.remove('opacity-0');
+        panel.classList.remove('translate-y-full');
+    }
+
+    function closeInfoSheet() {
+        const overlay = document.getElementById('sheet-overlay');
+        const panel = document.getElementById('sheet-panel');
+        
+        overlay.classList.add('opacity-0');
+        panel.classList.add('translate-y-full');
+        
+        // 等待 300ms 滑動動畫結束後，再隱藏容器
+        setTimeout(() => {
+            document.getElementById('info-bottom-sheet').classList.add('hidden');
+        }, 300); 
+    }
+
     function toggleEpsView(view) {
         const btnB = document.getElementById('btn-eps-basic');
         const btnQ = document.getElementById('btn-eps-quarter');
@@ -174,46 +214,63 @@ window.portfolioService = (function() {
         const recentQuarter = data["近一季"];
         if (recentQuarter && recentQuarter["年季"]) {
             const yq = String(recentQuarter["年季"]);
-            if (yq.length === 6) {
-                quarterStr = yq.substring(0, 4) + 'Q' + parseInt(yq.substring(4, 6), 10); 
-            } else {
-                quarterStr = yq;
-            }
+            quarterStr = yq.length === 6 ? yq.substring(0, 4) + 'Q' + parseInt(yq.substring(4, 6), 10) : yq;
         }
 
+        // 用來產生 `(!)` 標籤的輔助函數
+        const infoIcon = (key, title) => `<span onclick="window.portfolioService.showInfoSheet('${key}', '${title}')" class="inline-flex items-center justify-center w-[14px] h-[14px] ml-1.5 bg-gray-700/80 text-gray-300 rounded-full text-[9px] font-bold cursor-pointer active:scale-90 transition-transform">!</span>`;
+
         contentDiv.innerHTML = `
-            <div>
-                <h4 class="text-[12px] text-[#D4AF37] font-bold border-l-2 border-[#D4AF37] pl-2 mb-2">基本資訊</h4>
-                <div class="grid grid-cols-2 gap-2 text-[13px]">
-                    <div class="bg-[#1A1A1A] p-2 rounded border border-gray-800/60 flex flex-col justify-center"><span class="text-gray-500 text-[11px] block mb-0.5">產業</span><span class="text-gray-200 font-bold truncate">${data["產業名稱"] || '--'}</span></div>
-                    <div class="bg-[#1A1A1A] p-2 rounded border border-gray-800/60 flex flex-col justify-center"><span class="text-gray-500 text-[11px] block mb-0.5">上市/上櫃</span><span class="text-gray-200 font-bold">${marketType}</span></div>
-                    <div class="bg-[#1A1A1A] p-2 rounded border border-gray-800/60 flex flex-col justify-center"><span class="text-gray-500 text-[11px] block mb-0.5">掛牌年數</span><span class="text-gray-200 font-bold">${data["掛牌年數"] ? data["掛牌年數"] + ' 年' : '--'}</span></div>
-                    <div class="bg-[#1A1A1A] p-2 rounded border border-gray-800/60 flex flex-col justify-center"><span class="text-gray-500 text-[11px] block mb-0.5">市值</span><span class="text-gray-200 font-bold">${data["總市值(億)"] ? data["總市值(億)"] + ' 億' : '--'}</span></div>
-                    <div class="bg-[#1A1A1A] p-2 rounded border border-gray-800/60 flex flex-col justify-center"><span class="text-gray-500 text-[11px] block mb-0.5">股本</span><span class="text-gray-200 font-bold">${data["交易所公告股本(億)"] ? data["交易所公告股本(億)"] + ' 億' : '--'}</span></div>
-                    <div class="col-span-2 bg-[#1A1A1A] p-2 rounded border border-gray-800/60"><span class="text-gray-500 text-[11px] block mb-0.5">經營項目</span><span class="text-gray-300 text-[12px] leading-relaxed break-words">${data["經營項目"] || '--'}</span></div>
+            <div class="space-y-6 px-1">
+                <div>
+                    <h4 class="text-[13px] text-gray-400 font-bold border-l-2 border-[#D4AF37] pl-2 mb-4">基本資訊</h4>
+                    <div class="grid grid-cols-3 gap-y-4 gap-x-2 text-[13px]">
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">產業</span><span class="text-gray-200 font-bold truncate">${data["產業名稱"] || '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">上市/上櫃</span><span class="text-gray-200 font-bold">${marketType}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">掛牌年數</span><span class="text-gray-200 font-bold">${data["掛牌年數"] ? data["掛牌年數"] + ' 年' : '--'}</span></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-y-4 gap-x-2 text-[13px] mt-4">
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">市值</span><span class="text-gray-200 font-bold">${data["總市值(億)"] ? data["總市值(億)"] + ' 億' : '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">股本</span><span class="text-gray-200 font-bold">${data["交易所公告股本(億)"] ? data["交易所公告股本(億)"] + ' 億' : '--'}</span></div>
+                    </div>
+                    <div class="mt-4">
+                        <span class="text-gray-500 text-[11px] mb-1 block">經營項目</span>
+                        <span class="text-gray-300 text-[12px] leading-relaxed break-words">${data["經營項目"] || '--'}</span>
+                    </div>
                 </div>
-            </div>
-            <div>
-                <h4 class="text-[12px] text-[#D4AF37] font-bold border-l-2 border-[#D4AF37] pl-2 mb-2 mt-3">基本數據 (近四季)</h4>
-                <div class="grid grid-cols-2 gap-2 text-[13px]">
-                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">公告每股淨值</span><span class="text-gray-200 font-mono font-bold">${data["公告每股淨值(元)"] || '--'}</span></div>
-                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">股價淨值比</span><span class="text-gray-200 font-mono font-bold">${data["股價淨值比"] || '--'}</span></div>
-                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">本益比</span><span class="text-gray-200 font-mono font-bold">${data["本益比(近四季)"] || '--'}</span></div>
-                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">EPS</span><span class="text-gray-200 font-mono font-bold">${data["公告基本每股盈餘(近四季)"] || '--'}</span></div>
-                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">ROE</span><span class="text-gray-200 font-mono font-bold">${data["ROE(近四季)"] ? data["ROE(近四季)"] + '%' : '--'}</span></div>
-                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">ROA</span><span class="text-gray-200 font-mono font-bold">${data["ROA(近四季)"] ? data["ROA(近四季)"] + '%' : '--'}</span></div>
-                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center col-span-2"><span class="text-gray-500 text-[12px]">現金股利殖利率</span><span class="text-[#D4AF37] font-mono font-bold">${data["現金股利殖利率(%)"] ? data["現金股利殖利率(%)"] + '%' : '--'}</span></div>
+
+                <div class="w-full h-px bg-gray-800/40 my-2"></div>
+
+                <div>
+                    <h4 class="text-[13px] text-gray-400 font-bold border-l-2 border-[#D4AF37] pl-2 mb-4">基本數據 (TTM 近四季)</h4>
+                    <div class="grid grid-cols-3 gap-y-4 gap-x-2 text-[13px]">
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">公告每股淨值</span><span class="text-gray-200 font-mono font-bold">${data["公告每股淨值(元)"] || '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1 flex items-center">P/B ${infoIcon('PB', '股價淨值比 (P/B)')}</span><span class="text-gray-200 font-mono font-bold">${data["股價淨值比"] || '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1 flex items-center">P/E ${infoIcon('PE', '本益比 (P/E)')}</span><span class="text-gray-200 font-mono font-bold">${data["本益比(近四季)"] || '--'}</span></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-y-4 gap-x-2 text-[13px] mt-4">
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">EPS</span><span class="text-gray-200 font-mono font-bold">${data["公告基本每股盈餘(近四季)"] || '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1 flex items-center">ROE ${infoIcon('ROE', '股東權益報酬率 (ROE)')}</span><span class="text-gray-200 font-mono font-bold">${data["ROE(近四季)"] ? data["ROE(近四季)"] + '%' : '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1 flex items-center">ROA ${infoIcon('ROA', '資產報酬率 (ROA)')}</span><span class="text-gray-200 font-mono font-bold">${data["ROA(近四季)"] ? data["ROA(近四季)"] + '%' : '--'}</span></div>
+                    </div>
+                    <div class="mt-4">
+                        <span class="text-gray-500 text-[11px] mb-1 block">現金股利殖利率</span>
+                        <span class="text-[#D4AF37] font-mono font-bold text-base">${data["現金股利殖利率(%)"] ? data["現金股利殖利率(%)"] + '%' : '--'}</span>
+                    </div>
                 </div>
-            </div>
-            <div>
-                <h4 class="text-[12px] text-[#D4AF37] font-bold border-l-2 border-[#D4AF37] pl-2 mb-2 mt-3">財務資料 (${quarterStr})</h4>
-                <div class="grid grid-cols-2 gap-2 text-[13px]">
-                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">ROE</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["ROE"] ? recentQuarter["ROE"] + '%' : '--'}</span></div>
-                    <div class="bg-[#1A1A1A] p-2.5 rounded border border-gray-800/60 flex justify-between items-center"><span class="text-gray-500 text-[12px]">ROA</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["ROA"] ? recentQuarter["ROA"] + '%' : '--'}</span></div>
-                    <div class="bg-transparent border-0 p-0 col-span-2 grid grid-cols-3 gap-2">
-                        <div class="bg-[#1A1A1A] py-2 rounded border border-gray-800/60 flex flex-col items-center justify-center"><span class="text-gray-500 text-[11px] mb-0.5">毛利率</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季毛利率(％)"] ? recentQuarter["單季毛利率(％)"] + '%' : '--'}</span></div>
-                        <div class="bg-[#1A1A1A] py-2 rounded border border-gray-800/60 flex flex-col items-center justify-center"><span class="text-gray-500 text-[11px] mb-0.5">營益率</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季營業利益率(％)"] ? recentQuarter["單季營業利益率(％)"] + '%' : '--'}</span></div>
-                        <div class="bg-[#1A1A1A] py-2 rounded border border-gray-800/60 flex flex-col items-center justify-center"><span class="text-gray-500 text-[11px] mb-0.5">淨利率</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季稅後淨利率(％)"] ? recentQuarter["單季稅後淨利率(％)"] + '%' : '--'}</span></div>
+
+                <div class="w-full h-px bg-gray-800/40 my-2"></div>
+
+                <div>
+                    <h4 class="text-[13px] text-gray-400 font-bold border-l-2 border-[#D4AF37] pl-2 mb-4">財務資料 (${quarterStr})</h4>
+                    <div class="grid grid-cols-2 gap-y-4 gap-x-2 text-[13px]">
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">ROE</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["ROE"] ? recentQuarter["ROE"] + '%' : '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">ROA</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["ROA"] ? recentQuarter["ROA"] + '%' : '--'}</span></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-y-4 gap-x-2 text-[13px] mt-4">
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1 flex items-center">毛利率 ${infoIcon('GM', '毛利率')}</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季毛利率(％)"] ? recentQuarter["單季毛利率(％)"] + '%' : '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1 flex items-center">營益率 ${infoIcon('OPM', '營業利益率')}</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季營業利益率(％)"] ? recentQuarter["單季營業利益率(％)"] + '%' : '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1 flex items-center">淨利率 ${infoIcon('NPM', '淨利率')}</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季稅後淨利率(％)"] ? recentQuarter["單季稅後淨利率(％)"] + '%' : '--'}</span></div>
                     </div>
                 </div>
             </div>
