@@ -9,17 +9,17 @@
     </div>
     <div class="flex justify-between items-center relative z-20 px-1">
         <div class="relative">
-            <button onclick="window.pickService.toggleFilter()" class="flex items-center gap-1 text-xs bg-[#1A1A1A] border border-[#333] text-gray-300 px-3 py-1.5 rounded hover:border-gold hover:text-gold shadow-sm"><span class="material-icons text-[14px]">filter_list</span><span id="pick-filter-label">全部</span><span class="material-icons text-[12px] ml-1">arrow_drop_down</span></button>
+            <button onclick="window.pickService.toggleFilter()" class="flex items-center gap-1 text-xs md:text-sm bg-[#1A1A1A] border border-[#333] text-gray-300 px-3 py-1.5 rounded hover:border-gold hover:text-gold shadow-sm"><span class="material-icons text-[14px]">filter_list</span><span id="pick-filter-label">全部</span><span class="material-icons text-[12px] md:text-[15px] ml-1">arrow_drop_down</span></button>
             <div id="pick-filter-menu" class="hidden absolute top-full mt-1 left-0 custom-dropdown min-w-[120px]"><button onclick="window.pickService.setMarketFilter('ALL')" class="custom-dropdown-item py-2">全部市場</button><button onclick="window.pickService.setMarketFilter('TW')" class="custom-dropdown-item py-2">🇹🇼 台股</button><button onclick="window.pickService.setMarketFilter('US')" class="custom-dropdown-item py-2">🇺🇸 美股</button><button onclick="window.pickService.setMarketFilter('JP')" class="custom-dropdown-item py-2">🇯🇵 日股</button></div>
             <div id="pick-filter-overlay" onclick="window.pickService.toggleFilter()" class="hidden fixed inset-0 z-40"></div>
         </div>
         <div class="flex items-center gap-1">
             <div class="relative">
-                <button onclick="window.pickService.toggleSort()" class="flex items-center gap-1 text-xs bg-[#1A1A1A] border border-[#333] text-gray-300 px-3 py-1.5 rounded-l border-r-0 hover:border-gold hover:text-gold shadow-sm"><span class="material-icons text-[14px]">sort</span><span id="pick-sort-label">股號</span></button>
+                <button onclick="window.pickService.toggleSort()" class="flex items-center gap-1 text-xs md:text-sm bg-[#1A1A1A] border border-[#333] text-gray-300 px-3 py-1.5 rounded-l border-r-0 hover:border-gold hover:text-gold shadow-sm"><span class="material-icons text-[14px]">sort</span><span id="pick-sort-label">股號</span></button>
                 <div id="pick-sort-menu" class="hidden absolute top-full mt-1 right-0 custom-dropdown min-w-[120px]"><button onclick="window.pickService.setSortField('symbol')" class="custom-dropdown-item py-2">股號</button><button onclick="window.pickService.setSortField('expReturn')" class="custom-dropdown-item py-2">預期報酬</button></div>
                 <div id="pick-sort-overlay" onclick="window.pickService.toggleSort()" class="hidden fixed inset-0 z-40"></div>
             </div>
-            <button onclick="window.pickService.toggleSortOrder()" class="flex items-center justify-center text-xs bg-[#1A1A1A] border border-[#333] text-gray-300 px-2 py-1.5 rounded-r hover:border-gold hover:text-gold shadow-sm"><span id="pick-sort-arrow" class="material-icons text-[14px]">arrow_downward</span></button>
+            <button onclick="window.pickService.toggleSortOrder()" class="flex items-center justify-center text-xs md:text-sm bg-[#1A1A1A] border border-[#333] text-gray-300 px-2 py-1.5 rounded-r hover:border-gold hover:text-gold shadow-sm"><span id="pick-sort-arrow" class="material-icons text-[14px]">arrow_downward</span></button>
         </div>
     </div>
     <div id="pick-list-container" class="space-y-2 pb-24"></div>

@@ -7,7 +7,7 @@
         <div class="flex justify-between items-center px-1 relative z-20">
             <div class="relative">
                 <button onclick="window.portfolioService.toggleFilterMenu()" class="flex items-center gap-1 text-sm bg-[#1A1A1A] border border-[#333] text-gray-300 px-4 py-2 rounded-lg hover:border-gold hover:text-gold shadow-sm">
-                    <span class="material-icons text-base">filter_list</span><span id="current-filter-label">全部市場</span><span class="material-icons text-xs ml-1">arrow_drop_down</span>
+                    <span class="material-icons text-base">filter_list</span><span id="current-filter-label">全部市場</span><span class="material-icons text-xs md:text-sm ml-1">arrow_drop_down</span>
                 </button>
                 <div id="filter-menu" class="hidden absolute top-full mt-2 left-0 custom-dropdown"><button onclick="window.portfolioService.setMarketFilter('ALL')" class="custom-dropdown-item">全部市場</button><button onclick="window.portfolioService.setMarketFilter('TW')" class="custom-dropdown-item">🇹🇼 台股</button><button onclick="window.portfolioService.setMarketFilter('US')" class="custom-dropdown-item">🇺🇸 美股</button><button onclick="window.portfolioService.setMarketFilter('JP')" class="custom-dropdown-item">🇯🇵 日股</button></div>
                 <div id="filter-overlay" onclick="window.portfolioService.toggleFilterMenu()" class="hidden fixed inset-0 z-40"></div>

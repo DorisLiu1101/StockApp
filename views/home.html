@@ -2,12 +2,12 @@
     <div class="app-card p-6 relative overflow-hidden">
         <div class="absolute -right-6 -top-6 opacity-10"><span class="material-icons text-9xl text-gold">account_balance</span></div>
         <div class="relative z-10">
-            <div class="flex items-center gap-2 mb-3"><span class="text-xs text-gold uppercase tracking-widest border border-gold px-2 py-0.5 rounded font-bold">Total Assets</span></div>
+            <div class="flex items-center gap-2 mb-3"><span class="text-xs md:text-sm text-gold uppercase tracking-widest border border-gold px-2 py-0.5 rounded font-bold">Total Assets</span></div>
             <div class="flex items-baseline gap-2 mb-8"><span class="text-xl text-gray-400 font-serif">NT$</span><span id="total-asset" class="text-5xl font-light text-white tracking-wide">--</span></div>
             <div class="grid grid-cols-3 gap-4 border-t border-[#333] pt-5">
-                <div><div class="text-xs text-gray-400 mb-1 uppercase font-bold">損益</div><div id="daily-profit" class="text-gray-200 font-bold text-lg">--</div></div>
-                <div class="border-l border-[#333] pl-4"><div class="text-xs text-gray-400 mb-1 uppercase font-bold">報酬</div><div id="total-return" class="text-gray-200 font-bold text-lg">--</div></div>
-                <div class="border-l border-[#333] pl-4"><div class="text-xs text-gray-400 mb-1 uppercase font-bold">現金</div><div id="cash-level" class="text-gray-200 font-bold text-lg">--</div></div>
+                <div><div class="text-xs md:text-sm text-gray-400 mb-1 uppercase font-bold">損益</div><div id="daily-profit" class="text-gray-200 font-bold text-lg">--</div></div>
+                <div class="border-l border-[#333] pl-4"><div class="text-xs md:text-sm text-gray-400 mb-1 uppercase font-bold">報酬</div><div id="total-return" class="text-gray-200 font-bold text-lg">--</div></div>
+                <div class="border-l border-[#333] pl-4"><div class="text-xs md:text-sm text-gray-400 mb-1 uppercase font-bold">現金</div><div id="cash-level" class="text-gray-200 font-bold text-lg">--</div></div>
             </div>
         </div>
     </div>
@@ -15,7 +15,7 @@
         <div class="flex justify-between items-center mb-5 relative min-h-[32px]">
             <h2 class="text-sm font-bold text-gray-300 uppercase tracking-widest">Portfolio</h2>
             <div class="relative">
-                <select onchange="window.portfolioService.updateHomeChart(this.value)" class="bg-[#1A1A1A] text-[#D4AF37] border border-[#D4AF37]/40 rounded-lg px-3 py-1.5 text-xs font-bold tracking-widest focus:outline-none appearance-none pr-9 cursor-pointer hover:border-[#D4AF37] shadow-sm">
+                <select onchange="window.portfolioService.updateHomeChart(this.value)" class="bg-[#1A1A1A] text-[#D4AF37] border border-[#D4AF37]/40 rounded-lg px-3 py-1.5 text-xs md:text-sm font-bold tracking-widest focus:outline-none appearance-none pr-9 cursor-pointer hover:border-[#D4AF37] shadow-sm">
                     <option value="ALL">ALL</option><option value="TW">TW</option><option value="US">US</option><option value="JP">JP</option>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#D4AF37]"><span class="material-icons text-sm">expand_more</span></div>

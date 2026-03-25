@@ -22,8 +22,8 @@ window.portfolioService = (function() {
     function renderChart(vals, labels) {
         if (!document.getElementById('portfolio-chart')) return;
         const colors=['#D4AF37','#B4941F','#756010','#4B5563','#1F2937']; let grad="conic-gradient(", curr=0, leg="";
-        if (vals.length === 0) { document.getElementById('portfolio-chart').style.background = '#222'; document.getElementById('sector-legend').innerHTML = '<div class="text-xs text-gray-600">無數據</div>'; document.getElementById('chart-center-text').innerText = "0%"; return; }
-        vals.forEach((v,i)=>{ const c=colors[i]||colors[colors.length-1]; grad+=`${c} ${curr}% ${curr+v}%, `; curr+=v; leg+=`<div class="flex items-center justify-between text-xs mb-1"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full" style="background:${c}"></div><span class="text-gray-400 truncate w-24">${labels[i]}</span></div><span class="text-gray-400 font-mono">${v}%</span></div>`; });
+        if (vals.length === 0) { document.getElementById('portfolio-chart').style.background = '#222'; document.getElementById('sector-legend').innerHTML = '<div class="text-xs md:text-sm text-gray-600">無數據</div>'; document.getElementById('chart-center-text').innerText = "0%"; return; }
+        vals.forEach((v,i)=>{ const c=colors[i]||colors[colors.length-1]; grad+=`${c} ${curr}% ${curr+v}%, `; curr+=v; leg+=`<div class="flex items-center justify-between text-xs md:text-sm mb-1"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full" style="background:${c}"></div><span class="text-gray-400 truncate w-24">${labels[i]}</span></div><span class="text-gray-400 font-mono">${v}%</span></div>`; });
         document.getElementById('portfolio-chart').style.background=grad.slice(0,-2)+")"; document.getElementById('sector-legend').innerHTML=leg; document.getElementById('chart-center-text').innerText = vals.reduce((a,b)=>a+b,0) + "%";
     }
 
@@ -64,15 +64,15 @@ window.portfolioService = (function() {
             html += `<div onclick="window.portfolioService.openStockDetail('${item.market}', '${item.symbol}')" class="app-card py-[5px] px-[10px] flex flex-col justify-center cursor-pointer hover:bg-[#1A1A1A] transition-all my-[10px] mx-[5px] active:scale-[0.98] shadow-md h-full">
                 <div class="flex justify-between items-center mb-1">
                     <div class="flex items-center gap-2 min-w-0 flex-1 mr-2 overflow-hidden">
-                        <span class="text-xs px-1.5 py-0.5 rounded border font-bold uppercase min-w-[30px] text-center flex-shrink-0 ${badgeClass}">${item.market}</span>
+                        <span class="text-xs md:text-sm px-1.5 py-0.5 rounded border font-bold uppercase min-w-[30px] text-center flex-shrink-0 ${badgeClass}">${item.market}</span>
                         <span class="text-[20px] font-bold text-white font-mono tracking-wide flex-shrink-0">${item.symbol}</span>
-                        <span class="text-[18px] text-gray-400 font-light truncate">${item.name || '--'}</span>
+                        <span class="text-[18px] md:text-[22px] text-gray-400 font-light truncate">${item.name || '--'}</span>
                     </div>
-                    <div class="text-[18px] font-bold text-gray-100 font-mono tracking-tight flex-shrink-0">${safeFmt(item.price)}</div>
+                    <div class="text-[18px] md:text-[22px] font-bold text-gray-100 font-mono tracking-tight flex-shrink-0">${safeFmt(item.price)}</div>
                 </div>
                 <div class="flex justify-between items-center">
-                    <div class="text-[18px] text-gray-500 font-mono">${safeFmt(item.qty)} sh</div>
-                    <div class="text-[18px] font-bold ${isGain ? 'text-[#E57373]' : 'text-[#4DB6AC]'} font-mono">${gainPctStr} <span class="text-[18px] opacity-80 ml-1">(${gainAmtStr})</span></div>
+                    <div class="text-[18px] md:text-[22px] text-gray-500 font-mono">${safeFmt(item.qty)} sh</div>
+                    <div class="text-[18px] md:text-[22px] font-bold ${isGain ? 'text-[#E57373]' : 'text-[#4DB6AC]'} font-mono">${gainPctStr} <span class="text-[18px] md:text-[22px] opacity-80 ml-1">(${gainAmtStr})</span></div>
                 </div>
             </div>`;
         });
@@ -130,8 +130,8 @@ window.portfolioService = (function() {
         const viewY = document.getElementById('eps-year-view');
         const viewD = document.getElementById('eps-dividend-view');
         
-        const activeClass = "px-3 py-1.5 rounded-md text-[11px] font-bold transition-all bg-gray-700 text-white shadow-sm";
-        const inactiveClass = "px-3 py-1.5 rounded-md text-[11px] font-bold transition-all text-gray-400 hover:text-gray-200";
+        const activeClass = "px-3 py-1.5 rounded-md text-[11px] md:text-[14px] font-bold transition-all bg-gray-700 text-white shadow-sm";
+        const inactiveClass = "px-3 py-1.5 rounded-md text-[11px] md:text-[14px] font-bold transition-all text-gray-400 hover:text-gray-200";
 
         if(btnB) btnB.className = view === 'basic' ? activeClass : inactiveClass;
         if(btnQ) btnQ.className = view === 'quarter' ? activeClass : inactiveClass;
@@ -171,7 +171,7 @@ window.portfolioService = (function() {
 
         if (!window.appState || !window.appState.API_URL) {
             if(loadingDiv) loadingDiv.classList.add('hidden');
-            if(contentDiv) { contentDiv.innerHTML = '<p class="text-center text-xs text-red-400 py-6">請先至設定綁定 API 網址</p>'; contentDiv.classList.remove('hidden'); }
+            if(contentDiv) { contentDiv.innerHTML = '<p class="text-center text-xs md:text-sm text-red-400 py-6">請先至設定綁定 API 網址</p>'; contentDiv.classList.remove('hidden'); }
             return;
         }
 
@@ -188,11 +188,11 @@ window.portfolioService = (function() {
                 renderBasicInfoUI(json.data);
             } else {
                 let errorMsg = json.message || '查無此股票資料';
-                if(contentDiv) { contentDiv.innerHTML = `<div class="text-center py-6"><p class="text-xs text-gray-500 mb-1">無法顯示基本資料</p><p class="text-[10px] text-red-400/70 font-mono tracking-widest">${errorMsg}</p></div>`; contentDiv.classList.remove('hidden'); }
+                if(contentDiv) { contentDiv.innerHTML = `<div class="text-center py-6"><p class="text-xs md:text-sm text-gray-500 mb-1">無法顯示基本資料</p><p class="text-[10px] text-red-400/70 font-mono tracking-widest">${errorMsg}</p></div>`; contentDiv.classList.remove('hidden'); }
             }
         } catch (e) {
             if(loadingDiv) loadingDiv.classList.add('hidden');
-            if(contentDiv) { contentDiv.innerHTML = '<p class="text-center text-xs text-red-400 py-6">資料載入失敗</p>'; contentDiv.classList.remove('hidden'); }
+            if(contentDiv) { contentDiv.innerHTML = '<p class="text-center text-xs md:text-sm text-red-400 py-6">資料載入失敗</p>'; contentDiv.classList.remove('hidden'); }
         }
     }
 
@@ -202,7 +202,7 @@ window.portfolioService = (function() {
 
         const data = (rawData && rawData.data && Array.isArray(rawData.data)) ? rawData.data[0] : rawData;
         if (!data || !data["股票代號"]) {
-            contentDiv.innerHTML = '<p class="text-center text-xs text-red-400 py-6">資料格式解析異常或查無資料</p>';
+            contentDiv.innerHTML = '<p class="text-center text-xs md:text-sm text-red-400 py-6">資料格式解析異常或查無資料</p>';
             contentDiv.classList.remove('hidden');
             return;
         }
@@ -223,38 +223,38 @@ window.portfolioService = (function() {
         contentDiv.innerHTML = `
             <div class="space-y-6 px-1">
                 <div>
-                    <h4 class="text-[13px] text-gray-400 font-bold border-l-2 border-[#D4AF37] pl-2 mb-4">基本資訊</h4>
-                    <div class="grid grid-cols-3 gap-y-4 gap-x-2 text-[13px]">
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">產業</span><span class="text-gray-200 font-bold truncate">${data["產業名稱"] || '--'}</span></div>
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">上市/上櫃</span><span class="text-gray-200 font-bold">${marketType}</span></div>
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">掛牌年數</span><span class="text-gray-200 font-bold">${data["掛牌年數"] ? data["掛牌年數"] + ' 年' : '--'}</span></div>
+                    <h4 class="text-[13px] md:text-[16px] text-gray-400 font-bold border-l-2 border-[#D4AF37] pl-2 mb-4">基本資訊</h4>
+                    <div class="grid grid-cols-3 gap-y-4 gap-x-2 text-[13px] md:text-[16px]">
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1">產業</span><span class="text-gray-200 font-bold truncate">${data["產業名稱"] || '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1">上市/上櫃</span><span class="text-gray-200 font-bold">${marketType}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1">掛牌年數</span><span class="text-gray-200 font-bold">${data["掛牌年數"] ? data["掛牌年數"] + ' 年' : '--'}</span></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-y-4 gap-x-2 text-[13px] mt-4">
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">市值</span><span class="text-gray-200 font-bold">${data["總市值(億)"] ? data["總市值(億)"] + ' 億' : '--'}</span></div>
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">股本</span><span class="text-gray-200 font-bold">${data["交易所公告股本(億)"] ? data["交易所公告股本(億)"] + ' 億' : '--'}</span></div>
+                    <div class="grid grid-cols-2 gap-y-4 gap-x-2 text-[13px] md:text-[16px] mt-4">
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1">市值</span><span class="text-gray-200 font-bold">${data["總市值(億)"] ? data["總市值(億)"] + ' 億' : '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1">股本</span><span class="text-gray-200 font-bold">${data["交易所公告股本(億)"] ? data["交易所公告股本(億)"] + ' 億' : '--'}</span></div>
                     </div>
                     <div class="mt-4">
-                        <span class="text-gray-500 text-[11px] mb-1 block">經營項目</span>
-                        <span class="text-gray-300 text-[12px] leading-relaxed break-words">${data["經營項目"] || '--'}</span>
+                        <span class="text-gray-500 text-[11px] md:text-[14px] mb-1 block">經營項目</span>
+                        <span class="text-gray-300 text-[12px] md:text-[15px] leading-relaxed break-words">${data["經營項目"] || '--'}</span>
                     </div>
                 </div>
 
                 <div class="w-full h-px bg-gray-800/40 my-2"></div>
 
                 <div>
-                    <h4 class="text-[13px] text-gray-400 font-bold border-l-2 border-[#D4AF37] pl-2 mb-4">基本數據 (TTM 近四季)</h4>
-                    <div class="grid grid-cols-3 gap-y-4 gap-x-2 text-[13px]">
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">公告每股淨值</span><span class="text-gray-200 font-mono font-bold">${data["公告每股淨值(元)"] || '--'}</span></div>
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1 flex items-center">P/B ${infoIcon('PB', '股價淨值比 (P/B)')}</span><span class="text-gray-200 font-mono font-bold">${data["股價淨值比"] || '--'}</span></div>
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1 flex items-center">P/E ${infoIcon('PE', '本益比 (P/E)')}</span><span class="text-gray-200 font-mono font-bold">${data["本益比(近四季)"] || '--'}</span></div>
+                    <h4 class="text-[13px] md:text-[16px] text-gray-400 font-bold border-l-2 border-[#D4AF37] pl-2 mb-4">基本數據 (TTM 近四季)</h4>
+                    <div class="grid grid-cols-3 gap-y-4 gap-x-2 text-[13px] md:text-[16px]">
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1">公告每股淨值</span><span class="text-gray-200 font-mono font-bold">${data["公告每股淨值(元)"] || '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1 flex items-center">P/B ${infoIcon('PB', '股價淨值比 (P/B)')}</span><span class="text-gray-200 font-mono font-bold">${data["股價淨值比"] || '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1 flex items-center">P/E ${infoIcon('PE', '本益比 (P/E)')}</span><span class="text-gray-200 font-mono font-bold">${data["本益比(近四季)"] || '--'}</span></div>
                     </div>
-                    <div class="grid grid-cols-3 gap-y-4 gap-x-2 text-[13px] mt-4">
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">EPS</span><span class="text-gray-200 font-mono font-bold">${data["公告基本每股盈餘(近四季)"] || '--'}</span></div>
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1 flex items-center">ROE ${infoIcon('ROE', '股東權益報酬率 (ROE)')}</span><span class="text-gray-200 font-mono font-bold">${data["ROE(近四季)"] ? data["ROE(近四季)"] + '%' : '--'}</span></div>
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1 flex items-center">ROA ${infoIcon('ROA', '資產報酬率 (ROA)')}</span><span class="text-gray-200 font-mono font-bold">${data["ROA(近四季)"] ? data["ROA(近四季)"] + '%' : '--'}</span></div>
+                    <div class="grid grid-cols-3 gap-y-4 gap-x-2 text-[13px] md:text-[16px] mt-4">
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1">EPS</span><span class="text-gray-200 font-mono font-bold">${data["公告基本每股盈餘(近四季)"] || '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1 flex items-center">ROE ${infoIcon('ROE', '股東權益報酬率 (ROE)')}</span><span class="text-gray-200 font-mono font-bold">${data["ROE(近四季)"] ? data["ROE(近四季)"] + '%' : '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1 flex items-center">ROA ${infoIcon('ROA', '資產報酬率 (ROA)')}</span><span class="text-gray-200 font-mono font-bold">${data["ROA(近四季)"] ? data["ROA(近四季)"] + '%' : '--'}</span></div>
                     </div>
                     <div class="mt-4">
-                        <span class="text-gray-500 text-[11px] mb-1 block">現金股利殖利率</span>
+                        <span class="text-gray-500 text-[11px] md:text-[14px] mb-1 block">現金股利殖利率</span>
                         <span class="text-[#D4AF37] font-mono font-bold text-base">${data["現金股利殖利率(%)"] ? data["現金股利殖利率(%)"] + '%' : '--'}</span>
                     </div>
                 </div>
@@ -262,15 +262,15 @@ window.portfolioService = (function() {
                 <div class="w-full h-px bg-gray-800/40 my-2"></div>
 
                 <div>
-                    <h4 class="text-[13px] text-gray-400 font-bold border-l-2 border-[#D4AF37] pl-2 mb-4">財務資料 (${quarterStr})</h4>
-                    <div class="grid grid-cols-2 gap-y-4 gap-x-2 text-[13px]">
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">ROE</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["ROE"] ? recentQuarter["ROE"] + '%' : '--'}</span></div>
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1">ROA</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["ROA"] ? recentQuarter["ROA"] + '%' : '--'}</span></div>
+                    <h4 class="text-[13px] md:text-[16px] text-gray-400 font-bold border-l-2 border-[#D4AF37] pl-2 mb-4">財務資料 (${quarterStr})</h4>
+                    <div class="grid grid-cols-2 gap-y-4 gap-x-2 text-[13px] md:text-[16px]">
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1">ROE</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["ROE"] ? recentQuarter["ROE"] + '%' : '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1">ROA</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["ROA"] ? recentQuarter["ROA"] + '%' : '--'}</span></div>
                     </div>
-                    <div class="grid grid-cols-3 gap-y-4 gap-x-2 text-[13px] mt-4">
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1 flex items-center">毛利率 ${infoIcon('GM', '毛利率')}</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季毛利率(％)"] ? recentQuarter["單季毛利率(％)"] + '%' : '--'}</span></div>
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1 flex items-center">營益率 ${infoIcon('OPM', '營業利益率')}</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季營業利益率(％)"] ? recentQuarter["單季營業利益率(％)"] + '%' : '--'}</span></div>
-                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] mb-1 flex items-center">淨利率 ${infoIcon('NPM', '淨利率')}</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季稅後淨利率(％)"] ? recentQuarter["單季稅後淨利率(％)"] + '%' : '--'}</span></div>
+                    <div class="grid grid-cols-3 gap-y-4 gap-x-2 text-[13px] md:text-[16px] mt-4">
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1 flex items-center">毛利率 ${infoIcon('GM', '毛利率')}</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季毛利率(％)"] ? recentQuarter["單季毛利率(％)"] + '%' : '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1 flex items-center">營益率 ${infoIcon('OPM', '營業利益率')}</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季營業利益率(％)"] ? recentQuarter["單季營業利益率(％)"] + '%' : '--'}</span></div>
+                        <div class="flex flex-col"><span class="text-gray-500 text-[11px] md:text-[14px] mb-1 flex items-center">淨利率 ${infoIcon('NPM', '淨利率')}</span><span class="text-gray-200 font-mono font-bold">${recentQuarter && recentQuarter["單季稅後淨利率(％)"] ? recentQuarter["單季稅後淨利率(％)"] + '%' : '--'}</span></div>
                     </div>
                 </div>
             </div>
@@ -284,9 +284,9 @@ window.portfolioService = (function() {
         const tbodyD = document.getElementById('eps-dividend-tbody');
         
         if (!stock.records || !Array.isArray(stock.records) || stock.records.length === 0) {
-            if(tbodyQ) tbodyQ.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500 text-xs">尚無歷史財報資料</td></tr>';
-            if(tbodyY) tbodyY.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs">尚無歷史財報資料</td></tr>';
-            if(tbodyD) tbodyD.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs">尚無歷年配息資料</td></tr>';
+            if(tbodyQ) tbodyQ.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500 text-xs md:text-sm">尚無歷史財報資料</td></tr>';
+            if(tbodyY) tbodyY.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs md:text-sm">尚無歷史財報資料</td></tr>';
+            if(tbodyD) tbodyD.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs md:text-sm">尚無歷年配息資料</td></tr>';
             return;
         }
 
@@ -345,7 +345,7 @@ window.portfolioService = (function() {
                     <td class="py-2.5 text-center font-mono text-gray-500">${roeStr}</td>
                 </tr>`;
             });
-            tbodyY.innerHTML = yearHtml || '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs">無歷年資料</td></tr>';
+            tbodyY.innerHTML = yearHtml || '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs md:text-sm">無歷年資料</td></tr>';
         }
 
         // 2. 季度動能 (季資料)
@@ -398,14 +398,14 @@ window.portfolioService = (function() {
             if (quartersData.length > 8) {
                 quarterHtml += `<tr id="quarter-toggle-row">
                     <td colspan="3" class="text-center py-3 border-b-0">
-                        <button id="btn-toggle-quarters" onclick="window.portfolioService.toggleMoreQuarters()" class="text-[11px] text-gray-400 hover:text-[#D4AF37] tracking-widest w-full py-2 bg-[#1A1A1A] rounded-lg border border-gray-800/60 transition-colors shadow-sm focus:outline-none active:scale-95">
+                        <button id="btn-toggle-quarters" onclick="window.portfolioService.toggleMoreQuarters()" class="text-[11px] md:text-[14px] text-gray-400 hover:text-[#D4AF37] tracking-widest w-full py-2 bg-[#1A1A1A] rounded-lg border border-gray-800/60 transition-colors shadow-sm focus:outline-none active:scale-95">
                             展開更多歷史季度 ▾
                         </button>
                     </td>
                 </tr>`;
             }
 
-            tbodyQ.innerHTML = quarterHtml || '<tr><td colspan="3" class="text-center py-4 text-gray-500 text-xs">無季度資料</td></tr>';
+            tbodyQ.innerHTML = quarterHtml || '<tr><td colspan="3" class="text-center py-4 text-gray-500 text-xs md:text-sm">無季度資料</td></tr>';
             isQuarterExpanded = false; 
         }
 
@@ -464,7 +464,7 @@ window.portfolioService = (function() {
                     <td class="py-2.5 text-center font-mono text-gray-400">${prStr}</td>
                 </tr>`;
             });
-            tbodyD.innerHTML = divHtml || '<tr><td colspan="5" class="text-center py-4 text-gray-500 text-xs">無歷年配息資料</td></tr>';
+            tbodyD.innerHTML = divHtml || '<tr><td colspan="5" class="text-center py-4 text-gray-500 text-xs md:text-sm">無歷年配息資料</td></tr>';
         }
         
         toggleEpsView('year');
@@ -482,7 +482,7 @@ window.portfolioService = (function() {
         document.getElementById('detail-report-date').innerText = stock.reportDate || "--";
         const roiEl = document.getElementById('detail-roi'); roiEl.innerText = (isGain ? "+" : "") + stock.gainPct + "%"; roiEl.className = `text-2xl font-bold tracking-tighter leading-none ${isGain ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
         const prefix = market === 'US' ? '$ ' : (market === 'JP' ? '¥ ' : '$ ');
-        document.getElementById('detail-qty').innerText = fmt(stock.qty); document.getElementById('detail-cost').innerText = fmt(stock.cost); const costOrg = stock.cost * stock.qty; document.getElementById('detail-exp-return-grid').innerText = (stock.expReturn !== "" && stock.expReturn != null) ? stock.expReturn + "%" : "--"; document.getElementById('detail-cost-twd-primary').innerText = prefix + fmt(Math.round(costOrg)); const costTWD = stock.marketValue - stock.gain; document.getElementById('detail-cost-twd-secondary').innerText = "NT$ " + fmt(Math.round(costTWD)); const mktOrg = stock.price * stock.qty; document.getElementById('detail-market-primary').innerText = prefix + fmt(Math.round(mktOrg)); document.getElementById('detail-market-secondary').innerText = "NT$ " + fmt(stock.marketValue); const gainOrg = stock.gainOrg || ((stock.price - stock.cost) * stock.qty); document.getElementById('detail-gain-primary').innerText = (gainOrg >= 0 ? "+" : "") + fmt(Math.round(gainOrg)); document.getElementById('detail-gain-primary').className = `text-val-md ${gainOrg >= 0 ? 'text-[#EF4444]' : 'text-[#22C55E]'}`; document.getElementById('detail-gain-secondary').innerText = (isGain ? "+NT$ " : "NT$ ") + fmt(Math.round(stock.gain)); document.getElementById('detail-gain-secondary').className = `text-[13px] font-bold font-mono mt-1.5 ${isGain ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
+        document.getElementById('detail-qty').innerText = fmt(stock.qty); document.getElementById('detail-cost').innerText = fmt(stock.cost); const costOrg = stock.cost * stock.qty; document.getElementById('detail-exp-return-grid').innerText = (stock.expReturn !== "" && stock.expReturn != null) ? stock.expReturn + "%" : "--"; document.getElementById('detail-cost-twd-primary').innerText = prefix + fmt(Math.round(costOrg)); const costTWD = stock.marketValue - stock.gain; document.getElementById('detail-cost-twd-secondary').innerText = "NT$ " + fmt(Math.round(costTWD)); const mktOrg = stock.price * stock.qty; document.getElementById('detail-market-primary').innerText = prefix + fmt(Math.round(mktOrg)); document.getElementById('detail-market-secondary').innerText = "NT$ " + fmt(stock.marketValue); const gainOrg = stock.gainOrg || ((stock.price - stock.cost) * stock.qty); document.getElementById('detail-gain-primary').innerText = (gainOrg >= 0 ? "+" : "") + fmt(Math.round(gainOrg)); document.getElementById('detail-gain-primary').className = `text-val-md ${gainOrg >= 0 ? 'text-[#EF4444]' : 'text-[#22C55E]'}`; document.getElementById('detail-gain-secondary').innerText = (isGain ? "+NT$ " : "NT$ ") + fmt(Math.round(stock.gain)); document.getElementById('detail-gain-secondary').className = `text-[13px] md:text-[16px] font-bold font-mono mt-1.5 ${isGain ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
         
         const elDetailCurrentPrice = document.getElementById('detail-current-price'); if (elDetailCurrentPrice) elDetailCurrentPrice.innerText = fmt(Number(stock.price) || 0);
         const elCurrentPriceTitle = document.getElementById('label-current-price-title');
@@ -498,7 +498,8 @@ window.portfolioService = (function() {
         renderValuationBar();
         renderEpsTables(stock);
 
-        const editBtn = document.getElementById('btn-header-edit'); if(editBtn) editBtn.onclick = (e) => { e.stopPropagation(); window.txService.openTransactionModal(market, symbol); };
+        const editBtnContainer = document.getElementById('btn-header-edit-container'); 
+        if(editBtnContainer) { editBtnContainer.innerHTML = `<button id="btn-header-edit" onclick="window.portfolioService.editPosition()" class="p-1 text-gray-500 hover:text-[#D4AF37] transition-colors focus:outline-none active:scale-90"><span class="material-icons text-lg">edit</span></button>`; }
         document.getElementById('report-frame').srcdoc = ""; document.getElementById('report-content').classList.add('hidden'); document.getElementById('report-loading').classList.add('hidden'); 
         
         // 觸發折疊區塊初始化與背景載入
@@ -560,11 +561,38 @@ window.portfolioService = (function() {
 
     function resetBars() { for(let i=1; i<=4; i++) { const el = document.getElementById(`bar-${i}`); if(el) el.className = 'flex-1 bg-gray-800 transition-all duration-300'; } }
     
+    function editPosition() {
+        const qtyEl = document.getElementById('detail-qty'); const costEl = document.getElementById('detail-cost'); const btnContainer = document.getElementById('btn-header-edit-container');
+        if (!currentStock || qtyEl.querySelector('input')) return; 
+        const currentQty = currentStock.qty || 0; const currentCost = currentStock.cost || 0;
+        qtyEl.innerHTML = `<input type="number" id="inline-qty-input" value="${currentQty}" class="bg-[#1A1A1A] border border-[#D4AF37] rounded px-1 py-0.5 text-[18px] text-[#D4AF37] w-full max-w-[80px] text-center focus:outline-none shadow-inner font-mono">`;
+        costEl.innerHTML = `<input type="number" id="inline-cost-input" value="${currentCost}" class="bg-[#1A1A1A] border border-[#D4AF37] rounded px-1 py-0.5 text-[18px] text-[#D4AF37] w-full max-w-[80px] text-center focus:outline-none shadow-inner font-mono">`;
+        btnContainer.innerHTML = `<div class="flex gap-2"><button onclick="window.portfolioService.savePosition()" class="text-green-500 hover:text-green-400 p-1 bg-[#2A2A2A] rounded border border-green-900/50 flex items-center"><span class="material-icons text-sm">check</span></button><button onclick="window.portfolioService.cancelPositionEdit()" class="text-red-500 hover:text-red-400 p-1 bg-[#2A2A2A] rounded border border-red-900/50 flex items-center"><span class="material-icons text-sm">close</span></button></div>`;
+    }
+
+    function cancelPositionEdit() { if(currentStock) openStockDetail(currentStock.market, currentStock.symbol); }
+
+    async function savePosition() {
+        const newQty = document.getElementById('inline-qty-input').value; const newCost = document.getElementById('inline-cost-input').value; const btnContainer = document.getElementById('btn-header-edit-container');
+        if (newQty === "" || newCost === "") return window.showAlert("股數與成本不可為空"); if (!window.appState.API_URL) return window.showAlert("請先設定 URL"); 
+        btnContainer.innerHTML = `<span class="text-[10px] text-[#D4AF37] animate-pulse font-mono tracking-widest mt-1">儲存中...</span>`;
+        try { 
+            const res = await fetch(window.appState.API_URL, { method: 'POST', body: JSON.stringify({ action: 'edit_position', data: { market: currentStock.market, symbol: currentStock.symbol, qty: Number(newQty), cost: Number(newCost) } }) }); 
+            const json = await res.json();
+            if(json.success) { 
+                if(window.syncSheetData) await window.syncSheetData(); 
+                const updatedStock = getPortfolioData().find(s => s.market === currentStock.market && s.symbol === currentStock.symbol);
+                if(updatedStock) currentStock = updatedStock;
+                openStockDetail(currentStock.market, currentStock.symbol); // 重新渲染且停留在卡片
+            } else throw new Error(json.message); 
+        } catch(e) { window.showAlert("更新失敗: " + e.message); cancelPositionEdit(); } 
+    }
+
     function editStockName() {
         const symbol = window.appState.currentDetailSymbol, market = window.appState.currentDetailMarket;
         const nameEl = document.getElementById('detail-name'); if (nameEl.querySelector('input')) return; 
         const currentName = nameEl.innerText;
-        nameEl.innerHTML = `<div class="flex items-center gap-2"><input type="text" id="inline-name-input" value="${currentName}" class="bg-[#1A1A1A] border border-[#D4AF37] rounded px-2 py-0.5 text-[18px] text-white w-28 focus:outline-none shadow-inner"><button onclick="window.portfolioService.saveInlineName('${currentName}')" class="text-green-500 hover:text-green-400 p-1 bg-[#2A2A2A] rounded border border-green-900/50"><span class="material-icons text-sm">check</span></button><button onclick="window.portfolioService.cancelInlineName('${currentName}')" class="text-red-500 hover:text-red-400 p-1 bg-[#2A2A2A] rounded border border-red-900/50"><span class="material-icons text-sm">close</span></button></div>`;
+        nameEl.innerHTML = `<div class="flex items-center gap-2"><input type="text" id="inline-name-input" value="${currentName}" class="bg-[#1A1A1A] border border-[#D4AF37] rounded px-2 py-0.5 text-[18px] md:text-[22px] text-white w-28 focus:outline-none shadow-inner"><button onclick="window.portfolioService.saveInlineName('${currentName}')" class="text-green-500 hover:text-green-400 p-1 bg-[#2A2A2A] rounded border border-green-900/50"><span class="material-icons text-sm">check</span></button><button onclick="window.portfolioService.cancelInlineName('${currentName}')" class="text-red-500 hover:text-red-400 p-1 bg-[#2A2A2A] rounded border border-red-900/50"><span class="material-icons text-sm">close</span></button></div>`;
     }
     function cancelInlineName(oldName) { document.getElementById('detail-name').innerText = oldName; }
     async function saveInlineName(oldName) { 
@@ -576,7 +604,7 @@ window.portfolioService = (function() {
         if(json.success) { nameEl.innerText = newName; if(window.syncSheetData) window.syncSheetData(); } else { throw new Error(json.message); } } catch(e) { window.showAlert("更新失敗: " + e.message); nameEl.innerText = oldName; } 
     }
 
-    return { setPortfolioData, getPortfolioData, updateHomeChart, renderChart, filterStocks, toggleFilterMenu, setMarketFilter, toggleSortMenu, setSortField, toggleSortOrder, openStockDetail, closeStockDetail, editStockName, cancelInlineName, saveInlineName, initValuationEvents, renderValuationBar, resetBars, toggleEpsView, toggleMoreQuarters, showInfoSheet, closeInfoSheet };
+    return { setPortfolioData, getPortfolioData, updateHomeChart, renderChart, filterStocks, toggleFilterMenu, setMarketFilter, toggleSortMenu, setSortField, toggleSortOrder, openStockDetail, closeStockDetail, editStockName, cancelInlineName, saveInlineName, initValuationEvents, renderValuationBar, resetBars, toggleEpsView, toggleMoreQuarters, showInfoSheet, closeInfoSheet,editPosition, cancelPositionEdit, savePosition };
 })();
 
 setTimeout(() => { if(window.portfolioService.initValuationEvents) window.portfolioService.initValuationEvents(); }, 1000);

@@ -27,12 +27,12 @@ window.pickService = (function() {
             html += `
             <div onclick="window.pickService.openFavoriteDetail('${item.market}', '${item.symbol}')" class="app-card py-[5px] px-[10px] flex justify-between items-center shadow-sm border border-[#333] hover:border-gold cursor-pointer transition-colors my-[10px] mx-[5px] min-h-[50px] active:scale-[0.98]">
                 <div class="flex items-center gap-2 overflow-hidden w-[55%]">
-                    <span class="text-xs px-1.5 py-0.5 rounded border font-bold uppercase min-w-[30px] text-center flex-shrink-0 ${badgeClass}">${item.market}</span>
+                    <span class="text-xs md:text-sm px-1.5 py-0.5 rounded border font-bold uppercase min-w-[30px] text-center flex-shrink-0 ${badgeClass}">${item.market}</span>
                     <span class="text-[20px] font-bold text-white font-mono tracking-wide flex-shrink-0 leading-tight">${item.symbol}</span>
-                    <span class="text-[18px] text-gray-400 font-light truncate leading-tight">${item.name || '--'}</span>
+                    <span class="text-[18px] md:text-[22px] text-gray-400 font-light truncate leading-tight">${item.name || '--'}</span>
                 </div>
                 <div class="flex items-center gap-3 w-[45%] justify-end flex-shrink-0">
-                    <span class="text-[18px] font-bold text-gray-100 font-mono leading-tight">${item.price ? item.price : '--'}</span>
+                    <span class="text-[18px] md:text-[22px] font-bold text-gray-100 font-mono leading-tight">${item.price ? item.price : '--'}</span>
                     <span class="text-[16px] font-bold text-[#D4AF37] font-mono whitespace-nowrap bg-[#D4AF37]/10 px-1.5 py-0.5 rounded leading-tight">Exp. ${item.expReturn ? item.expReturn : '--'}%</span>
                 </div>
             </div>`;
@@ -122,7 +122,7 @@ window.pickService = (function() {
             
             let alignClass = "-translate-x-1/2"; 
             if (pct <= 5) alignClass = "translate-x-0"; else if (pct >= 95) alignClass = "-translate-x-full";
-            label.className = `absolute text-[11px] font-black px-2 py-0.5 rounded shadow-lg z-20 transform ${alignClass} top-0 whitespace-nowrap ${badgeColor}`;
+            label.className = `absolute text-[11px] md:text-[14px] font-black px-2 py-0.5 rounded shadow-lg z-20 transform ${alignClass} top-0 whitespace-nowrap ${badgeColor}`;
         } else { thermSection.classList.add('hidden'); }
 
         document.getElementById('fav-report-frame').srcdoc = "";
@@ -143,7 +143,7 @@ window.pickService = (function() {
         const nameEl = document.getElementById('fav-detail-name');
         if (nameEl.querySelector('input')) return; 
         const currentName = nameEl.innerText === '--' ? '' : nameEl.innerText;
-        nameEl.innerHTML = `<div class="flex items-center gap-2"><input type="text" id="fav-inline-name-input" value="${currentName}" class="bg-[#1A1A1A] border border-[#D4AF37] rounded px-2 py-0.5 text-[18px] text-white w-28 focus:outline-none shadow-inner"><button onclick="window.pickService.saveInlineFavName('${currentName}')" class="text-green-500 hover:text-green-400 p-1 bg-[#2A2A2A] rounded border border-green-900/50"><span class="material-icons text-sm">check</span></button><button onclick="window.pickService.cancelInlineFavName('${currentName}')" class="text-red-500 hover:text-red-400 p-1 bg-[#2A2A2A] rounded border border-red-900/50"><span class="material-icons text-sm">close</span></button></div>`;
+        nameEl.innerHTML = `<div class="flex items-center gap-2"><input type="text" id="fav-inline-name-input" value="${currentName}" class="bg-[#1A1A1A] border border-[#D4AF37] rounded px-2 py-0.5 text-[18px] md:text-[22px] text-white w-28 focus:outline-none shadow-inner"><button onclick="window.pickService.saveInlineFavName('${currentName}')" class="text-green-500 hover:text-green-400 p-1 bg-[#2A2A2A] rounded border border-green-900/50"><span class="material-icons text-sm">check</span></button><button onclick="window.pickService.cancelInlineFavName('${currentName}')" class="text-red-500 hover:text-red-400 p-1 bg-[#2A2A2A] rounded border border-red-900/50"><span class="material-icons text-sm">close</span></button></div>`;
     }
     function cancelInlineFavName(oldName) { document.getElementById('fav-detail-name').innerText = oldName || '--'; }
     async function saveInlineFavName(oldName) { 

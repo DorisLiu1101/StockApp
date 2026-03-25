@@ -28,12 +28,26 @@ window.txService = (function() {
     function openTransactionModal(m, s) { 
         if(window.pushModalState) window.pushModalState('tx'); 
         const mS=document.getElementById('tx-market'), sI=document.getElementById('tx-symbol'); 
-        mS.value=m||'TW'; sI.value=s||''; document.getElementById('tx-name').value = ''; 
-        resetTxStatus(); if(s) lookupSymbolName(); 
+        
+        // 🌟 判斷是否為同一檔股票，若不是才清空資料 (保留未送出資料的記憶功能)
+        const isSameStock = (mS.value === (m || 'TW')) && (sI.value === (s || ''));
+        
+        mS.value=m||'TW'; sI.value=s||''; 
+        resetTxStatus(); 
+        
+        // 只有切換股票或全新開啟時，才清空價格與股數表單
+        if(!isSameStock || !s) {
+            document.getElementById('tx-name').value = ''; 
+            document.getElementById('tx-price').value=''; 
+            document.getElementById('tx-qty').value=''; 
+            setTxType('buy'); 
+            if(s) lookupSymbolName(); 
+        }
+        
         mS.disabled=!!s; sI.readOnly=!!s; 
         if(s) sI.classList.add('opacity-60','cursor-not-allowed'); else sI.classList.remove('opacity-60','cursor-not-allowed'); 
-        document.getElementById('tx-price').value=''; document.getElementById('tx-qty').value=''; 
-        setTxType('buy'); document.getElementById('transaction-modal').classList.add('open'); 
+        
+        document.getElementById('transaction-modal').classList.add('open'); 
     }
     
     function closeTransactionModal(fromPop = false) { 
@@ -56,7 +70,14 @@ window.txService = (function() {
         try {
             const res = await fetch(window.appState.API_URL, { method: 'POST', body: JSON.stringify({ action: 'add', data: { market: m, symbol: s, price: Number(p), qty: qty, name: name } }) });
             const json = await res.json();
-            if (json.success) { sD.innerHTML = '<span class="text-green-500">新增完成 ✅</span>'; if(window.syncSheetData) await window.syncSheetData(); sB.disabled = false; sB.innerText = "確認新增"; } else { throw new Error(json.message); }
+            if (json.success) { 
+                sD.innerHTML = '<span class="text-green-500">新增完成 ✅</span>'; 
+                // 🌟 送出成功後清空記憶資料
+                document.getElementById('tx-price').value=''; 
+                document.getElementById('tx-qty').value=''; 
+                if(window.syncSheetData) await window.syncSheetData(); 
+                sB.disabled = false; sB.innerText = "確認新增"; 
+            } else { throw new Error(json.message); }
         } catch (e) { window.showAlert("錯誤：" + e.message); sB.disabled = false; sB.innerText = "確認新增"; }
     }
 
