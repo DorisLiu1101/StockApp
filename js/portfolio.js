@@ -143,10 +143,12 @@ window.portfolioService = (function() {
             const json = await res.json();
             
             if(loadingDiv) loadingDiv.classList.add('hidden');
+            // 替換為這段 (加入顯示真實的錯誤訊息)：
             if (json.success && json.data) {
                 renderBasicInfoUI(json.data);
             } else {
-                if(contentDiv) { contentDiv.innerHTML = '<p class="text-center text-xs text-gray-500 py-6">此個股尚無基本資料</p>'; contentDiv.classList.remove('hidden'); }
+                let errorMsg = json.message || '查無此股票資料';
+                if(contentDiv) { contentDiv.innerHTML = `<div class="text-center py-6"><p class="text-xs text-gray-500 mb-1">無法顯示基本資料</p><p class="text-[10px] text-red-400/70 font-mono tracking-widest">${errorMsg}</p></div>`; contentDiv.classList.remove('hidden'); }
             }
         } catch (e) {
             if(loadingDiv) loadingDiv.classList.add('hidden');
