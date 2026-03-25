@@ -1,7 +1,5 @@
-/* 
- [VER] v2.7.0 [2026-03-25]
- [DESC] 實作基本資料 API 欄位精準對接，並加入折疊區塊與預設膠囊狀態的初始化機制
- [DESC] 實作真實日曆基準法 (季度過濾)、空值顯示為淺灰雙底線、展開更多功能，並強制抓取「前一年度」配息頻率進行字典轉換 
+/* [VER] v2.7.1 [2026-03-25]
+ [DESC] 實作基本資料 API 欄位精準對接，修復 Scope 錯誤，並加入折疊區塊與預設膠囊狀態的初始化機制
  */
 
 window.portfolioService = (function() {
@@ -47,14 +45,11 @@ window.portfolioService = (function() {
         
         let html = "";
         list.forEach(item => {
-            // 🛡️ [新增防呆機制] 安全的數字格式化工具
             const safeFmt = (n) => {
-                // 如果是 null、undefined、空字串或根本不是數字，一律優雅回傳 '--'，絕不崩潰
                 if (n === null || n === undefined || n === '' || isNaN(Number(n))) return '--';
                 return Number(n).toLocaleString();
             };
 
-            // 針對損益 (Gain) 進行防呆處理
             const isGain = Number(item.gain) >= 0; 
             const gainAmtStr = (item.gain === null || item.gain === undefined || isNaN(Number(item.gain))) 
                 ? '--' 
@@ -126,36 +121,11 @@ window.portfolioService = (function() {
         }
     }
 
-    function renderEpsTables(stock) {
-        const tbodyQ = document.getElementById('eps-quarter-tbody');
-        const tbodyY = document.getElementById('eps-year-tbody');
-        const tbodyD = document.getElementById('eps-dividend-tbody');
-        
-        if (!stock.records || !Array.isArray(stock.records) || stock.records.length === 0) {
-            if(tbodyQ) tbodyQ.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500 text-xs">尚無歷史財報資料</td></tr>';
-            if(tbodyY) tbodyY.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs">尚無歷史財報資料</td></tr>';
-            if(tbodyD) tbodyD.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs">尚無歷年配息資料</td></tr>';
-            return;
-        }
-
-        let records = [...stock.records].filter(r => r.Year && r.Year !== 'TTM');
-        records.sort((a, b) => Number(b.Year) - Number(a.Year)); 
-        const ttmRecord = stock.records.find(r => r.Year === 'TTM');
-        const market = stock.market || 'TW';
-
-        const getColorClass = (val) => {
-            if (val > 0) return market === 'US' ? 'text-[#22c55e]' : 'text-[#ef4444]';
-            if (val < 0) return market === 'US' ? 'text-[#ef4444]' : 'text-[#22c55e]';
-            return 'text-gray-400';
-        };
-
-        const nullBadge = '<span class="text-gray-600 font-mono text-center w-full block">--</span>';
-
-        async function prefetchBasicInfo(market, symbol) {
+    // 🌟 [修正位置] 將預先載入相關函數移出 renderEpsTables 的作用域外
+    async function prefetchBasicInfo(market, symbol) {
         const contentDiv = document.getElementById('basic-info-content');
         const loadingDiv = document.getElementById('basic-info-loading');
         
-        // 初始化狀態
         if(loadingDiv) loadingDiv.classList.remove('hidden');
         if(contentDiv) { contentDiv.classList.add('hidden'); contentDiv.innerHTML = ''; }
 
@@ -166,7 +136,6 @@ window.portfolioService = (function() {
         }
 
         try {
-            // 向 GAS 後端發送請求
             const res = await fetch(window.appState.userScriptUrl, { 
                 method: 'POST', 
                 body: JSON.stringify({ action: 'get_basic_info', data: { market: market, symbol: symbol } }) 
@@ -189,7 +158,6 @@ window.portfolioService = (function() {
         const contentDiv = document.getElementById('basic-info-content');
         if (!contentDiv) return;
 
-        // 相容處理：確保抓到正確的資料層級 (防護 GAS 回傳原始 nstock 結構或解開後的物件)
         const data = (rawData && rawData.data && Array.isArray(rawData.data)) ? rawData.data[0] : rawData;
         if (!data || !data["股票代號"]) {
             contentDiv.innerHTML = '<p class="text-center text-xs text-red-400 py-6">資料格式解析異常或查無資料</p>';
@@ -197,11 +165,9 @@ window.portfolioService = (function() {
             return;
         }
 
-        // 1. 字典轉換 [Dictionary]：上市上櫃數字轉文字
         const marketTypeMap = { "1": "上市", "2": "上櫃", "3": "興櫃", "4": "創櫃", "5": "公開發行" };
         const marketType = marketTypeMap[data["上市上櫃"]] || data["上市上櫃"] || '--';
 
-        // 2. 字串處理 [String Manipulation]：年季轉換 (例如 "202504" -> "2025Q4")
         let quarterStr = '--';
         const recentQuarter = data["近一季"];
         if (recentQuarter && recentQuarter["年季"]) {
@@ -213,7 +179,6 @@ window.portfolioService = (function() {
             }
         }
 
-        // 3. UI 渲染：精準對接真實 JSON 欄位
         contentDiv.innerHTML = `
             <div>
                 <h4 class="text-[12px] text-[#D4AF37] font-bold border-l-2 border-[#D4AF37] pl-2 mb-2">基本資訊</h4>
@@ -254,7 +219,30 @@ window.portfolioService = (function() {
         contentDiv.classList.remove('hidden');
     }
 
+    function renderEpsTables(stock) {
+        const tbodyQ = document.getElementById('eps-quarter-tbody');
+        const tbodyY = document.getElementById('eps-year-tbody');
+        const tbodyD = document.getElementById('eps-dividend-tbody');
+        
+        if (!stock.records || !Array.isArray(stock.records) || stock.records.length === 0) {
+            if(tbodyQ) tbodyQ.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500 text-xs">尚無歷史財報資料</td></tr>';
+            if(tbodyY) tbodyY.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs">尚無歷史財報資料</td></tr>';
+            if(tbodyD) tbodyD.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500 text-xs">尚無歷年配息資料</td></tr>';
+            return;
+        }
 
+        let records = [...stock.records].filter(r => r.Year && r.Year !== 'TTM');
+        records.sort((a, b) => Number(b.Year) - Number(a.Year)); 
+        const ttmRecord = stock.records.find(r => r.Year === 'TTM');
+        const market = stock.market || 'TW';
+
+        const getColorClass = (val) => {
+            if (val > 0) return market === 'US' ? 'text-[#22c55e]' : 'text-[#ef4444]';
+            if (val < 0) return market === 'US' ? 'text-[#ef4444]' : 'text-[#22c55e]';
+            return 'text-gray-400';
+        };
+
+        const nullBadge = '<span class="text-gray-600 font-mono text-center w-full block">--</span>';
 
         // 1. 歷年表現 (年資料)
         if(tbodyY) {
@@ -344,13 +332,12 @@ window.portfolioService = (function() {
             isQuarterExpanded = false; 
         }
 
-        // 3. 股利政策 (強制抓取前一年度配息頻率與字典轉換，並加入殖利率欄位)
+        // 3. 股利政策
         if(tbodyD) {
             let validYields = records.filter(r => r.CashYield !== 'N/A' && r.CashYield !== undefined && r.CashYield !== null).map(r => Number(r.CashYield));
             let avg3y = validYields.slice(0, 3).reduce((a,b)=>a+b, 0) / Math.min(validYields.length, 3);
             let avg5y = validYields.slice(0, 5).reduce((a,b)=>a+b, 0) / Math.min(validYields.length, 5);
             
-            // 強制尋找前一年度
             const nowYear = new Date().getFullYear();
             const prevYear = nowYear - 1;
             const prevYearRecord = records.find(r => Number(r.Year) === prevYear);
@@ -397,11 +384,9 @@ window.portfolioService = (function() {
                     <td class="py-2.5 text-center font-mono text-gray-400">${prStr}</td>
                 </tr>`;
             });
-            // 注意：colspan 改為 5
             tbodyD.innerHTML = divHtml || '<tr><td colspan="5" class="text-center py-4 text-gray-500 text-xs">無歷年配息資料</td></tr>';
         }
         
-        //預設啟動的膠囊按鈕
         toggleEpsView('year');
     }
 
@@ -431,13 +416,15 @@ window.portfolioService = (function() {
 
         const editBtn = document.getElementById('btn-header-edit'); if(editBtn) editBtn.onclick = (e) => { e.stopPropagation(); window.txService.openTransactionModal(market, symbol); };
         document.getElementById('report-frame').srcdoc = ""; document.getElementById('report-content').classList.add('hidden'); document.getElementById('report-loading').classList.add('hidden'); 
+        
+        // 觸發折疊區塊初始化與背景載入
         const detailsBlock = document.querySelector('#detail-modal details');
-        if (detailsBlock) detailsBlock.removeAttribute('open'); // 強制收合折疊區塊
-        prefetchBasicInfo(market, symbol); // 觸發背景預先載入基本資料        
-        // 確保函數的最後一行維持開啟彈窗：
+        if (detailsBlock) detailsBlock.removeAttribute('open'); 
+        prefetchBasicInfo(market, symbol); 
+        
         document.getElementById('detail-modal').classList.add('open');
-
     }
+    
     function closeStockDetail(fromPop = false) { document.getElementById('detail-modal').classList.remove('open'); document.getElementById('report-frame').srcdoc = ""; if(fromPop !== true && typeof history.back === 'function') history.back(); }
 
     function toggleFilterMenu() { document.getElementById('filter-menu').classList.toggle('hidden'); document.getElementById('filter-overlay').classList.toggle('hidden'); }
