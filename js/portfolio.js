@@ -546,12 +546,10 @@ window.portfolioService = (function() {
             if (valSection) valSection.style.display = 'none';
             if (expTitle) expTitle.innerText = '現價';
             document.getElementById('detail-exp-return-grid').innerText = fmt(Number(stock.price) || 0);
-            document.getElementById('detail-exp-return-grid').classList.replace('text-[#D4AF37]', 'text-white');
         } else {
             if (valSection) valSection.style.display = 'block';
             if (expTitle) expTitle.innerText = '預期報酬率';
             document.getElementById('detail-exp-return-grid').innerText = (stock.expReturn !== "" && stock.expReturn != null) ? stock.expReturn + "%" : "--";
-            document.getElementById('detail-exp-return-grid').classList.replace('text-white', 'text-[#D4AF37]');
         }
 
         renderValuationBar();
