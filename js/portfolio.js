@@ -513,8 +513,20 @@ window.portfolioService = (function() {
         document.getElementById('detail-symbol').innerText = symbol; document.getElementById('detail-name').innerText = stock.name || symbol; document.getElementById('detail-sector').innerText = stock.sector || "其他"; document.getElementById('debug-symbol').innerText = symbol;
         document.getElementById('detail-report-date').innerText = stock.reportDate || "--";
         const roiEl = document.getElementById('detail-roi'); roiEl.innerText = (isGain ? "+" : "") + stock.gainPct + "%"; roiEl.className = `text-2xl font-bold tracking-tighter leading-none ${isGain ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
-        const prefix = market === 'US' ? '$ ' : (market === 'JP' ? '¥ ' : '$ ');
-        document.getElementById('detail-qty').innerText = fmt(stock.qty); document.getElementById('detail-cost').innerText = fmt(stock.cost); const costOrg = stock.cost * stock.qty; document.getElementById('detail-exp-return-grid').innerText = (stock.expReturn !== "" && stock.expReturn != null) ? stock.expReturn + "%" : "--"; document.getElementById('detail-cost-twd-primary').innerText = prefix + fmt(Math.round(costOrg)); const costTWD = stock.marketValue - stock.gain; document.getElementById('detail-cost-twd-secondary').innerText = "NT$ " + fmt(Math.round(costTWD)); const mktOrg = stock.price * stock.qty; document.getElementById('detail-market-primary').innerText = prefix + fmt(Math.round(mktOrg)); document.getElementById('detail-market-secondary').innerText = "NT$ " + fmt(stock.marketValue); const gainOrg = stock.gainOrg || ((stock.price - stock.cost) * stock.qty); document.getElementById('detail-gain-primary').innerText = (gainOrg >= 0 ? "+" : "") + fmt(Math.round(gainOrg)); document.getElementById('detail-gain-primary').className = `text-val-md ${gainOrg >= 0 ? 'text-[#EF4444]' : 'text-[#22C55E]'}`; document.getElementById('detail-gain-secondary').innerText = (isGain ? "+NT$ " : "NT$ ") + fmt(Math.round(stock.gain)); document.getElementById('detail-gain-secondary').className = `text-[13px] md:text-[16px] font-bold font-mono mt-1.5 ${isGain ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
+        
+        document.getElementById('detail-qty').innerText = fmt(stock.qty); document.getElementById('detail-cost').innerText = fmt(stock.cost); const costOrg = stock.cost * stock.qty; 
+        document.getElementById('detail-exp-return-grid').innerText = (stock.expReturn !== "" && stock.expReturn != null) ? stock.expReturn + "%" : "--"; 
+        const r = stock.rate || 1; // 取得後端傳來的精準匯率
+        document.getElementById('detail-cost-twd-primary').innerText = fmt(Math.round(costOrg)); 
+        document.getElementById('detail-cost-twd-secondary').innerText = "NT$ " + fmt(Math.round(costOrg * r)); 
+        const mktOrg = stock.price * stock.qty; 
+        document.getElementById('detail-market-primary').innerText = fmt(Math.round(mktOrg)); 
+        document.getElementById('detail-market-secondary').innerText = "NT$ " + fmt(Math.round(mktOrg * r)); 
+        const gainOrg = stock.gainOrg || ((stock.price - stock.cost) * stock.qty); 
+        document.getElementById('detail-gain-primary').innerText = (gainOrg >= 0 ? "+" : "") + fmt(Math.round(gainOrg)); 
+        document.getElementById('detail-gain-primary').className = `text-val-md ${gainOrg >= 0 ? 'text-[#EF4444]' : 'text-[#22C55E]'}`; 
+        document.getElementById('detail-gain-secondary').innerText = (isGain ? "+NT$ " : "NT$ ") + fmt(Math.round(gainOrg * r)); 
+        document.getElementById('detail-gain-secondary').className = `text-[13px] md:text-[16px] font-bold font-mono mt-1.5 ${isGain ? 'text-[#EF4444]' : 'text-[#22C55E]'}`;
         
         const elDetailCurrentPrice = document.getElementById('detail-current-price'); if (elDetailCurrentPrice) elDetailCurrentPrice.innerText = fmt(Number(stock.price) || 0);
         const elCurrentPriceTitle = document.getElementById('label-current-price-title');
@@ -548,7 +560,7 @@ window.portfolioService = (function() {
     function setMarketFilter(m) { currentFilter=m; document.getElementById('current-filter-label').innerText={'ALL':'全部市場','TW':'台股','US':'美股','JP':'日股'}[m]||m; toggleFilterMenu(); filterStocks(); }
     function toggleSortMenu() { document.getElementById('sort-menu').classList.toggle('hidden'); document.getElementById('sort-overlay').classList.toggle('hidden'); }
     function setSortField(f) { currentSort.field=f; document.getElementById('current-sort-field-label').innerText={'gain':'損益','weight':'佔比','expReturn':'預期報酬','symbol':'股號'}[f]||f; toggleSortMenu(); filterStocks(); }
-    function toggleSortOrder() { currentSort.order=currentSort.order==='desc'?'asc':'desc'; document.getElementById('sort-arrow-icon').innerText=currentSort.order==='desc'?'arrow_downward':'arrow_upward'; filterStocks(); }
+    function toggleSortOrder() { currentSort.order=currentSort.order==='desc'?'asc':'desc'; document.getElementById('sort-arrow-icon').innerText=currentSort.order==='desc'?'arrow_upward':'arrow_downward'; filterStocks(); }
 
     function initValuationEvents() {
         // 直接設定為 12 與 30，不再去 localStorage 撈取舊記憶
