@@ -61,10 +61,17 @@ window.portfolioService = (function() {
 
             let badgeClass = item.market === 'TW' ? "bg-blue-950 text-blue-300 border-blue-800" : (item.market === 'US' ? "bg-yellow-950 text-yellow-300 border-yellow-800" : "bg-red-950 text-red-300 border-red-800");
             
+            // [VER] v2.8.0 [2026-03-27]
+            // [DESC] portfolio.js 標籤整合：遇到 ETF 產業時，動態將市場代號加上 -ETF
+            let displayMarket = item.market;
+            if (item.sector === 'ETF') {
+                displayMarket = item.market + '-ETF';
+            }
+
             html += `<div onclick="window.portfolioService.openStockDetail('${item.market}', '${item.symbol}')" class="app-card py-[5px] px-[10px] flex flex-col justify-center cursor-pointer hover:bg-[#1A1A1A] transition-all my-[10px] mx-[5px] active:scale-[0.98] shadow-md h-full">
                 <div class="flex justify-between items-center mb-1">
                     <div class="flex items-center gap-2 min-w-0 flex-1 mr-2 overflow-hidden">
-                        <span class="text-xs md:text-sm px-1.5 py-0.5 rounded border font-bold uppercase min-w-[30px] text-center flex-shrink-0 ${badgeClass}">${item.market}</span>
+                        <span class="text-xs md:text-sm px-1.5 py-0.5 rounded border font-bold uppercase min-w-[30px] text-center flex-shrink-0 ${badgeClass}">${displayMarket}</span>
                         <span class="text-[20px] font-bold text-white font-mono tracking-wide flex-shrink-0">${item.symbol}</span>
                         <span class="text-[18px] md:text-[22px] text-gray-400 font-light truncate">${item.name || '--'}</span>
                     </div>
