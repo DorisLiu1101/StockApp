@@ -6,6 +6,7 @@ window.portfolioService = (function() {
     let allPortfolioData = [];
     let currentStock = null;
     let currentFilter = 'ALL', currentChartFilter = 'ALL', currentSort = { field: 'gain', order: 'desc' };
+    let showStock = true, showETF = true; // [VER] v2.8.1 [2026-03-27] 新增藥丸多選狀態
     let isQuarterExpanded = false;
 
     function setPortfolioData(data) { allPortfolioData = data; filterStocks(); updateHomeChart('ALL'); }
@@ -30,7 +31,13 @@ window.portfolioService = (function() {
     function filterStocks() {
         const searchInput = document.getElementById('stock-search');
         const q = searchInput ? searchInput.value.toLowerCase() : '';
-        let f = allPortfolioData.filter(i => { const m = (currentFilter === 'ALL') || (i.market === currentFilter); return m && (String(i.symbol).toLowerCase().includes(q) || String(i.name||'').toLowerCase().includes(q)); });
+        let f = allPortfolioData.filter(i => { 
+            const m = (currentFilter === 'ALL') || (i.market === currentFilter); 
+            // [VER] v2.8.1：判斷是否為 ETF，並根據藥丸按鈕狀態過濾
+            const isETF = (i.sector === 'ETF');
+            const passType = (isETF && showETF) || (!isETF && showStock);
+            return m && passType && (String(i.symbol).toLowerCase().includes(q) || String(i.name||'').toLowerCase().includes(q)); 
+        });
         f.sort((a, b) => {
             if (currentSort.field === 'symbol') return currentSort.order === 'desc' ? -String(a.symbol).localeCompare(String(b.symbol),undefined,{numeric:true}) : String(a.symbol).localeCompare(String(b.symbol),undefined,{numeric:true});
             let vA=0, vB=0; if(currentSort.field==='expReturn') {vA=Number(a.expReturn)||0; vB=Number(b.expReturn)||0;} else if(currentSort.field==='gain') {vA=a.gain; vB=b.gain;} else if(currentSort.field==='weight') {vA=a.marketValue; vB=b.marketValue;} return currentSort.order==='desc'?vB-vA:vA-vB;
@@ -576,6 +583,23 @@ window.portfolioService = (function() {
     
     function closeStockDetail(fromPop = false) { document.getElementById('detail-modal').classList.remove('open'); document.getElementById('report-frame').srcdoc = ""; if(fromPop !== true && typeof history.back === 'function') history.back(); }
 
+    // [VER] v2.8.1：切換藥丸按鈕狀態與樣式 (多選開關邏輯)
+    function toggleTypeFilter(type) {
+        if (type === 'stock') showStock = !showStock;
+        if (type === 'etf') showETF = !showETF;
+        
+        const stockBtn = document.getElementById('filter-chip-stock');
+        const etfBtn = document.getElementById('filter-chip-etf');
+        // [VER] v2.8.2：UI微調，改為圓角矩形(rounded-lg)，選取為深灰底，未選取為空心
+        const activeClass = "px-3 py-1.5 rounded-lg text-[11px] md:text-sm font-bold border transition-colors bg-[#333] text-gray-200 border-[#333] shadow-sm";
+        const inactiveClass = "px-3 py-1.5 rounded-lg text-[11px] md:text-sm font-bold border transition-colors bg-transparent text-gray-500 border-[#333] hover:border-gray-400 hover:text-gray-300";
+        
+        if (stockBtn) stockBtn.className = showStock ? activeClass : inactiveClass;
+        if (etfBtn) etfBtn.className = showETF ? activeClass : inactiveClass;
+        
+        filterStocks();
+    }
+
     function toggleFilterMenu() { document.getElementById('filter-menu').classList.toggle('hidden'); document.getElementById('filter-overlay').classList.toggle('hidden'); }
     function setMarketFilter(m) { currentFilter=m; document.getElementById('current-filter-label').innerText={'ALL':'全部市場','TW':'台股','US':'美股','JP':'日股'}[m]||m; toggleFilterMenu(); filterStocks(); }
     function toggleSortMenu() { document.getElementById('sort-menu').classList.toggle('hidden'); document.getElementById('sort-overlay').classList.toggle('hidden'); }
@@ -720,7 +744,7 @@ window.portfolioService = (function() {
         if(json.success) { nameEl.innerText = newName; if(window.syncSheetData) window.syncSheetData(); } else { throw new Error(json.message); } } catch(e) { window.showAlert("更新失敗: " + e.message); nameEl.innerText = oldName; } 
     }
 
-    return { setPortfolioData, getPortfolioData, updateHomeChart, renderChart, filterStocks, toggleFilterMenu, setMarketFilter, toggleSortMenu, setSortField, toggleSortOrder, openStockDetail, closeStockDetail, editStockName, cancelInlineName, saveInlineName, initValuationEvents, renderValuationBar, resetBars, toggleEpsView, toggleMoreQuarters, showInfoSheet, closeInfoSheet,editPosition, cancelPositionEdit, savePosition };
+    return { setPortfolioData, getPortfolioData, updateHomeChart, renderChart, filterStocks, toggleTypeFilter, toggleFilterMenu, setMarketFilter, toggleSortMenu, setSortField, toggleSortOrder, openStockDetail, closeStockDetail, editStockName, cancelInlineName, saveInlineName, initValuationEvents, renderValuationBar, resetBars, toggleEpsView, toggleMoreQuarters, showInfoSheet, closeInfoSheet,editPosition, cancelPositionEdit, savePosition };
 })();
 
 setTimeout(() => { if(window.portfolioService.initValuationEvents) window.portfolioService.initValuationEvents(); }, 1000);
