@@ -539,6 +539,21 @@ window.portfolioService = (function() {
         const cheapInput = document.getElementById('pe-cheap-input'); if(cheapInput) cheapInput.value = 12;
         const priceyInput = document.getElementById('pe-pricey-input'); if(priceyInput) priceyInput.value = 30;
 
+        // [新增] ETF 智能隱藏估值與替換現價功能
+        const valSection = document.getElementById('valuation-dashboard'); 
+        const expTitle = document.getElementById('label-exp-return-title'); 
+        if (stock.sector === 'ETF') {
+            if (valSection) valSection.style.display = 'none';
+            if (expTitle) expTitle.innerText = '現價';
+            document.getElementById('detail-exp-return-grid').innerText = fmt(Number(stock.price) || 0);
+            document.getElementById('detail-exp-return-grid').classList.replace('text-[#D4AF37]', 'text-white');
+        } else {
+            if (valSection) valSection.style.display = 'block';
+            if (expTitle) expTitle.innerText = '預期報酬率';
+            document.getElementById('detail-exp-return-grid').innerText = (stock.expReturn !== "" && stock.expReturn != null) ? stock.expReturn + "%" : "--";
+            document.getElementById('detail-exp-return-grid').classList.replace('text-white', 'text-[#D4AF37]');
+        }
+
         renderValuationBar();
         renderEpsTables(stock);
 
