@@ -360,9 +360,14 @@ window.portfolioService = (function() {
                 const lastYearRecord = records.find(r => String(r.Year) === String(new Date().getFullYear() - 1));
                 if (lastYearRecord && lastYearRecord.EPS !== 'N/A') {
                     let curEps = Number(ttmRecord.EPS), prevEps = Number(lastYearRecord.EPS);
+                    // 一鍵複製區塊
                     if (prevEps !== 0 && !isNaN(curEps) && !isNaN(prevEps)) {
                         let yoy = ((curEps - prevEps) / Math.abs(prevEps)) * 100;
-                        ttmYoyHtml = `<span class="${getColorClass(yoy)}">${yoy > 0 ? '+' : ''}${yoy.toFixed(2)}%</span>`;
+                        if (yoy === 0) {
+                            ttmYoyHtml = nullBadge;
+                        } else {
+                            ttmYoyHtml = `<span class="${getColorClass(yoy)}">${yoy > 0 ? '+' : ''}${yoy.toFixed(2)}%</span>`;
+                        }
                     }
                 }
                 yearHtml += `<tr class="border-b border-gray-800/50 bg-[#D4AF37]/5"><td class="py-2.5 font-mono text-gray-300 font-bold text-center">TTM</td><td class="py-2.5 text-center font-mono font-bold text-white">${Number(ttmRecord.EPS).toFixed(2)}</td><td class="py-2.5 text-center font-mono">${ttmYoyHtml}</td><td class="py-2.5 text-center font-mono text-gray-400">${ttmRecord.ROE !== 'N/A' ? (Number(ttmRecord.ROE) * 100).toFixed(2) + '%' : nullBadge}</td></tr>`;
